@@ -1,0 +1,19 @@
+{
+  "nav.home": "Home", "nav.nodes": "Nodes", "nav.tasks": "Tasks", "nav.approvals": "Approvals", "nav.enroll": "Add machine",
+  "logout": "Log out", "login.title": "Sign in to AIPager Dashboard", "login.hint": "Paste an admin token (starts with apa_). Kept for this tab only.", "login.button": "Sign in",
+  "home.asleep": "Asleep or offline machines", "home.stuck": "Stuck tasks", "home.pendingNodes": "Machines waiting for approval", "home.approvals": "Waiting for a human decision",
+  "home.noneAsleep": "All machines are online.", "home.noneStuck": "No stuck tasks.", "home.nonePending": "No machines waiting.", "home.noneApprovals": "Nothing to review.",
+  "col.node": "Node", "col.name": "Name", "col.presence": "Presence", "col.silent": "Silent", "col.power": "Type", "col.state": "State", "col.roles": "Roles", "col.labels": "Labels",
+  "col.os": "OS", "col.profiles": "Profiles", "col.running": "Running", "col.waiting": "Queued for it", "col.lastWake": "Last wake", "col.task": "Task", "col.title": "Title",
+  "col.from": "From", "col.to": "To", "col.created": "Created", "col.reason": "Reason",
+  "power.server": "server", "power.desktop": "desktop", "power.laptop": "laptop",
+  "btn.approve": "Approve", "btn.allow": "Allow", "btn.deny": "Deny", "btn.save": "Save", "btn.cancelTask": "Cancel task", "btn.drain": "Drain", "btn.disable": "Disable",
+  "btn.enable": "Enable", "btn.retire": "Retire", "btn.rollback": "Restore this version", "btn.create": "Create code", "btn.revoke": "Revoke", "btn.copy": "Copy", "btn.confirm": "Confirm", "btn.back": "Back",
+  "node.edit": "Edit metadata", "node.history": "History", "node.facts": "Reported facts", "node.presenceSettings": "Presence settings",
+  "field.display_name": "Display name", "field.description": "Description", "field.roles": "Roles (comma separated)", "field.labels": "Labels (key=value per line)", "field.power": "Type",
+  "field.asleep_after_sec": "Asleep after (s)", "field.offline_after_sec": "Offline after (s)", "field.suspend_grace_sec": "Keep task while asleep (s)", "field.owner": "Owner", "field.notes": "Notes",
+  "field.ttl": "Valid for", "field.auto_approve": "Approve automatically", "field.node_id": "Bind node_id (reinstall, optional)", "field.note": "Note (sent to Claude)",
+  "enroll.code": "Enrollment code (shown once)", "enroll.cmd": "Run on the new machine", "enroll.list": "Enrollment codes",
+  "task.events": "Progress", "task.result": "Result", "task.artifacts": "Artifacts", "filter.state": "State", "filter.all": "All",
+  "confirm.retire": "Retiring revokes this machine's token immediately. Continue?", "saved": "Saved", "done": "Done", "conflict": "Metadata changed meanwhile; reloaded, please edit again"
+}
