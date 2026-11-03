@@ -60,6 +60,7 @@ env   = 使用者環境 + profile.env + AIPAGER_TASK_ID + MCP_TOOL_TIMEOUT=90000
     <tr><td><code>type=assistant</code> 含 <code>tool_use</code></td><td>progress phase=tool（工具名 + 參數摘要 ≤ 300 字）</td></tr>
     <tr><td><code>type=assistant</code> 含 text</td><td>只寫入 stream.jsonl，不逐句轉送（避免洗版）</td></tr>
     <tr><td><code>type=result</code></td><td>取 <code>subtype</code>、<code>is_error</code>、<code>result</code>、<code>session_id</code>、<code>total_cost_usd</code>、<code>num_turns</code>、<code>duration_ms</code> 寫入 metrics</td></tr>
+    <tr><td>其他類型（實測：<code>active_goal</code>、<code>autocompact_state</code>、<code>rate_limit_event</code>、<code>system/post_turn_summary</code>）</td><td>只寫入 stream.jsonl，不處理。Claude Code 版本更新可能增加新類型，Worker 一律略過不認識的類型</td></tr>
     <tr><td>無法解析的行</td><td>原樣保留在 stream.jsonl，Log 記 warn，不中斷任務</td></tr>
   </table></div>
 

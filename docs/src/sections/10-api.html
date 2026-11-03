@@ -34,7 +34,7 @@
     <tr><td><span class="method post">POST</span></td><td><code>/tasks/{id}/progress</code></td><td>node / task</td><td>task.progress payload，回 202</td></tr>
     <tr><td><span class="method post">POST</span></td><td><code>/tasks/{id}/result</code></td><td>node（需 lease_id）</td><td>task.result payload，回 200 <code>{state}</code></td></tr>
     <tr><td><span class="method post">POST</span></td><td><code>/tasks/{id}/cancel</code></td><td>發送者 node / admin</td><td><code>{reason}</code>，回 202</td></tr>
-    <tr><td><span class="method">GET</span></td><td><code>/tasks</code></td><td>node / admin</td><td>查詢：<code>state</code>、<code>to_node</code>、<code>thread_id</code>、<code>waiting_for_node</code>（排隊等某台醒來的任務）、<code>limit</code>、<code>cursor</code></td></tr>
+    <tr><td><span class="method">GET</span></td><td><code>/tasks</code></td><td>node / admin</td><td>查詢：<code>state</code>、<code>to_node</code>、<code>thread_id</code>、<code>waiting_for_node</code>（排隊等某台醒來的任務）、<code>stuck=1</code>（卡住的任務，回應每筆附 <code>stuck_reason</code> 與說明，見 <a data-ref="presence"></a>）、<code>limit</code>、<code>cursor</code></td></tr>
     <tr><td><span class="method">GET</span></td><td><code>/tasks/{id}</code></td><td>node / task / admin</td><td>完整內容：envelope、狀態、attempt、結果、目標目前的在線狀態</td></tr>
     <tr><td><span class="method">GET</span></td><td><code>/tasks/{id}/wait?timeout=45</code></td><td>node / admin</td><td>等到終態或逾時，回目前狀態 + 最近 5 筆進度 + 結果</td></tr>
     <tr><td><span class="method">GET</span></td><td><code>/tasks/{id}/events?after_seq=0</code></td><td>node / admin</td><td>進度事件清單</td></tr>

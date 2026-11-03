@@ -52,6 +52,7 @@
     <tr><td class="num">v0.2</td><td class="num">2026-11-03</td><td>Hub 改放 Linux；節點支援 Windows / macOS / Linux；新增跨平台差異、os / arch 路由、Claude 登入模式、各平台服務設定；網路改 Tailscale</td></tr>
     <tr><td class="num">v0.3</td><td class="num">2026-11-03</td><td>機器改為動態加入（加入碼、待核准、生命週期）；metadata 移到 Hub 並可隨時修改、有版本紀錄；新增在線判斷與派給沒在線機器時的 confirm / queue / reject；執行中睡著保留租約、逾時只算醒著時間；標籤路由；新增 api.schema.json 與參考實作；修正領任務 SQL 的 NULL 標籤錯誤；Hub 支援 Ubuntu 24.04 / 26.04；文件改為一章一檔</td></tr>
     <tr><td class="num">v0.3.1</td><td class="num">2026-11-03</td><td>測試項目獨立為 <code>spec/tests/test-plan.json</code>（含執行紀錄），驗證計畫與開發階段表改由它產生；新增可重跑的自動化測試 A03–A06；在 Ubuntu 24.04 容器實跑 install-hub.sh 與 systemd-analyze 驗證兩個 unit；T31 記錄為部分完成（26.04 未執行）；優先測試清單移除 T09（屬 P2，需 MCP）</td></tr>
+    <tr><td class="num">v0.4</td><td class="num">2026-11-03</td><td>依使用者決定：MCP 與 Dashboard（睡著的機器、卡住的任務、待核准）移到 P0；Claude Max 訂閱、預設 login 模式；新機器人工核准；保留時間依機器設定。新增 <code>GET /tasks?stuck=1</code> 與 T34；開發階段重整為 P0–P3。以實際 Claude Code 2.1.317 驗證 stream-json 欄位、<code>--max-turns</code> 可用、出現未列出的事件類型（D24）。開始實作</td></tr>
     <tr><td class="num">v0.3.2</td><td class="num">2026-11-03</td><td>專案名稱統一為 AIPager（repo aipager）：程式與路徑 <code>aipager</code>（如 <code>/opt/aipager</code>、<code>aipager-hub.service</code>、<code>aipagerctl</code>）、環境變數 <code>AIPAGER_*</code>、header <code>X-AIPager-Agent</code>、協定 <code>aipager/1.0</code>、MCP server <code>aipager</code>（工具名稱去掉 relay_ 前綴）、token 前綴 <code>apa_ / apn_ / apt_ / ape_</code>、Hub 主機名稱 <code>aipager-hub</code>；改名後重跑全部自動化測試</td></tr>
   </table></div>
 </section>

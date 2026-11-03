@@ -167,7 +167,7 @@ details > .inner .codebox { margin-top: 10px; }
     <svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><circle cx="4" cy="11" r="3" fill="var(--accent)"/><circle cx="18" cy="5" r="3" fill="var(--accent)"/><circle cx="18" cy="17" r="3" fill="var(--accent)"/><path d="M6.5 10 L15.5 6 M6.5 12 L15.5 16" stroke="var(--accent)" stroke-width="1.6"/></svg>
     AIPager
   </div>
-  <div class="ver">aipager/1.0 · 設計 v0.3.2</div>
+  <div class="ver">aipager/1.0 · 設計 v0.4</div>
   <ol>
     <li class="group">總覽</li>
     <li><a href="#overview">目標與範圍</a></li>
@@ -210,7 +210,7 @@ details > .inner .codebox { margin-top: 10px; }
   <p class="lede">在任何一台機器下指令，其他機器上的 Claude 會收到任務、執行、把結果送回來。Hub 跑在 Linux 上，Windows、macOS、Linux 都可以隨時加入當執行節點，機器資料在 Hub 上隨時調整。中間不需要人轉貼 prompt，機器睡著時會主動提醒，只有需要授權的危險動作才請人按核准。</p>
   <div class="meta-row">
     <span>協定 <b>aipager/1.0</b></span>
-    <span>文件 <b>v0.3.2</b></span>
+    <span>文件 <b>v0.4</b></span>
     <span>日期 <b>2026-11-03</b></span>
     <span>Hub <b>Ubuntu 24.04 / 26.04（systemd）</b></span>
     <span>節點 <b>Windows · macOS · Linux，動態加入</b></span>
@@ -1063,6 +1063,17 @@ details > .inner .codebox { margin-top: 10px; }
     <tr><td>執行中的機器睡著</td><td>信箱收到通知：「執行中的機器睡著了，最多保留 30 分鐘」</td><td>Dashboard 任務標示「執行機器睡眠中」</td></tr>
     <tr><td><code>alert_on_offline=true</code> 的機器離線（預設只有 server）</td><td>不通知</td><td>webhook（ntfy / Teams / Slack）</td></tr>
   </table></div>
+
+  <h3>卡住的任務（Dashboard 首頁）</h3>
+  <p>機器睡著時最需要知道的是「有哪些事因此停住」。Hub 以 <code>GET /api/v1/tasks?stuck=1</code> 提供下列清單，Dashboard 首頁與 <code>aipagerctl tasks --stuck</code> 都用它：</p>
+  <div class="tablewrap"><table>
+    <tr><th>卡住原因（stuck_reason）</th><th>條件</th><th>顯示內容</th></tr>
+    <tr><td><code>waiting_node</code></td><td>queued，指定的節點不是 online</td><td>等哪台、那台沉默多久、已排隊多久、最晚等到何時</td></tr>
+    <tr><td><code>no_candidate</code></td><td>queued，送給角色但沒有任何符合條件的節點在線</td><td>角色、符合條件的節點數與各自狀態</td></tr>
+    <tr><td><code>node_asleep</code></td><td>claimed / running / waiting_approval，執行的節點不是 online</td><td>哪台、睡了多久、保留時間還剩多少</td></tr>
+    <tr><td><code>waiting_approval</code></td><td>waiting_approval 超過 5 分鐘</td><td>等待中的審核項目與剩餘時間</td></tr>
+  </table></div>
+  <p>首頁同時列出「睡著或離線的機器」：顯示名稱、機器類型、沉默多久、上次醒來時間、排隊等它的任務數。保留時間依機器不同，可直接在節點詳情頁調整該機器的 <code>suspend_grace_sec</code>。</p>
 
   <h3>執行中睡著</h3>
   <ul>
@@ -1928,7 +1939,7 @@ module.exports = {
     <tr><td><span class="method post">POST</span></td><td><code>/tasks/{id}/progress</code></td><td>node / task</td><td>task.progress payload，回 202</td></tr>
     <tr><td><span class="method post">POST</span></td><td><code>/tasks/{id}/result</code></td><td>node（需 lease_id）</td><td>task.result payload，回 200 <code>{state}</code></td></tr>
     <tr><td><span class="method post">POST</span></td><td><code>/tasks/{id}/cancel</code></td><td>發送者 node / admin</td><td><code>{reason}</code>，回 202</td></tr>
-    <tr><td><span class="method">GET</span></td><td><code>/tasks</code></td><td>node / admin</td><td>查詢：<code>state</code>、<code>to_node</code>、<code>thread_id</code>、<code>waiting_for_node</code>（排隊等某台醒來的任務）、<code>limit</code>、<code>cursor</code></td></tr>
+    <tr><td><span class="method">GET</span></td><td><code>/tasks</code></td><td>node / admin</td><td>查詢：<code>state</code>、<code>to_node</code>、<code>thread_id</code>、<code>waiting_for_node</code>（排隊等某台醒來的任務）、<code>stuck=1</code>（卡住的任務，回應每筆附 <code>stuck_reason</code> 與說明，見 <a href="#presence">07 在線狀態與睡眠</a>）、<code>limit</code>、<code>cursor</code></td></tr>
     <tr><td><span class="method">GET</span></td><td><code>/tasks/{id}</code></td><td>node / task / admin</td><td>完整內容：envelope、狀態、attempt、結果、目標目前的在線狀態</td></tr>
     <tr><td><span class="method">GET</span></td><td><code>/tasks/{id}/wait?timeout=45</code></td><td>node / admin</td><td>等到終態或逾時，回目前狀態 + 最近 5 筆進度 + 結果</td></tr>
     <tr><td><span class="method">GET</span></td><td><code>/tasks/{id}/events?after_seq=0</code></td><td>node / admin</td><td>進度事件清單</td></tr>
@@ -2645,6 +2656,7 @@ env   = 使用者環境 + profile.env + AIPAGER_TASK_ID + MCP_TOOL_TIMEOUT=90000
     <tr><td><code>type=assistant</code> 含 <code>tool_use</code></td><td>progress phase=tool（工具名 + 參數摘要 ≤ 300 字）</td></tr>
     <tr><td><code>type=assistant</code> 含 text</td><td>只寫入 stream.jsonl，不逐句轉送（避免洗版）</td></tr>
     <tr><td><code>type=result</code></td><td>取 <code>subtype</code>、<code>is_error</code>、<code>result</code>、<code>session_id</code>、<code>total_cost_usd</code>、<code>num_turns</code>、<code>duration_ms</code> 寫入 metrics</td></tr>
+    <tr><td>其他類型（實測：<code>active_goal</code>、<code>autocompact_state</code>、<code>rate_limit_event</code>、<code>system/post_turn_summary</code>）</td><td>只寫入 stream.jsonl，不處理。Claude Code 版本更新可能增加新類型，Worker 一律略過不認識的類型</td></tr>
     <tr><td>無法解析的行</td><td>原樣保留在 stream.jsonl，Log 記 warn，不中斷任務</td></tr>
   </table></div>
 
@@ -3920,7 +3932,7 @@ INSERT OR IGNORE INTO schema_version(version, applied_at) VALUES (1, strftime('%
 <section id="tests">
   <h2><span class="no">21</span>驗證計畫</h2>
   <p>本章由 <code>spec/tests/test-plan.json</code> 自動產生，那份檔案是測試項目與執行紀錄的唯一來源。執行任何一項後，請在該檔更新 <code>status</code> 與 <code>last_run</code>，再執行 <code>npm run check</code> 重新產生文件，不要直接改本章。</p>
-  <div class="note"><b>目前進度：</b>手動測試 33 項：未執行 32、部分完成 1、通過 0、失敗 0。自動化測試 7 項，最近一次通過 7 項。</div>
+  <div class="note"><b>目前進度：</b>手動測試 34 項：未執行 33、部分完成 1、通過 0、失敗 0。自動化測試 7 項，最近一次通過 7 項。</div>
 
   <h3>自動化測試與執行紀錄</h3>
   <p>這些測試不需要 Hub 或 Claude 登入，任何人都可以在自己的機器上重跑。A06 會修改系統，只能在用完即丟的 Ubuntu 機器或容器中執行。</p>
@@ -3951,23 +3963,23 @@ INSERT OR IGNORE INTO schema_version(version, applied_at) VALUES (1, strftime('%
     <tr><td class="num">T03</td><td>Windows 冒煙任務 <span class="pill run">優先</span> <span class="pill">CLI 行為</span></td><td>P0</td><td>Windows</td><td class="wrap"><code>aipagerctl send --to worker@build-pc --profile echo --title "冒煙" --text "執行 hostname 與 whoami 並回報" --wait 120</code></td><td>succeeded；summary 含 build-pc 主機名；<code>result_source=submit_tool</code></td><td>任務目錄檔案齊全；stream.jsonl 第一筆 <code>type=system</code>、最後一筆 <code>type=result</code></td><td><span class="pill">未執行</span></td></tr>
     <tr><td class="num">T04</td><td>macOS 冒煙任務 <span class="pill run">優先</span> <span class="pill">CLI 行為</span></td><td>P0</td><td>macOS</td><td class="wrap">同 T03，改 <code>--to worker@macbook-hc</code>，內容加「執行 sw_vers」</td><td>succeeded；回報 macOS 版本</td><td>同 T03</td><td><span class="pill">未執行</span></td></tr>
     <tr><td class="num">T05</td><td>Linux 冒煙任務 <span class="pill run">優先</span> <span class="pill">CLI 行為</span></td><td>P0</td><td>Linux</td><td class="wrap">同 T03，改 <code>--to worker@linux-box</code>，內容加「讀取 /etc/os-release」</td><td>succeeded；回報發行版</td><td>同 T03</td><td><span class="pill">未執行</span></td></tr>
-    <tr><td class="num">T06</td><td>互動 MCP</td><td>P1</td><td>任一</td><td class="wrap">在 dev 機開 Claude Code，輸入 <code>/mcp</code>；再輸入「列出 aipager 節點」</td><td>aipager 為 connected；列出各機器、顯示名稱與在線狀態</td><td>mcp Log</td><td><span class="pill">未執行</span></td></tr>
-    <tr><td class="num">T07</td><td>跨 OS 互動派工</td><td>P1</td><td>macOS / Windows</td><td class="wrap">在 dev-mac 的 Claude 輸入「叫 build-pc 用 echo profile 回報 dotnet --info 的 SDK 版本」</td><td>Claude 自動派工、等待、回報版本</td><td>Dashboard 任務詳情的時間軸</td><td><span class="pill">未執行</span></td></tr>
-    <tr><td class="num">T08</td><td>訊息與未讀提示</td><td>P1</td><td>Linux / Windows</td><td class="wrap">在 linux-box：<code>aipagerctl msg --to main@dev-pc --text "測試訊息 中文 ✓"</code>；在 dev-pc 的 Claude 隨便輸入一句</td><td>回應前出現 <code>[AIPager] 1 則未讀…</code>；請 Claude 讀信箱，中文正確</td><td>hint Log</td><td><span class="pill">未執行</span></td></tr>
-    <tr><td class="num">T09</td><td>人工審核（確認 permission-prompt-tool 與 MCP_TOOL_TIMEOUT） <span class="pill">CLI 行為</span></td><td>P2</td><td>Windows</td><td class="wrap">對 build profile 送「在工作目錄建立 aipager-test.txt 後執行 git push」，在 Dashboard 按拒絕</td><td>任務出現 waiting_approval；拒絕後 Claude 改為不推送，結果說明原因</td><td>approvals 表；stream.jsonl 中的 permission 往返</td><td><span class="pill">未執行</span></td></tr>
-    <tr><td class="num">T10</td><td>審核逾時</td><td>P2</td><td>Windows</td><td class="wrap">同 T09，但 <code>approval.timeout_sec</code> 設 60，不處理</td><td>60 秒後自動 deny，任務繼續並完成</td><td>approvals.state = expired</td><td><span class="pill">未執行</span></td></tr>
+    <tr><td class="num">T06</td><td>互動 MCP</td><td>P0</td><td>任一</td><td class="wrap">在 dev 機開 Claude Code，輸入 <code>/mcp</code>；再輸入「列出 aipager 節點」</td><td>aipager 為 connected；列出各機器、顯示名稱與在線狀態</td><td>mcp Log</td><td><span class="pill">未執行</span></td></tr>
+    <tr><td class="num">T07</td><td>跨 OS 互動派工</td><td>P0</td><td>macOS / Windows</td><td class="wrap">在 dev-mac 的 Claude 輸入「叫 build-pc 用 echo profile 回報 dotnet --info 的 SDK 版本」</td><td>Claude 自動派工、等待、回報版本</td><td>Dashboard 任務詳情的時間軸</td><td><span class="pill">未執行</span></td></tr>
+    <tr><td class="num">T08</td><td>訊息與未讀提示</td><td>P0</td><td>Linux / Windows</td><td class="wrap">在 linux-box：<code>aipagerctl msg --to main@dev-pc --text "測試訊息 中文 ✓"</code>；在 dev-pc 的 Claude 隨便輸入一句</td><td>回應前出現 <code>[AIPager] 1 則未讀…</code>；請 Claude 讀信箱，中文正確</td><td>hint Log</td><td><span class="pill">未執行</span></td></tr>
+    <tr><td class="num">T09</td><td>人工審核（確認 permission-prompt-tool 與 MCP_TOOL_TIMEOUT） <span class="pill">CLI 行為</span></td><td>P1</td><td>Windows</td><td class="wrap">對 build profile 送「在工作目錄建立 aipager-test.txt 後執行 git push」，在 Dashboard 按拒絕</td><td>任務出現 waiting_approval；拒絕後 Claude 改為不推送，結果說明原因</td><td>approvals 表；stream.jsonl 中的 permission 往返</td><td><span class="pill">未執行</span></td></tr>
+    <tr><td class="num">T10</td><td>審核逾時</td><td>P1</td><td>Windows</td><td class="wrap">同 T09，但 <code>approval.timeout_sec</code> 設 60，不處理</td><td>60 秒後自動 deny，任務繼續並完成</td><td>approvals.state = expired</td><td><span class="pill">未執行</span></td></tr>
     <tr><td class="num">T11</td><td>取消（Windows）</td><td>P0</td><td>Windows</td><td class="wrap">對 build-pc 送「執行 <code>ping -n 300 127.0.0.1</code>」，10 秒後 <code>aipagerctl cancel</code></td><td>60 秒內 cancelled；工作管理員中沒有殘留 claude.exe / ping.exe</td><td>worker Log 的 <code>taskkill</code> 紀錄</td><td><span class="pill">未執行</span></td></tr>
     <tr><td class="num">T12</td><td>取消（macOS / Linux）</td><td>P0</td><td>macOS / Linux</td><td class="wrap">對 macbook-hc 與 linux-box 送「執行 <code>sleep 300</code>」，10 秒後取消；再執行 <code>ps -o pid,stat,comm -g &lt;pgid&gt;</code></td><td>cancelled；群組內沒有非 Z 狀態的程序</td><td>worker Log 的 pgid 與信號紀錄</td><td><span class="pill">未執行</span></td></tr>
     <tr><td class="num">T13</td><td>逾時</td><td>P0</td><td>任一</td><td class="wrap">同 T11 / T12 但 <code>timeout_sec=60</code>，不取消</td><td>failed，<code>E_TIMEOUT</code></td><td>result.json</td><td><span class="pill">未執行</span></td></tr>
-    <tr><td class="num">T14</td><td>防迴圈</td><td>P3</td><td>任一</td><td class="wrap">送任務要求「把這個任務原封不動轉給 worker@build-pc」</td><td>第 5 層建立時被拒，<code>E_HOP_LIMIT</code></td><td>trace 頁可見 4 層</td><td><span class="pill">未執行</span></td></tr>
+    <tr><td class="num">T14</td><td>防迴圈</td><td>P2</td><td>任一</td><td class="wrap">送任務要求「把這個任務原封不動轉給 worker@build-pc」</td><td>第 5 層建立時被拒，<code>E_HOP_LIMIT</code></td><td>trace 頁可見 4 層</td><td><span class="pill">未執行</span></td></tr>
     <tr><td class="num">T15</td><td>冪等</td><td>P0</td><td>任一</td><td class="wrap">用相同 <code>idempotency_key</code> 呼叫兩次 <code>POST /tasks</code></td><td>第二次回 200 與相同 task_id</td><td>tasks 表只有一筆</td><td><span class="pill">未執行</span></td></tr>
     <tr><td class="num">T16</td><td>重開機免登入（確認各平台的 Claude 登入方式） <span class="pill run">優先</span> <span class="pill">CLI 行為</span></td><td>P0</td><td>Windows / macOS / Linux</td><td class="wrap">三台 Worker 重開機、不登入，再跑 T03–T05。macOS 使用 LaunchDaemon + oauth_token</td><td>三台結果與 T03–T05 相同</td><td>Windows 排程上次結果；<code>launchctl print system/com.aipager.worker</code>；<code>systemctl --user status</code></td><td><span class="pill">未執行</span></td></tr>
-    <tr><td class="num">T17</td><td>Hub 重啟</td><td>P3</td><td>Linux</td><td class="wrap">送 3 分鐘的任務，執行中 <code>sudo systemctl stop aipager-hub</code>，1 分鐘後再 start</td><td>任務最終 succeeded，結果有送達</td><td>worker Log 的 pending result 重送紀錄</td><td><span class="pill">未執行</span></td></tr>
-    <tr><td class="num">T18</td><td>Worker 離線</td><td>P3</td><td>Linux</td><td class="wrap">停止 linux-box Worker，用 <code>--on-unavailable queue</code> 送任務，2 分鐘後再啟動</td><td>45 秒內轉 asleep；任務維持 queued；啟動後被領走完成</td><td>nodes 表 last_seen、presence</td><td><span class="pill">未執行</span></td></tr>
-    <tr><td class="num">T19</td><td>平台路由</td><td>P3</td><td>macOS / Linux / Windows</td><td class="wrap">macbook-hc 與 linux-box 都是 tester；送 <code>--to worker@role:tester --requires-os macos</code>，再對 build-pc 送 <code>--requires-os linux</code></td><td>第一筆只由 macbook-hc 領取；第二筆建立時回 <code>E_REQUIREMENT_UNMET</code></td><td>tasks.assigned_node</td><td><span class="pill">未執行</span></td></tr>
-    <tr><td class="num">T20</td><td>跨平台流水線</td><td>P4</td><td>Windows / Linux</td><td class="wrap">送 <a href="#protocol">08 訊息封包（Envelope）</a> 的 task-create 範例（linux-box 需有標籤 <code>browser=chromium</code>）</td><td>build-pc 編譯成功後自動建立 E2E 任務，由 linux-box 執行，兩者同一 thread</td><td>Thread 頁</td><td><span class="pill">未執行</span></td></tr>
+    <tr><td class="num">T17</td><td>Hub 重啟</td><td>P2</td><td>Linux</td><td class="wrap">送 3 分鐘的任務，執行中 <code>sudo systemctl stop aipager-hub</code>，1 分鐘後再 start</td><td>任務最終 succeeded，結果有送達</td><td>worker Log 的 pending result 重送紀錄</td><td><span class="pill">未執行</span></td></tr>
+    <tr><td class="num">T18</td><td>Worker 離線</td><td>P2</td><td>Linux</td><td class="wrap">停止 linux-box Worker，用 <code>--on-unavailable queue</code> 送任務，2 分鐘後再啟動</td><td>45 秒內轉 asleep；任務維持 queued；啟動後被領走完成</td><td>nodes 表 last_seen、presence</td><td><span class="pill">未執行</span></td></tr>
+    <tr><td class="num">T19</td><td>平台路由</td><td>P2</td><td>macOS / Linux / Windows</td><td class="wrap">macbook-hc 與 linux-box 都是 tester；送 <code>--to worker@role:tester --requires-os macos</code>，再對 build-pc 送 <code>--requires-os linux</code></td><td>第一筆只由 macbook-hc 領取；第二筆建立時回 <code>E_REQUIREMENT_UNMET</code></td><td>tasks.assigned_node</td><td><span class="pill">未執行</span></td></tr>
+    <tr><td class="num">T20</td><td>跨平台流水線</td><td>P3</td><td>Windows / Linux</td><td class="wrap">送 <a href="#protocol">08 訊息封包（Envelope）</a> 的 task-create 範例（linux-box 需有標籤 <code>browser=chromium</code>）</td><td>build-pc 編譯成功後自動建立 E2E 任務，由 linux-box 執行，兩者同一 thread</td><td>Thread 頁</td><td><span class="pill">未執行</span></td></tr>
     <tr><td class="num">T21</td><td>編碼與換行稽核</td><td>P0</td><td>Windows / macOS / Linux</td><td class="wrap">從 dev-mac 送含繁體中文的任務給 build-pc，完成後在三台執行 <code>aipagerctl doctor --encoding</code></td><td>中文正確；所有 .json / .jsonl / .txt 為 UTF-8 無 BOM、LF；.bat 純 ASCII；.ps1 有 BOM</td><td>doctor 輸出</td><td><span class="pill">未執行</span></td></tr>
-    <tr><td class="num">T22</td><td>Hub 備份與還原</td><td>P3</td><td>Linux</td><td class="wrap"><code>aipagerctl admin backup</code>；停止 Hub；<code>aipagerctl admin restore &lt;file&gt;</code>；啟動</td><td>任務與節點資料完整</td><td><code>/var/lib/aipager/backup/</code></td><td><span class="pill">未執行</span></td></tr>
+    <tr><td class="num">T22</td><td>Hub 備份與還原</td><td>P2</td><td>Linux</td><td class="wrap"><code>aipagerctl admin backup</code>；停止 Hub；<code>aipagerctl admin restore &lt;file&gt;</code>；啟動</td><td>任務與節點資料完整</td><td><code>/var/lib/aipager/backup/</code></td><td><span class="pill">未執行</span></td></tr>
   </table></div>
 
   <h3>節點管理與在線狀態</h3>
@@ -3975,46 +3987,42 @@ INSERT OR IGNORE INTO schema_version(version, applied_at) VALUES (1, strftime('%
     <tr><th>#</th><th>項目</th><th>階段</th><th>平台</th><th>步驟</th><th>預期結果</th><th>觀察點</th><th>狀態</th></tr>
     <tr><td class="num">T23</td><td>加入新機器</td><td>P0</td><td>任一</td><td class="wrap">① <code>aipagerctl enroll create --name "測試機" --power desktop --role tester</code> ② 新機器 <code>aipagerctl join --hub http://aipager-hub:7300 --code &lt;code&gt;</code> ③ <code>aipagerctl service install</code> ④ Dashboard 按核准</td><td>join 後為 pending 且 Dashboard 顯示 online；核准後 active，可領任務</td><td>join 印出寫入的 node.json 路徑；events 中 <code>node.enrolled</code>、<code>node.state</code></td><td><span class="pill">未執行</span></td></tr>
     <tr><td class="num">T24</td><td>加入碼防護</td><td>P0</td><td>任一</td><td class="wrap">同一加入碼再 join 一次；使用過期加入碼；連續送 6 次錯誤加入碼</td><td>前兩者 422 <code>E_ENROLL_INVALID</code>；第 6 次 429 <code>E_RATE_LIMIT</code></td><td>enrollments 表 used_at；hub Log</td><td><span class="pill">未執行</span></td></tr>
-    <tr><td class="num">T25</td><td>metadata 即時生效與衝突</td><td>P2</td><td>Linux</td><td class="wrap">① 送 <code>--requires-label gpu=yes</code> 的任務給 role tester（沒有機器符合，排隊）② <code>aipagerctl nodes set linux-box --label gpu=yes</code> ③ 用舊的 meta_version 直接 PATCH 一次</td><td>② 之後 15 秒內任務被 linux-box 領走；③ 回 409 <code>E_META_CONFLICT</code></td><td><code>aipagerctl nodes history linux-box</code> 可見新版本</td><td><span class="pill">未執行</span></td></tr>
-    <tr><td class="num">T26</td><td>profiles 熱重載</td><td>P3</td><td>Linux</td><td class="wrap">在 linux-box 的 profiles.json 新增 profile 存檔；再故意存一份 JSON 格式錯誤的版本</td><td>新增後下一次心跳 Dashboard 出現新 profile；錯誤版本時保留原設定、Dashboard 顯示 <code>profiles_error</code></td><td>worker Log 的 <code>profiles.reload</code></td><td><span class="pill">未執行</span></td></tr>
-    <tr><td class="num">T27</td><td>派給睡著的筆電（confirm）</td><td>P1</td><td>macOS</td><td class="wrap">macbook-hc 闔蓋 2 分鐘後，在 dev-pc 的 Claude 輸入「叫 macbook-hc 跑 iOS 單元測試」</td><td>任務未建立；Claude 告知「已 N 分鐘沒有回應，可能睡著」並詢問排隊 / 改派 / 取消</td><td>MCP Log 中 409 <code>E_TARGET_UNAVAILABLE</code>；tasks 表沒有新列</td><td><span class="pill">未執行</span></td></tr>
-    <tr><td class="num">T28</td><td>排隊等待與醒來通知</td><td>P1</td><td>macOS</td><td class="wrap">接 T27，回答「排隊」；10 分鐘後打開筆電</td><td>任務建立時帶 <code>W_TARGET_ASLEEP</code>；開蓋後 1 分鐘內被領取；dev-pc 下次輸入時 aipager-hint 提示「macbook-hc 已回來，開始執行…」</td><td>信箱 <code>system.notice</code>；events 的 <code>node.presence</code> asleep → online</td><td><span class="pill">未執行</span></td></tr>
+    <tr><td class="num">T25</td><td>metadata 即時生效與衝突</td><td>P0</td><td>Linux</td><td class="wrap">① 送 <code>--requires-label gpu=yes</code> 的任務給 role tester（沒有機器符合，排隊）② <code>aipagerctl nodes set linux-box --label gpu=yes</code> ③ 用舊的 meta_version 直接 PATCH 一次</td><td>② 之後 15 秒內任務被 linux-box 領走；③ 回 409 <code>E_META_CONFLICT</code></td><td><code>aipagerctl nodes history linux-box</code> 可見新版本</td><td><span class="pill">未執行</span></td></tr>
+    <tr><td class="num">T26</td><td>profiles 熱重載</td><td>P2</td><td>Linux</td><td class="wrap">在 linux-box 的 profiles.json 新增 profile 存檔；再故意存一份 JSON 格式錯誤的版本</td><td>新增後下一次心跳 Dashboard 出現新 profile；錯誤版本時保留原設定、Dashboard 顯示 <code>profiles_error</code></td><td>worker Log 的 <code>profiles.reload</code></td><td><span class="pill">未執行</span></td></tr>
+    <tr><td class="num">T27</td><td>派給睡著的筆電（confirm）</td><td>P0</td><td>macOS</td><td class="wrap">macbook-hc 闔蓋 2 分鐘後，在 dev-pc 的 Claude 輸入「叫 macbook-hc 跑 iOS 單元測試」</td><td>任務未建立；Claude 告知「已 N 分鐘沒有回應，可能睡著」並詢問排隊 / 改派 / 取消</td><td>MCP Log 中 409 <code>E_TARGET_UNAVAILABLE</code>；tasks 表沒有新列</td><td><span class="pill">未執行</span></td></tr>
+    <tr><td class="num">T28</td><td>排隊等待與醒來通知</td><td>P0</td><td>macOS</td><td class="wrap">接 T27，回答「排隊」；10 分鐘後打開筆電</td><td>任務建立時帶 <code>W_TARGET_ASLEEP</code>；開蓋後 1 分鐘內被領取；dev-pc 下次輸入時 aipager-hint 提示「macbook-hc 已回來，開始執行…」</td><td>信箱 <code>system.notice</code>；events 的 <code>node.presence</code> asleep → online</td><td><span class="pill">未執行</span></td></tr>
     <tr><td class="num">T29</td><td>執行中闔蓋 <span class="pill run">優先</span></td><td>P0</td><td>macOS</td><td class="wrap">① 對 macbook-hc 送一個約 5 分鐘的任務，執行中闔蓋 10 分鐘再打開 ② 重做一次，把該節點 <code>suspend_grace_sec</code> 設 120，闔蓋 5 分鐘</td><td>① 任務續跑並 succeeded，發派者收到「執行中的機器睡著了」通知 ② 任務 failed，<code>E_LEASE_LOST</code>（detail: node_asleep），醒來後 Worker 終止該任務並保留本機結果</td><td>tasks.node_asleep_since、asleep_ms_total；worker Log 的 <code>resumed_from_sleep</code></td><td><span class="pill">未執行</span></td></tr>
-    <tr><td class="num">T30</td><td>逾時只算醒著時間</td><td>P3</td><td>macOS</td><td class="wrap">對 macbook-hc 送 <code>timeout_sec=300</code> 的任務（約 4 分鐘），執行 1 分鐘後闔蓋 10 分鐘再打開（suspend_grace 30 分鐘）</td><td>任務 succeeded，不會因牆上時間超過 300 秒而 <code>E_TIMEOUT</code></td><td>result.json 的 duration_ms 與 Worker Log 的 sleep gap</td><td><span class="pill">未執行</span></td></tr>
+    <tr><td class="num">T30</td><td>逾時只算醒著時間</td><td>P2</td><td>macOS</td><td class="wrap">對 macbook-hc 送 <code>timeout_sec=300</code> 的任務（約 4 分鐘），執行 1 分鐘後闔蓋 10 分鐘再打開（suspend_grace 30 分鐘）</td><td>任務 succeeded，不會因牆上時間超過 300 秒而 <code>E_TIMEOUT</code></td><td>result.json 的 duration_ms 與 Worker Log 的 sleep gap</td><td><span class="pill">未執行</span></td></tr>
     <tr><td class="num">T31</td><td>Ubuntu 26.04 安裝 <span class="pill run">優先</span></td><td>P0</td><td>Linux</td><td class="wrap">在全新的 Ubuntu 26.04 LTS 執行 Hub 安裝步驟（<a href="#deploy">19 部署</a>）與 T01、T22</td><td>install-hub.sh 全部步驟成功；服務正常</td><td>install-hub.sh 輸出；<code>systemctl status aipager-hub</code></td><td><span class="pill wait">部分完成</span><br>2026-11-03<br>安裝腳本部分由 A06 在 24.04 實跑通過、unit 由 A05 以 systemd-analyze 驗證；Ubuntu 26.04（Rust coreutils、sudo-rs）尚未執行</td></tr>
-    <tr><td class="num">T32</td><td>重灌同一台</td><td>P3</td><td>Linux</td><td class="wrap"><code>aipagerctl enroll create --node-id linux-box</code>，在 linux-box 刪除設定後重新 join</td><td>node_id 不變、metadata 保留、meta_version + 1；舊 token 呼叫 API 回 401</td><td>tokens 表 revoked_at</td><td><span class="pill">未執行</span></td></tr>
-    <tr><td class="num">T33</td><td>退役</td><td>P3</td><td>任一</td><td class="wrap"><code>aipagerctl nodes retire &lt;id&gt;</code>，之後在該機觀察 Worker</td><td>Worker 心跳收到 401 後停止並在 Log 說明「此節點已退役」；<code>aipagerctl nodes</code> 預設不再列出</td><td>worker Log；Dashboard「已退役」篩選</td><td><span class="pill">未執行</span></td></tr>
+    <tr><td class="num">T32</td><td>重灌同一台</td><td>P2</td><td>Linux</td><td class="wrap"><code>aipagerctl enroll create --node-id linux-box</code>，在 linux-box 刪除設定後重新 join</td><td>node_id 不變、metadata 保留、meta_version + 1；舊 token 呼叫 API 回 401</td><td>tokens 表 revoked_at</td><td><span class="pill">未執行</span></td></tr>
+    <tr><td class="num">T33</td><td>退役</td><td>P2</td><td>任一</td><td class="wrap"><code>aipagerctl nodes retire &lt;id&gt;</code>，之後在該機觀察 Worker</td><td>Worker 心跳收到 401 後停止並在 Log 說明「此節點已退役」；<code>aipagerctl nodes</code> 預設不再列出</td><td>worker Log；Dashboard「已退役」篩選</td><td><span class="pill">未執行</span></td></tr>
+    <tr><td class="num">T34</td><td>Dashboard 顯示睡著的機器與卡住的任務</td><td>P0</td><td>macOS / Linux</td><td class="wrap">① macbook-hc 闔蓋 ② 以 <code>--on-unavailable queue</code> 派一個任務給它 ③ 另派一個約 5 分鐘的任務給 linux-box，執行中停止其 Worker ④ 開 Dashboard 首頁</td><td>「睡著／離線的機器」區塊列出 macbook-hc 與 linux-box、各自沉默多久；「卡住的任務」區塊列出排隊等 macbook-hc 的任務（原因：等待機器醒來）與 linux-box 上執行中的任務（原因：執行機器沒有回應，剩餘保留時間）</td><td>Dashboard 首頁；<code>GET /api/v1/tasks?stuck=1</code></td><td><span class="pill">未執行</span></td></tr>
   </table></div>
 
   <details>
     <summary>測試清單原始檔（spec/tests/test-plan.json）</summary>
     <div class="inner"><div class="codebox"><div class="label"><span>spec/tests/test-plan.json</span><button type="button" data-copy>複製</button></div><pre><code>{
   "$schema": "../schemas/test-plan.schema.json",
-  "version": "0.3.2",
+  "version": "0.4",
   "note": "單一來源：設計文件的驗證計畫與開發階段由此檔產生。執行手動測試後，更新該項 status 與 last_run 再重跑 npm run check。",
   "phases": [
     {
       "id": "P0",
-      "name": "核心",
-      "scope": "aipager-client（含 Windows / POSIX 平台模組）、Ubuntu Hub（節點登錄、metadata、在線判斷、tasks、blobs）、三平台 Worker 最小版（含睡眠偵測）、aipagerctl（join、service、nodes、send）、Log、各平台服務設定"
+      "name": "核心、互動與 Dashboard",
+      "scope": "aipager-client（含 Windows / POSIX 平台模組）、Ubuntu Hub（節點登錄、人工核准、metadata、在線判斷、tasks、blobs、SSE）、三平台 Worker（含睡眠偵測）、aipagerctl（join、service、nodes、enroll、send）、aipager-mcp（兩種模式，含派工確認流程與 submit_result）、aipager-hint、信箱與醒來通知、Dashboard（節點在線狀態、睡著與卡住的任務、待核准機器、metadata 編輯）、Log、各平台服務設定"
     },
     {
       "id": "P1",
-      "name": "互動整合",
-      "scope": "aipager-mcp（兩種模式，含派工確認流程）、aipager-hint、信箱、醒來通知"
+      "name": "人工審核",
+      "scope": "approvals、permission_prompt、Dashboard 審核佇列、webhook"
     },
     {
       "id": "P2",
-      "name": "審核與 Dashboard",
-      "scope": "approvals、permission prompt、Dashboard（含待核准機器、metadata 編輯與歷史）、SSE、webhook"
-    },
-    {
-      "id": "P3",
       "name": "穩定性",
       "scope": "租約寬限、睡眠保留、結果補送、離線處理、防迴圈、條件路由、profiles 熱重載、保存期限、備份、重灌與退役"
     },
     {
-      "id": "P4",
+      "id": "P3",
       "name": "流水線",
       "scope": "then 鏈結、resume_thread"
     }
@@ -4217,7 +4225,7 @@ INSERT OR IGNORE INTO schema_version(version, applied_at) VALUES (1, strftime('%
       "id": "T06",
       "group": "basic",
       "title": "互動 MCP",
-      "phase": "P1",
+      "phase": "P0",
       "platforms": [
         "any"
       ],
@@ -4233,7 +4241,7 @@ INSERT OR IGNORE INTO schema_version(version, applied_at) VALUES (1, strftime('%
       "id": "T07",
       "group": "basic",
       "title": "跨 OS 互動派工",
-      "phase": "P1",
+      "phase": "P0",
       "platforms": [
         "macos",
         "windows"
@@ -4250,7 +4258,7 @@ INSERT OR IGNORE INTO schema_version(version, applied_at) VALUES (1, strftime('%
       "id": "T08",
       "group": "basic",
       "title": "訊息與未讀提示",
-      "phase": "P1",
+      "phase": "P0",
       "platforms": [
         "linux",
         "windows"
@@ -4267,7 +4275,7 @@ INSERT OR IGNORE INTO schema_version(version, applied_at) VALUES (1, strftime('%
       "id": "T09",
       "group": "basic",
       "title": "人工審核（確認 permission-prompt-tool 與 MCP_TOOL_TIMEOUT）",
-      "phase": "P2",
+      "phase": "P1",
       "platforms": [
         "windows"
       ],
@@ -4283,7 +4291,7 @@ INSERT OR IGNORE INTO schema_version(version, applied_at) VALUES (1, strftime('%
       "id": "T10",
       "group": "basic",
       "title": "審核逾時",
-      "phase": "P2",
+      "phase": "P1",
       "platforms": [
         "windows"
       ],
@@ -4348,7 +4356,7 @@ INSERT OR IGNORE INTO schema_version(version, applied_at) VALUES (1, strftime('%
       "id": "T14",
       "group": "basic",
       "title": "防迴圈",
-      "phase": "P3",
+      "phase": "P2",
       "platforms": [
         "any"
       ],
@@ -4398,7 +4406,7 @@ INSERT OR IGNORE INTO schema_version(version, applied_at) VALUES (1, strftime('%
       "id": "T17",
       "group": "basic",
       "title": "Hub 重啟",
-      "phase": "P3",
+      "phase": "P2",
       "platforms": [
         "linux"
       ],
@@ -4414,7 +4422,7 @@ INSERT OR IGNORE INTO schema_version(version, applied_at) VALUES (1, strftime('%
       "id": "T18",
       "group": "basic",
       "title": "Worker 離線",
-      "phase": "P3",
+      "phase": "P2",
       "platforms": [
         "linux"
       ],
@@ -4430,7 +4438,7 @@ INSERT OR IGNORE INTO schema_version(version, applied_at) VALUES (1, strftime('%
       "id": "T19",
       "group": "basic",
       "title": "平台路由",
-      "phase": "P3",
+      "phase": "P2",
       "platforms": [
         "macos",
         "linux",
@@ -4448,7 +4456,7 @@ INSERT OR IGNORE INTO schema_version(version, applied_at) VALUES (1, strftime('%
       "id": "T20",
       "group": "basic",
       "title": "跨平台流水線",
-      "phase": "P4",
+      "phase": "P3",
       "platforms": [
         "windows",
         "linux"
@@ -4483,7 +4491,7 @@ INSERT OR IGNORE INTO schema_version(version, applied_at) VALUES (1, strftime('%
       "id": "T22",
       "group": "basic",
       "title": "Hub 備份與還原",
-      "phase": "P3",
+      "phase": "P2",
       "platforms": [
         "linux"
       ],
@@ -4531,7 +4539,7 @@ INSERT OR IGNORE INTO schema_version(version, applied_at) VALUES (1, strftime('%
       "id": "T25",
       "group": "nodes",
       "title": "metadata 即時生效與衝突",
-      "phase": "P2",
+      "phase": "P0",
       "platforms": [
         "linux"
       ],
@@ -4547,7 +4555,7 @@ INSERT OR IGNORE INTO schema_version(version, applied_at) VALUES (1, strftime('%
       "id": "T26",
       "group": "nodes",
       "title": "profiles 熱重載",
-      "phase": "P3",
+      "phase": "P2",
       "platforms": [
         "linux"
       ],
@@ -4563,7 +4571,7 @@ INSERT OR IGNORE INTO schema_version(version, applied_at) VALUES (1, strftime('%
       "id": "T27",
       "group": "nodes",
       "title": "派給睡著的筆電（confirm）",
-      "phase": "P1",
+      "phase": "P0",
       "platforms": [
         "macos"
       ],
@@ -4579,7 +4587,7 @@ INSERT OR IGNORE INTO schema_version(version, applied_at) VALUES (1, strftime('%
       "id": "T28",
       "group": "nodes",
       "title": "排隊等待與醒來通知",
-      "phase": "P1",
+      "phase": "P0",
       "platforms": [
         "macos"
       ],
@@ -4611,7 +4619,7 @@ INSERT OR IGNORE INTO schema_version(version, applied_at) VALUES (1, strftime('%
       "id": "T30",
       "group": "nodes",
       "title": "逾時只算醒著時間",
-      "phase": "P3",
+      "phase": "P2",
       "platforms": [
         "macos"
       ],
@@ -4648,7 +4656,7 @@ INSERT OR IGNORE INTO schema_version(version, applied_at) VALUES (1, strftime('%
       "id": "T32",
       "group": "nodes",
       "title": "重灌同一台",
-      "phase": "P3",
+      "phase": "P2",
       "platforms": [
         "linux"
       ],
@@ -4664,7 +4672,7 @@ INSERT OR IGNORE INTO schema_version(version, applied_at) VALUES (1, strftime('%
       "id": "T33",
       "group": "nodes",
       "title": "退役",
-      "phase": "P3",
+      "phase": "P2",
       "platforms": [
         "any"
       ],
@@ -4673,6 +4681,23 @@ INSERT OR IGNORE INTO schema_version(version, applied_at) VALUES (1, strftime('%
       "steps": "`aipagerctl nodes retire &lt;id&gt;`，之後在該機觀察 Worker",
       "expected": "Worker 心跳收到 401 後停止並在 Log 說明「此節點已退役」；`aipagerctl nodes` 預設不再列出",
       "observe": "worker Log；Dashboard「已退役」篩選",
+      "status": "not-run",
+      "last_run": null
+    },
+    {
+      "id": "T34",
+      "group": "nodes",
+      "title": "Dashboard 顯示睡著的機器與卡住的任務",
+      "phase": "P0",
+      "platforms": [
+        "macos",
+        "linux"
+      ],
+      "verifies_cli_behavior": false,
+      "priority": false,
+      "steps": "① macbook-hc 闔蓋 ② 以 `--on-unavailable queue` 派一個任務給它 ③ 另派一個約 5 分鐘的任務給 linux-box，執行中停止其 Worker ④ 開 Dashboard 首頁",
+      "expected": "「睡著／離線的機器」區塊列出 macbook-hc 與 linux-box、各自沉默多久；「卡住的任務」區塊列出排隊等 macbook-hc 的任務（原因：等待機器醒來）與 linux-box 上執行中的任務（原因：執行機器沒有回應，剩餘保留時間）",
+      "observe": "Dashboard 首頁；`GET /api/v1/tasks?stuck=1`",
       "status": "not-run",
       "last_run": null
     }
@@ -4687,11 +4712,10 @@ INSERT OR IGNORE INTO schema_version(version, applied_at) VALUES (1, strftime('%
   <p>各階段的內容與完成條件由 <code>spec/tests/test-plan.json</code> 產生：每個手動測試標記所屬階段，該階段的測試全部通過才算完成。</p>
   <div class="tablewrap"><table>
     <tr><th>階段</th><th>內容</th><th>完成條件（通過以下測試）</th></tr>
-    <tr><td><b>P0</b> 核心</td><td>aipager-client（含 Windows / POSIX 平台模組）、Ubuntu Hub（節點登錄、metadata、在線判斷、tasks、blobs）、三平台 Worker 最小版（含睡眠偵測）、aipagerctl（join、service、nodes、send）、Log、各平台服務設定</td><td>T01、T02、T03、T04、T05、T11、T12、T13、T15、T16、T21、T23、T24、T29、T31</td></tr>
-    <tr><td><b>P1</b> 互動整合</td><td>aipager-mcp（兩種模式，含派工確認流程）、aipager-hint、信箱、醒來通知</td><td>T06、T07、T08、T27、T28</td></tr>
-    <tr><td><b>P2</b> 審核與 Dashboard</td><td>approvals、permission prompt、Dashboard（含待核准機器、metadata 編輯與歷史）、SSE、webhook</td><td>T09、T10、T25</td></tr>
-    <tr><td><b>P3</b> 穩定性</td><td>租約寬限、睡眠保留、結果補送、離線處理、防迴圈、條件路由、profiles 熱重載、保存期限、備份、重灌與退役</td><td>T14、T17、T18、T19、T22、T26、T30、T32、T33</td></tr>
-    <tr><td><b>P4</b> 流水線</td><td>then 鏈結、resume_thread</td><td>T20</td></tr>
+    <tr><td><b>P0</b> 核心、互動與 Dashboard</td><td>aipager-client（含 Windows / POSIX 平台模組）、Ubuntu Hub（節點登錄、人工核准、metadata、在線判斷、tasks、blobs、SSE）、三平台 Worker（含睡眠偵測）、aipagerctl（join、service、nodes、enroll、send）、aipager-mcp（兩種模式，含派工確認流程與 submit_result）、aipager-hint、信箱與醒來通知、Dashboard（節點在線狀態、睡著與卡住的任務、待核准機器、metadata 編輯）、Log、各平台服務設定</td><td>T01、T02、T03、T04、T05、T06、T07、T08、T11、T12、T13、T15、T16、T21、T23、T24、T25、T27、T28、T29、T31、T34</td></tr>
+    <tr><td><b>P1</b> 人工審核</td><td>approvals、permission_prompt、Dashboard 審核佇列、webhook</td><td>T09、T10</td></tr>
+    <tr><td><b>P2</b> 穩定性</td><td>租約寬限、睡眠保留、結果補送、離線處理、防迴圈、條件路由、profiles 熱重載、保存期限、備份、重灌與退役</td><td>T14、T17、T18、T19、T22、T26、T30、T32、T33</td></tr>
+    <tr><td><b>P3</b> 流水線</td><td>then 鏈結、resume_thread</td><td>T20</td></tr>
   </table></div>
 </section>
 
@@ -4721,6 +4745,10 @@ INSERT OR IGNORE INTO schema_version(version, applied_at) VALUES (1, strftime('%
     <tr><td class="num">D18</td><td>在線判斷只看心跳，門檻依機器類型</td><td>三平台一致，不依賴作業系統的睡眠通知；筆電可以睡很久而不被當成故障</td><td>使用 OS 睡眠事件 API、單一門檻</td></tr>
     <tr><td class="num">D19</td><td>互動派工預設 confirm，自動流程預設 queue</td><td>人在場時由人決定等不等；自動流程不中斷，但一定附警告並通知</td><td>一律排隊（使用者不知道要等多久）、一律拒絕</td></tr>
     <tr><td class="num">D20</td><td>睡眠中保留租約，逾時只算醒著時間</td><td>筆電闔蓋不該讓任務失敗；三平台的單調時鐘在睡眠期間行為不同，改用偵測到的睡眠區間扣除</td><td>以牆上時間或系統單調時鐘計算</td></tr>
+    <tr><td class="num">D21</td><td>MCP 放 P0（使用者決定）</td><td>從第一階段就能用自然語言派工、Worker 端回報結構化結果</td><td>P0 只用 aipagerctl 派工</td></tr>
+    <tr><td class="num">D22</td><td>Dashboard 的節點與卡住任務頁放 P0（使用者決定）</td><td>保留時間依機器而異，需要一眼看出誰睡著、哪些任務因此停住</td><td>只用 aipagerctl 查詢</td></tr>
+    <tr><td class="num">D23</td><td>Worker 預設 <code>login</code> 登入模式</td><td>使用者為 Claude Max 訂閱；沿用該帳號登入最單純，免登入需求才用 setup-token</td><td>API key</td></tr>
+    <tr><td class="num">D24</td><td>Worker 略過不認識的 stream-json 類型</td><td>實測 Claude Code 2.1.317 會輸出設計時未列出的事件類型；版本更新可能再增加</td><td>遇到未知類型就報錯</td></tr>
   </table></div>
 </section>
 
@@ -4733,20 +4761,19 @@ INSERT OR IGNORE INTO schema_version(version, applied_at) VALUES (1, strftime('%
     <tr><td class="num">Q1</td><td>機器清單</td><td>不預先列出；改為動態加入、metadata 可隨時調整（<a href="#nodes">06 節點加入與 metadata</a>）</td></tr>
     <tr><td class="num">Q2</td><td>網路</td><td>使用 Tailscale</td></tr>
     <tr><td class="num">Q3</td><td>Hub 作業系統</td><td>Ubuntu 24.04 LTS / 26.04 LTS</td></tr>
+    <tr><td class="num">Q5</td><td>Claude 登入方式</td><td>Claude Max 訂閱。Worker 預設 <code>claude_auth.mode = "login"</code>；需要免登入的機器（例如 Mac LaunchDaemon）才用 <code>claude setup-token</code> 的 <code>oauth_token</code>；不使用 API key</td></tr>
     <tr><td class="num">Q6</td><td>Mac 是否會睡眠</td><td>一開始是筆電；以心跳判斷，派工時提醒（<a href="#presence">07 在線狀態與睡眠</a>）</td></tr>
+    <tr><td class="num">Q8</td><td>第一個實際流程</td><td>開發機派編譯給 Windows build-pc；P0 以此為驗收情境</td></tr>
+    <tr><td class="num">Q9</td><td>新機器加入是否需核准</td><td>需要人工核准；P0 就提供 <code>aipagerctl nodes approve</code> 與 Dashboard 核准按鈕</td></tr>
+    <tr><td class="num">Q10</td><td>睡眠保留時間</td><td>依機器不同：用每台 metadata 的 <code>presence.suspend_grace_sec</code> 覆寫預設；Dashboard 首頁要能看到誰睡著、睡多久、哪些任務因此卡住（P0）</td></tr>
+    <tr><td class="num">Q11</td><td>MCP 放哪個階段</td><td>放 P0，與 Hub、Worker 一起完成</td></tr>
   </table></div>
 
   <h3>仍待確認</h3>
-  <p>以下影響實作細節，請在開始 P0 前回覆：</p>
   <div class="tablewrap"><table>
     <tr><th>#</th><th>問題</th><th>預設（若不回覆）</th></tr>
     <tr><td class="num">Q4</td><td>Git server 是哪一套？Worker 用 SSH key 還是 HTTPS 憑證存取？</td><td>SSH key</td></tr>
-    <tr><td class="num">Q5</td><td>Claude Code 是訂閱登入還是 API key？macOS 是否可以用 <code>claude setup-token</code> 的長效 token？</td><td>訂閱登入；Mac 用 oauth_token</td></tr>
     <tr><td class="num">Q7</td><td>審核通知要送到哪裡（Teams、Slack、ntfy、只看 Dashboard）？</td><td>只看 Dashboard</td></tr>
-    <tr><td class="num">Q8</td><td>要先上線的第一個實際流程是什麼？</td><td>dev 機派編譯給 Windows build-pc</td></tr>
-    <tr><td class="num">Q9</td><td>新機器加入要人工核准，還是加入碼可設為自動核准？</td><td>預設需要核准；建立加入碼時可個別勾選自動核准</td></tr>
-    <tr><td class="num">Q10</td><td>筆電睡著時，執行中的任務保留多久（suspend_grace）？排隊任務最多等多久？</td><td>保留 30 分鐘；排隊最多等 24 小時</td></tr>
-    <tr><td class="num">Q11</td><td>MCP（讓 Claude 用自然語言派工、Worker 端回報結構化結果與申請審核）要放在第一階段，還是先只做 Hub + Worker 排程詢問 + aipagerctl？</td><td>先不做，放 P1；P0 用 aipagerctl 派工、結果取 Claude 最後的文字、超出權限一律拒絕</td></tr>
   </table></div>
 </section>
 
@@ -4806,6 +4833,7 @@ INSERT OR IGNORE INTO schema_version(version, applied_at) VALUES (1, strftime('%
     <tr><td class="num">v0.2</td><td class="num">2026-11-03</td><td>Hub 改放 Linux；節點支援 Windows / macOS / Linux；新增跨平台差異、os / arch 路由、Claude 登入模式、各平台服務設定；網路改 Tailscale</td></tr>
     <tr><td class="num">v0.3</td><td class="num">2026-11-03</td><td>機器改為動態加入（加入碼、待核准、生命週期）；metadata 移到 Hub 並可隨時修改、有版本紀錄；新增在線判斷與派給沒在線機器時的 confirm / queue / reject；執行中睡著保留租約、逾時只算醒著時間；標籤路由；新增 api.schema.json 與參考實作；修正領任務 SQL 的 NULL 標籤錯誤；Hub 支援 Ubuntu 24.04 / 26.04；文件改為一章一檔</td></tr>
     <tr><td class="num">v0.3.1</td><td class="num">2026-11-03</td><td>測試項目獨立為 <code>spec/tests/test-plan.json</code>（含執行紀錄），驗證計畫與開發階段表改由它產生；新增可重跑的自動化測試 A03–A06；在 Ubuntu 24.04 容器實跑 install-hub.sh 與 systemd-analyze 驗證兩個 unit；T31 記錄為部分完成（26.04 未執行）；優先測試清單移除 T09（屬 P2，需 MCP）</td></tr>
+    <tr><td class="num">v0.4</td><td class="num">2026-11-03</td><td>依使用者決定：MCP 與 Dashboard（睡著的機器、卡住的任務、待核准）移到 P0；Claude Max 訂閱、預設 login 模式；新機器人工核准；保留時間依機器設定。新增 <code>GET /tasks?stuck=1</code> 與 T34；開發階段重整為 P0–P3。以實際 Claude Code 2.1.317 驗證 stream-json 欄位、<code>--max-turns</code> 可用、出現未列出的事件類型（D24）。開始實作</td></tr>
     <tr><td class="num">v0.3.2</td><td class="num">2026-11-03</td><td>專案名稱統一為 AIPager（repo aipager）：程式與路徑 <code>aipager</code>（如 <code>/opt/aipager</code>、<code>aipager-hub.service</code>、<code>aipagerctl</code>）、環境變數 <code>AIPAGER_*</code>、header <code>X-AIPager-Agent</code>、協定 <code>aipager/1.0</code>、MCP server <code>aipager</code>（工具名稱去掉 relay_ 前綴）、token 前綴 <code>apa_ / apn_ / apt_ / ape_</code>、Hub 主機名稱 <code>aipager-hub</code>；改名後重跑全部自動化測試</td></tr>
   </table></div>
 </section>

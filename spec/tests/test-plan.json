@@ -1,30 +1,25 @@
 {
   "$schema": "../schemas/test-plan.schema.json",
-  "version": "0.3.2",
+  "version": "0.4",
   "note": "單一來源：設計文件的驗證計畫與開發階段由此檔產生。執行手動測試後，更新該項 status 與 last_run 再重跑 npm run check。",
   "phases": [
     {
       "id": "P0",
-      "name": "核心",
-      "scope": "aipager-client（含 Windows / POSIX 平台模組）、Ubuntu Hub（節點登錄、metadata、在線判斷、tasks、blobs）、三平台 Worker 最小版（含睡眠偵測）、aipagerctl（join、service、nodes、send）、Log、各平台服務設定"
+      "name": "核心、互動與 Dashboard",
+      "scope": "aipager-client（含 Windows / POSIX 平台模組）、Ubuntu Hub（節點登錄、人工核准、metadata、在線判斷、tasks、blobs、SSE）、三平台 Worker（含睡眠偵測）、aipagerctl（join、service、nodes、enroll、send）、aipager-mcp（兩種模式，含派工確認流程與 submit_result）、aipager-hint、信箱與醒來通知、Dashboard（節點在線狀態、睡著與卡住的任務、待核准機器、metadata 編輯）、Log、各平台服務設定"
     },
     {
       "id": "P1",
-      "name": "互動整合",
-      "scope": "aipager-mcp（兩種模式，含派工確認流程）、aipager-hint、信箱、醒來通知"
+      "name": "人工審核",
+      "scope": "approvals、permission_prompt、Dashboard 審核佇列、webhook"
     },
     {
       "id": "P2",
-      "name": "審核與 Dashboard",
-      "scope": "approvals、permission prompt、Dashboard（含待核准機器、metadata 編輯與歷史）、SSE、webhook"
-    },
-    {
-      "id": "P3",
       "name": "穩定性",
       "scope": "租約寬限、睡眠保留、結果補送、離線處理、防迴圈、條件路由、profiles 熱重載、保存期限、備份、重灌與退役"
     },
     {
-      "id": "P4",
+      "id": "P3",
       "name": "流水線",
       "scope": "then 鏈結、resume_thread"
     }
@@ -227,7 +222,7 @@
       "id": "T06",
       "group": "basic",
       "title": "互動 MCP",
-      "phase": "P1",
+      "phase": "P0",
       "platforms": [
         "any"
       ],
@@ -243,7 +238,7 @@
       "id": "T07",
       "group": "basic",
       "title": "跨 OS 互動派工",
-      "phase": "P1",
+      "phase": "P0",
       "platforms": [
         "macos",
         "windows"
@@ -260,7 +255,7 @@
       "id": "T08",
       "group": "basic",
       "title": "訊息與未讀提示",
-      "phase": "P1",
+      "phase": "P0",
       "platforms": [
         "linux",
         "windows"
@@ -277,7 +272,7 @@
       "id": "T09",
       "group": "basic",
       "title": "人工審核（確認 permission-prompt-tool 與 MCP_TOOL_TIMEOUT）",
-      "phase": "P2",
+      "phase": "P1",
       "platforms": [
         "windows"
       ],
@@ -293,7 +288,7 @@
       "id": "T10",
       "group": "basic",
       "title": "審核逾時",
-      "phase": "P2",
+      "phase": "P1",
       "platforms": [
         "windows"
       ],
@@ -358,7 +353,7 @@
       "id": "T14",
       "group": "basic",
       "title": "防迴圈",
-      "phase": "P3",
+      "phase": "P2",
       "platforms": [
         "any"
       ],
@@ -408,7 +403,7 @@
       "id": "T17",
       "group": "basic",
       "title": "Hub 重啟",
-      "phase": "P3",
+      "phase": "P2",
       "platforms": [
         "linux"
       ],
@@ -424,7 +419,7 @@
       "id": "T18",
       "group": "basic",
       "title": "Worker 離線",
-      "phase": "P3",
+      "phase": "P2",
       "platforms": [
         "linux"
       ],
@@ -440,7 +435,7 @@
       "id": "T19",
       "group": "basic",
       "title": "平台路由",
-      "phase": "P3",
+      "phase": "P2",
       "platforms": [
         "macos",
         "linux",
@@ -458,7 +453,7 @@
       "id": "T20",
       "group": "basic",
       "title": "跨平台流水線",
-      "phase": "P4",
+      "phase": "P3",
       "platforms": [
         "windows",
         "linux"
@@ -493,7 +488,7 @@
       "id": "T22",
       "group": "basic",
       "title": "Hub 備份與還原",
-      "phase": "P3",
+      "phase": "P2",
       "platforms": [
         "linux"
       ],
@@ -541,7 +536,7 @@
       "id": "T25",
       "group": "nodes",
       "title": "metadata 即時生效與衝突",
-      "phase": "P2",
+      "phase": "P0",
       "platforms": [
         "linux"
       ],
@@ -557,7 +552,7 @@
       "id": "T26",
       "group": "nodes",
       "title": "profiles 熱重載",
-      "phase": "P3",
+      "phase": "P2",
       "platforms": [
         "linux"
       ],
@@ -573,7 +568,7 @@
       "id": "T27",
       "group": "nodes",
       "title": "派給睡著的筆電（confirm）",
-      "phase": "P1",
+      "phase": "P0",
       "platforms": [
         "macos"
       ],
@@ -589,7 +584,7 @@
       "id": "T28",
       "group": "nodes",
       "title": "排隊等待與醒來通知",
-      "phase": "P1",
+      "phase": "P0",
       "platforms": [
         "macos"
       ],
@@ -621,7 +616,7 @@
       "id": "T30",
       "group": "nodes",
       "title": "逾時只算醒著時間",
-      "phase": "P3",
+      "phase": "P2",
       "platforms": [
         "macos"
       ],
@@ -658,7 +653,7 @@
       "id": "T32",
       "group": "nodes",
       "title": "重灌同一台",
-      "phase": "P3",
+      "phase": "P2",
       "platforms": [
         "linux"
       ],
@@ -674,7 +669,7 @@
       "id": "T33",
       "group": "nodes",
       "title": "退役",
-      "phase": "P3",
+      "phase": "P2",
       "platforms": [
         "any"
       ],
@@ -683,6 +678,23 @@
       "steps": "`aipagerctl nodes retire <id>`，之後在該機觀察 Worker",
       "expected": "Worker 心跳收到 401 後停止並在 Log 說明「此節點已退役」；`aipagerctl nodes` 預設不再列出",
       "observe": "worker Log；Dashboard「已退役」篩選",
+      "status": "not-run",
+      "last_run": null
+    },
+    {
+      "id": "T34",
+      "group": "nodes",
+      "title": "Dashboard 顯示睡著的機器與卡住的任務",
+      "phase": "P0",
+      "platforms": [
+        "macos",
+        "linux"
+      ],
+      "verifies_cli_behavior": false,
+      "priority": false,
+      "steps": "① macbook-hc 闔蓋 ② 以 `--on-unavailable queue` 派一個任務給它 ③ 另派一個約 5 分鐘的任務給 linux-box，執行中停止其 Worker ④ 開 Dashboard 首頁",
+      "expected": "「睡著／離線的機器」區塊列出 macbook-hc 與 linux-box、各自沉默多久；「卡住的任務」區塊列出排隊等 macbook-hc 的任務（原因：等待機器醒來）與 linux-box 上執行中的任務（原因：執行機器沒有回應，剩餘保留時間）",
+      "observe": "Dashboard 首頁；`GET /api/v1/tasks?stuck=1`",
       "status": "not-run",
       "last_run": null
     }

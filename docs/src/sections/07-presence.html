@@ -51,6 +51,17 @@
     <tr><td><code>alert_on_offline=true</code> 的機器離線（預設只有 server）</td><td>不通知</td><td>webhook（ntfy / Teams / Slack）</td></tr>
   </table></div>
 
+  <h3>卡住的任務（Dashboard 首頁）</h3>
+  <p>機器睡著時最需要知道的是「有哪些事因此停住」。Hub 以 <code>GET /api/v1/tasks?stuck=1</code> 提供下列清單，Dashboard 首頁與 <code>aipagerctl tasks --stuck</code> 都用它：</p>
+  <div class="tablewrap"><table>
+    <tr><th>卡住原因（stuck_reason）</th><th>條件</th><th>顯示內容</th></tr>
+    <tr><td><code>waiting_node</code></td><td>queued，指定的節點不是 online</td><td>等哪台、那台沉默多久、已排隊多久、最晚等到何時</td></tr>
+    <tr><td><code>no_candidate</code></td><td>queued，送給角色但沒有任何符合條件的節點在線</td><td>角色、符合條件的節點數與各自狀態</td></tr>
+    <tr><td><code>node_asleep</code></td><td>claimed / running / waiting_approval，執行的節點不是 online</td><td>哪台、睡了多久、保留時間還剩多少</td></tr>
+    <tr><td><code>waiting_approval</code></td><td>waiting_approval 超過 5 分鐘</td><td>等待中的審核項目與剩餘時間</td></tr>
+  </table></div>
+  <p>首頁同時列出「睡著或離線的機器」：顯示名稱、機器類型、沉默多久、上次醒來時間、排隊等它的任務數。保留時間依機器不同，可直接在節點詳情頁調整該機器的 <code>suspend_grace_sec</code>。</p>
+
   <h3>執行中睡著</h3>
   <ul>
     <li>筆電闔蓋時，<code>claude</code> 與 Worker 程序被系統凍結，醒來後會從原地繼續</li>

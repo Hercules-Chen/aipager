@@ -22,5 +22,9 @@
     <tr><td class="num">D18</td><td>在線判斷只看心跳，門檻依機器類型</td><td>三平台一致，不依賴作業系統的睡眠通知；筆電可以睡很久而不被當成故障</td><td>使用 OS 睡眠事件 API、單一門檻</td></tr>
     <tr><td class="num">D19</td><td>互動派工預設 confirm，自動流程預設 queue</td><td>人在場時由人決定等不等；自動流程不中斷，但一定附警告並通知</td><td>一律排隊（使用者不知道要等多久）、一律拒絕</td></tr>
     <tr><td class="num">D20</td><td>睡眠中保留租約，逾時只算醒著時間</td><td>筆電闔蓋不該讓任務失敗；三平台的單調時鐘在睡眠期間行為不同，改用偵測到的睡眠區間扣除</td><td>以牆上時間或系統單調時鐘計算</td></tr>
+    <tr><td class="num">D21</td><td>MCP 放 P0（使用者決定）</td><td>從第一階段就能用自然語言派工、Worker 端回報結構化結果</td><td>P0 只用 aipagerctl 派工</td></tr>
+    <tr><td class="num">D22</td><td>Dashboard 的節點與卡住任務頁放 P0（使用者決定）</td><td>保留時間依機器而異，需要一眼看出誰睡著、哪些任務因此停住</td><td>只用 aipagerctl 查詢</td></tr>
+    <tr><td class="num">D23</td><td>Worker 預設 <code>login</code> 登入模式</td><td>使用者為 Claude Max 訂閱；沿用該帳號登入最單純，免登入需求才用 setup-token</td><td>API key</td></tr>
+    <tr><td class="num">D24</td><td>Worker 略過不認識的 stream-json 類型</td><td>實測 Claude Code 2.1.317 會輸出設計時未列出的事件類型；版本更新可能再增加</td><td>遇到未知類型就報錯</td></tr>
   </table></div>
 </section>
