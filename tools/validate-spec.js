@@ -100,6 +100,21 @@ for (const t of tools.tools) {
 }
 ok('mcp tool input schemas compile: ' + tools.tools.length);
 
+// ---------- test plan ----------
+const planSchema = readJson(path.join(root, 'spec/schemas/test-plan.schema.json'));
+const validatePlan = ajv.compile(planSchema);
+const plan = readJson(path.join(root, 'spec/tests/test-plan.json'));
+if (validatePlan(plan)) ok('test plan valid against schema');
+else bad('test plan invalid\n      ' + ajv.errorsText(validatePlan.errors, { separator: '\n      ' }));
+const seq = (arr, prefix) => arr.every((x, i) => x.id === prefix + String(i + 1).padStart(2, '0'));
+expect(seq(plan.manual, 'T'), `test plan manual ids sequential T01..T${String(plan.manual.length).padStart(2, '0')}`);
+expect(seq(plan.automated, 'A'), `test plan automated ids sequential A01..A${String(plan.automated.length).padStart(2, '0')}`);
+const phaseIds = new Set(plan.phases.map((p) => p.id));
+expect(plan.manual.every((t) => phaseIds.has(t.phase)), 'every manual test belongs to a defined phase');
+expect(plan.phases.every((p) => plan.manual.some((t) => t.phase === p.id)), 'every phase has at least one completion test');
+expect(plan.manual.every((t) => (t.status === 'not-run') === (t.last_run === null)), 'manual tests: last_run present exactly when status is not "not-run"');
+expect(plan.manual.filter((t) => t.priority).every((t) => t.phase === 'P0'), 'priority tests are all in P0');
+
 // ---------- reference algorithms ----------
 const P = require(path.join(root, 'spec/reference/presence.js'));
 const T0 = Date.parse('2026-11-03T09:00:00.000Z');

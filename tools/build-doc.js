@@ -12,7 +12,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 
-const DOC_VERSION = 'v0.3';
+const DOC_VERSION = 'v0.3.1';
 const root = path.resolve(__dirname, '..');
 const src = path.join(root, 'docs/src');
 let problems = 0;
@@ -32,6 +32,50 @@ const sections = files.map((f, i) => {
   const no = String(i + 1).padStart(2, '0');
   return { file: f, id, title, group, no, body: text.slice(m[0].length) };
 }).filter(Boolean);
+// ---------- test plan (single source: spec/tests/test-plan.json) ----------
+const plan = JSON.parse(fs.readFileSync(path.join(root, 'spec/tests/test-plan.json'), 'utf8'));
+const OS_NAME = { any: '任一', windows: 'Windows', macos: 'macOS', linux: 'Linux' };
+const STATUS = {
+  'not-run': ['pill', '未執行'], partial: ['pill wait', '部分完成'], pass: ['pill ok', '通過'],
+  fail: ['pill bad', '失敗'], blocked: ['pill bad', '受阻'],
+};
+const txt = (t) => esc(t).replace(/`([^`]+)`/g, '<code>$1</code>').replace(/\[\[ref:([a-z-]+)\]\]/g, '<a data-ref="$1"></a>');
+const pill = (st) => `<span class="${STATUS[st][0]}">${STATUS[st][1]}</span>`;
+const runText = (r) => (r ? `${pill(r.result)} ${esc(r.date)}<br>${esc(r.env)}${r.note ? '<br>' + txt(r.note) : ''}` : '—');
+const testIdsOf = (phase) => plan.manual.filter((t) => t.phase === phase).map((t) => t.id).join('、');
+function renderPlan(tag) {
+  if (tag === 'priority') return plan.manual.filter((t) => t.priority).map((t) => t.id).join('、');
+  if (tag === 'summary') {
+    const count = (st) => plan.manual.filter((t) => t.status === st).length;
+    const autoPass = plan.automated.filter((a) => a.last_result && a.last_result.result === 'pass').length;
+    return `手動測試 ${plan.manual.length} 項：未執行 ${count('not-run')}、部分完成 ${count('partial')}、通過 ${count('pass')}、失敗 ${count('fail')}。自動化測試 ${plan.automated.length} 項，最近一次通過 ${autoPass} 項。`;
+  }
+  if (tag === 'automated') {
+    return '<div class="tablewrap"><table>\n    <tr><th>#</th><th>項目</th><th>指令</th><th>平台</th><th>涵蓋</th><th>最近一次結果</th></tr>\n' +
+      plan.automated.map((a) => `    <tr><td class="num">${a.id}</td><td>${esc(a.title)}</td><td class="wrap"><code>${esc(a.command)}</code></td><td>${a.platforms.map((p) => OS_NAME[p]).join(' / ')}</td><td>${txt(a.covers)}</td><td>${runText(a.last_result)}</td></tr>`).join('\n') +
+      '\n  </table></div>';
+  }
+  if (tag === 'manual:basic' || tag === 'manual:nodes') {
+    const group = tag.split(':')[1];
+    return '<div class="tablewrap"><table>\n    <tr><th>#</th><th>項目</th><th>階段</th><th>平台</th><th>步驟</th><th>預期結果</th><th>觀察點</th><th>狀態</th></tr>\n' +
+      plan.manual.filter((t) => t.group === group).map((t) => {
+        const flags = (t.priority ? ' <span class="pill run">優先</span>' : '') + (t.verifies_cli_behavior ? ' <span class="pill">CLI 行為</span>' : '');
+        const status = pill(t.status) + (t.last_run ? `<br>${esc(t.last_run.date)}<br>${txt(t.last_run.note || t.last_run.env)}` : '');
+        return `    <tr><td class="num">${t.id}</td><td>${esc(t.title)}${flags}</td><td>${t.phase}</td><td>${t.platforms.map((p) => OS_NAME[p]).join(' / ')}</td><td class="wrap">${txt(t.steps)}</td><td>${txt(t.expected)}</td><td>${txt(t.observe)}</td><td>${status}</td></tr>`;
+      }).join('\n') + '\n  </table></div>';
+  }
+  if (tag === 'roadmap') {
+    return '<div class="tablewrap"><table>\n    <tr><th>階段</th><th>內容</th><th>完成條件（通過以下測試）</th></tr>\n' +
+      plan.phases.map((p) => `    <tr><td><b>${p.id}</b> ${esc(p.name)}</td><td>${txt(p.scope)}</td><td>${testIdsOf(p.id)}</td></tr>`).join('\n') +
+      '\n  </table></div>';
+  }
+  bad('unknown TESTPLAN tag: ' + tag);
+  return '';
+}
+let planBlocks = 0;
+for (const s of sections) s.body = s.body.replace(/<!--TESTPLAN:([a-z:]+)-->/g, (_, tag) => { planBlocks++; return renderPlan(tag); });
+ok(`test plan rendered into ${planBlocks} blocks (${plan.manual.length} manual, ${plan.automated.length} automated)`);
+
 const byId = Object.fromEntries(sections.map((s) => [s.id, s]));
 if (Object.keys(byId).length !== sections.length) bad('duplicate section ids');
 ok(`${sections.length} sections loaded`);

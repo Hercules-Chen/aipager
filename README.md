@@ -6,7 +6,7 @@
 - 節點：Windows、macOS、Linux，以一次性加入碼動態加入，機器資料在 Hub 上隨時調整
 - 在線判斷：依心跳判斷 online / asleep / offline；派給睡著的機器時提醒發派者與使用者
 
-目前狀態：**設計規格 v0.3（草案），尚未實作。**
+目前狀態：**設計規格 v0.3.1（草案），尚未實作。**
 
 ## 閱讀文件
 
@@ -21,12 +21,14 @@
 | `spec/schemas/` | 封包與 API 的 JSON Schema（draft 2020-12） |
 | `spec/examples/` | 封包與 API 範例（全部經過 schema 驗證） |
 | `spec/reference/presence.js` | 在線判斷、租約保留、睡眠偵測、派工決策的參考實作 |
+| `spec/tests/test-plan.json` | 測試清單與執行紀錄（唯一來源） |
 | `spec/sql/hub-schema.sql` | Hub 資料庫 DDL（SQLite） |
 | `spec/mcp/relay-tools.json` | MCP 工具定義 |
 | `spec/config/` | Hub 與各平台節點的設定範本 |
 | `spec/scripts/` | Windows / macOS / Linux 的啟動與服務設定腳本 |
 | `tools/validate-spec.js` | 驗證全部規格檔 |
 | `tools/build-doc.js` | 產生 HTML 文件並稽核全專案編碼 |
+| `tools/tests/` | 可重跑的腳本行為測試（A03–A06） |
 
 ## 驗證與重新產生文件
 
@@ -40,7 +42,23 @@ npm ci
 npm run check
 ```
 
-`npm run check` 會先跑 `validate`（schema、範例、反例、參考實作、DDL、領任務 SQL），再跑 `build:doc`（產生 HTML、檢查錨點與交叉引用、編碼與換行稽核）。兩者都必須顯示 PASSED。
+`npm run check` 會先跑 `validate`（schema、範例、反例、測試清單、參考實作、DDL、領任務 SQL），再跑 `build:doc`（產生 HTML、檢查錨點與交叉引用、編碼與換行稽核）。兩者都必須顯示 PASSED。
+
+macOS / Linux 上可以再跑腳本行為測試（start-worker.sh、取消時終止程序群組、服務設定靜態檢查）：
+
+```bash
+npm test
+```
+
+Hub 安裝腳本的實跑測試會修改系統，只能在用完即丟的 Ubuntu 機器或容器中執行：
+
+```bash
+sudo RELAY_TEST_ALLOW_SYSTEM_CHANGES=1 bash tools/tests/linux-install-hub.test.sh
+```
+
+## 測試項目
+
+全部測試（自動化 A01–A07、手動 T01–T33）與執行紀錄都在 [`spec/tests/test-plan.json`](spec/tests/test-plan.json)，設計文件的「驗證計畫」與「開發階段」章節由它產生。執行手動測試後，更新該項的 `status` 與 `last_run`，再跑 `npm run check`。
 
 ## 修改規則
 

@@ -1,0 +1,690 @@
+{
+  "$schema": "../schemas/test-plan.schema.json",
+  "version": "0.3",
+  "note": "單一來源：設計文件的驗證計畫與開發階段由此檔產生。執行手動測試後，更新該項 status 與 last_run 再重跑 npm run check。",
+  "phases": [
+    {
+      "id": "P0",
+      "name": "核心",
+      "scope": "relay-client（含 Windows / POSIX 平台模組）、Ubuntu Hub（節點登錄、metadata、在線判斷、tasks、blobs）、三平台 Worker 最小版（含睡眠偵測）、relayctl（join、service、nodes、send）、Log、各平台服務設定"
+    },
+    {
+      "id": "P1",
+      "name": "互動整合",
+      "scope": "relay-mcp（兩種模式，含派工確認流程）、relay-hint、信箱、醒來通知"
+    },
+    {
+      "id": "P2",
+      "name": "審核與 Dashboard",
+      "scope": "approvals、permission prompt、Dashboard（含待核准機器、metadata 編輯與歷史）、SSE、webhook"
+    },
+    {
+      "id": "P3",
+      "name": "穩定性",
+      "scope": "租約寬限、睡眠保留、結果補送、離線處理、防迴圈、條件路由、profiles 熱重載、保存期限、備份、重灌與退役"
+    },
+    {
+      "id": "P4",
+      "name": "流水線",
+      "scope": "then 鏈結、resume_thread"
+    }
+  ],
+  "automated": [
+    {
+      "id": "A01",
+      "title": "規格驗證",
+      "command": "npm run validate",
+      "platforms": [
+        "any"
+      ],
+      "covers": "兩份 JSON Schema、16 個範例、21 個反例、設定範本、14 個 MCP 工具 schema、參考實作（在線判斷、租約保留、睡眠偵測、派工決策）、DDL 冪等、領任務 SQL 6 種情況（含 NULL 標籤回歸測試）",
+      "last_result": {
+        "date": "2026-11-03",
+        "env": "Ubuntu 24.04.5 LTS 容器，Node.js v22.23.4",
+        "result": "pass",
+        "note": "80 項全部通過"
+      }
+    },
+    {
+      "id": "A02",
+      "title": "文件建置與編碼稽核",
+      "command": "npm run build:doc",
+      "platforms": [
+        "any"
+      ],
+      "covers": "章節組合、錨點、交叉引用、標籤配對、測試編號連續、全專案 UTF-8 / BOM / 換行 / 亂碼稽核",
+      "last_result": {
+        "date": "2026-11-03",
+        "env": "Ubuntu 24.04.5 LTS 容器，Node.js v22.23.4",
+        "result": "pass",
+        "note": "BUILD + AUDIT PASSED"
+      }
+    },
+    {
+      "id": "A03",
+      "title": "start-worker.sh 行為",
+      "command": "bash tools/tests/posix-start-worker.test.sh",
+      "platforms": [
+        "macos",
+        "linux"
+      ],
+      "covers": "預設設定路徑、診斷輸出、不顯示 token 內容、找不到設定 exit 2、claude 不可執行 exit 3、Chrome DevTools inspect、XDG_CONFIG_HOME",
+      "last_result": {
+        "date": "2026-11-03",
+        "env": "Ubuntu 24.04.5 LTS 容器，Node.js v22.23.4",
+        "result": "pass",
+        "note": "6 項通過；macOS 尚未執行"
+      }
+    },
+    {
+      "id": "A04",
+      "title": "取消任務時終止整個程序群組",
+      "command": "node tools/tests/posix-killtree.test.js",
+      "platforms": [
+        "macos",
+        "linux"
+      ],
+      "covers": "多層子程序以 SIGTERM 全部結束；忽略 SIGTERM 的子程序由 SIGKILL 後備終止；檢查時排除殭屍程序（Z）",
+      "last_result": {
+        "date": "2026-11-03",
+        "env": "Ubuntu 24.04.5 LTS 容器，Node.js v22.23.4",
+        "result": "pass",
+        "note": "2 種情況通過；容器 PID 1 不回收，會留下 Z 狀態項目，屬預期；macOS 尚未執行"
+      }
+    },
+    {
+      "id": "A05",
+      "title": "服務腳本靜態檢查",
+      "command": "bash tools/tests/static-scripts.test.sh",
+      "platforms": [
+        "any"
+      ],
+      "covers": "所有 .sh 的 bash -n、launchd plist 解析與必要欄位、systemd unit 以 systemd-analyze verify 實際驗證、.ps1 以 pwsh 解析（有 pwsh 時）",
+      "last_result": {
+        "date": "2026-11-03",
+        "env": "Ubuntu 24.04.5 LTS 容器，Node.js v22.23.4，systemd 255",
+        "result": "pass",
+        "note": "兩個 systemd unit 通過 systemd-analyze；.ps1 因沒有 pwsh 而略過（SKIP），尚未驗證"
+      }
+    },
+    {
+      "id": "A06",
+      "title": "Hub 安裝腳本實跑",
+      "command": "sudo RELAY_TEST_ALLOW_SYSTEM_CHANGES=1 bash tools/tests/linux-install-hub.test.sh",
+      "platforms": [
+        "linux"
+      ],
+      "covers": "install-hub.sh 實際建立系統帳號、目錄擁有者與權限、hub.json 權限、systemd unit 安裝、daemon-reload、防火牆提示；第二次執行冪等且不覆蓋已修改的 hub.json；結束後清除",
+      "last_result": {
+        "date": "2026-11-03",
+        "env": "Ubuntu 24.04.5 LTS 容器（GNU coreutils 9.4），以 stub 取代 systemctl",
+        "result": "pass",
+        "note": "13 項通過；Ubuntu 26.04 尚未執行"
+      }
+    },
+    {
+      "id": "A07",
+      "title": "乾淨 clone 重現",
+      "command": "git clone <repo> && npm ci && npm run check",
+      "platforms": [
+        "any"
+      ],
+      "covers": "從 GitHub 分支取出後 .bat 為 ASCII+CRLF、.ps1 為 UTF-8 BOM+CRLF、.sh 保有執行權限，且 A01、A02 通過",
+      "last_result": {
+        "date": "2026-11-03",
+        "env": "Ubuntu 24.04.5 LTS 容器，Node.js v22.23.4",
+        "result": "pass",
+        "note": "commit e22269c 驗證通過"
+      }
+    }
+  ],
+  "manual": [
+    {
+      "id": "T01",
+      "group": "basic",
+      "title": "Hub 健康檢查",
+      "phase": "P0",
+      "platforms": [
+        "windows",
+        "macos",
+        "linux"
+      ],
+      "verifies_cli_behavior": false,
+      "priority": false,
+      "steps": "分別在 Windows、Mac、Linux 執行 `curl http://relay-hub:7300/api/v1/health`",
+      "expected": "三台都回 `{\"ok\":true,…,\"protocol\":\"1.0\"}`",
+      "observe": "hub Log 有三筆 `http.request`",
+      "status": "not-run",
+      "last_run": null
+    },
+    {
+      "id": "T02",
+      "group": "basic",
+      "title": "Worker 上線",
+      "phase": "P0",
+      "platforms": [
+        "windows",
+        "macos",
+        "linux"
+      ],
+      "verifies_cli_behavior": false,
+      "priority": false,
+      "steps": "三台以 T23 的流程加入並核准後執行 `relayctl nodes`",
+      "expected": "三台 active / online，facts 中 os / arch 正確",
+      "observe": "各平台服務主控台輸出印出 config、node_id、claude 版本",
+      "status": "not-run",
+      "last_run": null
+    },
+    {
+      "id": "T03",
+      "group": "basic",
+      "title": "Windows 冒煙任務",
+      "phase": "P0",
+      "platforms": [
+        "windows"
+      ],
+      "verifies_cli_behavior": true,
+      "priority": true,
+      "steps": "`relayctl send --to worker@build-pc --profile echo --title \"冒煙\" --text \"執行 hostname 與 whoami 並回報\" --wait 120`",
+      "expected": "succeeded；summary 含 build-pc 主機名；`result_source=submit_tool`",
+      "observe": "任務目錄檔案齊全；stream.jsonl 第一筆 `type=system`、最後一筆 `type=result`",
+      "status": "not-run",
+      "last_run": null
+    },
+    {
+      "id": "T04",
+      "group": "basic",
+      "title": "macOS 冒煙任務",
+      "phase": "P0",
+      "platforms": [
+        "macos"
+      ],
+      "verifies_cli_behavior": true,
+      "priority": true,
+      "steps": "同 T03，改 `--to worker@macbook-hc`，內容加「執行 sw_vers」",
+      "expected": "succeeded；回報 macOS 版本",
+      "observe": "同 T03",
+      "status": "not-run",
+      "last_run": null
+    },
+    {
+      "id": "T05",
+      "group": "basic",
+      "title": "Linux 冒煙任務",
+      "phase": "P0",
+      "platforms": [
+        "linux"
+      ],
+      "verifies_cli_behavior": true,
+      "priority": true,
+      "steps": "同 T03，改 `--to worker@linux-box`，內容加「讀取 /etc/os-release」",
+      "expected": "succeeded；回報發行版",
+      "observe": "同 T03",
+      "status": "not-run",
+      "last_run": null
+    },
+    {
+      "id": "T06",
+      "group": "basic",
+      "title": "互動 MCP",
+      "phase": "P1",
+      "platforms": [
+        "any"
+      ],
+      "verifies_cli_behavior": false,
+      "priority": false,
+      "steps": "在 dev 機開 Claude Code，輸入 `/mcp`；再輸入「列出 relay 節點」",
+      "expected": "relay 為 connected；列出各機器、顯示名稱與在線狀態",
+      "observe": "mcp Log",
+      "status": "not-run",
+      "last_run": null
+    },
+    {
+      "id": "T07",
+      "group": "basic",
+      "title": "跨 OS 互動派工",
+      "phase": "P1",
+      "platforms": [
+        "macos",
+        "windows"
+      ],
+      "verifies_cli_behavior": false,
+      "priority": false,
+      "steps": "在 dev-mac 的 Claude 輸入「叫 build-pc 用 echo profile 回報 dotnet --info 的 SDK 版本」",
+      "expected": "Claude 自動派工、等待、回報版本",
+      "observe": "Dashboard 任務詳情的時間軸",
+      "status": "not-run",
+      "last_run": null
+    },
+    {
+      "id": "T08",
+      "group": "basic",
+      "title": "訊息與未讀提示",
+      "phase": "P1",
+      "platforms": [
+        "linux",
+        "windows"
+      ],
+      "verifies_cli_behavior": false,
+      "priority": false,
+      "steps": "在 linux-box：`relayctl msg --to main@dev-pc --text \"測試訊息 中文 ✓\"`；在 dev-pc 的 Claude 隨便輸入一句",
+      "expected": "回應前出現 `[Relay] 1 則未讀…`；請 Claude 讀信箱，中文正確",
+      "observe": "hint Log",
+      "status": "not-run",
+      "last_run": null
+    },
+    {
+      "id": "T09",
+      "group": "basic",
+      "title": "人工審核（確認 permission-prompt-tool 與 MCP_TOOL_TIMEOUT）",
+      "phase": "P2",
+      "platforms": [
+        "windows"
+      ],
+      "verifies_cli_behavior": true,
+      "priority": false,
+      "steps": "對 build profile 送「在工作目錄建立 relay-test.txt 後執行 git push」，在 Dashboard 按拒絕",
+      "expected": "任務出現 waiting_approval；拒絕後 Claude 改為不推送，結果說明原因",
+      "observe": "approvals 表；stream.jsonl 中的 permission 往返",
+      "status": "not-run",
+      "last_run": null
+    },
+    {
+      "id": "T10",
+      "group": "basic",
+      "title": "審核逾時",
+      "phase": "P2",
+      "platforms": [
+        "windows"
+      ],
+      "verifies_cli_behavior": false,
+      "priority": false,
+      "steps": "同 T09，但 `approval.timeout_sec` 設 60，不處理",
+      "expected": "60 秒後自動 deny，任務繼續並完成",
+      "observe": "approvals.state = expired",
+      "status": "not-run",
+      "last_run": null
+    },
+    {
+      "id": "T11",
+      "group": "basic",
+      "title": "取消（Windows）",
+      "phase": "P0",
+      "platforms": [
+        "windows"
+      ],
+      "verifies_cli_behavior": false,
+      "priority": false,
+      "steps": "對 build-pc 送「執行 `ping -n 300 127.0.0.1`」，10 秒後 `relayctl cancel`",
+      "expected": "60 秒內 cancelled；工作管理員中沒有殘留 claude.exe / ping.exe",
+      "observe": "worker Log 的 `taskkill` 紀錄",
+      "status": "not-run",
+      "last_run": null
+    },
+    {
+      "id": "T12",
+      "group": "basic",
+      "title": "取消（macOS / Linux）",
+      "phase": "P0",
+      "platforms": [
+        "macos",
+        "linux"
+      ],
+      "verifies_cli_behavior": false,
+      "priority": false,
+      "steps": "對 macbook-hc 與 linux-box 送「執行 `sleep 300`」，10 秒後取消；再執行 `ps -o pid,stat,comm -g <pgid>`",
+      "expected": "cancelled；群組內沒有非 Z 狀態的程序",
+      "observe": "worker Log 的 pgid 與信號紀錄",
+      "status": "not-run",
+      "last_run": null
+    },
+    {
+      "id": "T13",
+      "group": "basic",
+      "title": "逾時",
+      "phase": "P0",
+      "platforms": [
+        "any"
+      ],
+      "verifies_cli_behavior": false,
+      "priority": false,
+      "steps": "同 T11 / T12 但 `timeout_sec=60`，不取消",
+      "expected": "failed，`E_TIMEOUT`",
+      "observe": "result.json",
+      "status": "not-run",
+      "last_run": null
+    },
+    {
+      "id": "T14",
+      "group": "basic",
+      "title": "防迴圈",
+      "phase": "P3",
+      "platforms": [
+        "any"
+      ],
+      "verifies_cli_behavior": false,
+      "priority": false,
+      "steps": "送任務要求「把這個任務原封不動轉給 worker@build-pc」",
+      "expected": "第 5 層建立時被拒，`E_HOP_LIMIT`",
+      "observe": "trace 頁可見 4 層",
+      "status": "not-run",
+      "last_run": null
+    },
+    {
+      "id": "T15",
+      "group": "basic",
+      "title": "冪等",
+      "phase": "P0",
+      "platforms": [
+        "any"
+      ],
+      "verifies_cli_behavior": false,
+      "priority": false,
+      "steps": "用相同 `idempotency_key` 呼叫兩次 `POST /tasks`",
+      "expected": "第二次回 200 與相同 task_id",
+      "observe": "tasks 表只有一筆",
+      "status": "not-run",
+      "last_run": null
+    },
+    {
+      "id": "T16",
+      "group": "basic",
+      "title": "重開機免登入（確認各平台的 Claude 登入方式）",
+      "phase": "P0",
+      "platforms": [
+        "windows",
+        "macos",
+        "linux"
+      ],
+      "verifies_cli_behavior": true,
+      "priority": true,
+      "steps": "三台 Worker 重開機、不登入，再跑 T03–T05。macOS 使用 LaunchDaemon + oauth_token",
+      "expected": "三台結果與 T03–T05 相同",
+      "observe": "Windows 排程上次結果；`launchctl print system/com.claude-relay.worker`；`systemctl --user status`",
+      "status": "not-run",
+      "last_run": null
+    },
+    {
+      "id": "T17",
+      "group": "basic",
+      "title": "Hub 重啟",
+      "phase": "P3",
+      "platforms": [
+        "linux"
+      ],
+      "verifies_cli_behavior": false,
+      "priority": false,
+      "steps": "送 3 分鐘的任務，執行中 `sudo systemctl stop claude-relay-hub`，1 分鐘後再 start",
+      "expected": "任務最終 succeeded，結果有送達",
+      "observe": "worker Log 的 pending result 重送紀錄",
+      "status": "not-run",
+      "last_run": null
+    },
+    {
+      "id": "T18",
+      "group": "basic",
+      "title": "Worker 離線",
+      "phase": "P3",
+      "platforms": [
+        "linux"
+      ],
+      "verifies_cli_behavior": false,
+      "priority": false,
+      "steps": "停止 linux-box Worker，用 `--on-unavailable queue` 送任務，2 分鐘後再啟動",
+      "expected": "45 秒內轉 asleep；任務維持 queued；啟動後被領走完成",
+      "observe": "nodes 表 last_seen、presence",
+      "status": "not-run",
+      "last_run": null
+    },
+    {
+      "id": "T19",
+      "group": "basic",
+      "title": "平台路由",
+      "phase": "P3",
+      "platforms": [
+        "macos",
+        "linux",
+        "windows"
+      ],
+      "verifies_cli_behavior": false,
+      "priority": false,
+      "steps": "macbook-hc 與 linux-box 都是 tester；送 `--to worker@role:tester --requires-os macos`，再對 build-pc 送 `--requires-os linux`",
+      "expected": "第一筆只由 macbook-hc 領取；第二筆建立時回 `E_REQUIREMENT_UNMET`",
+      "observe": "tasks.assigned_node",
+      "status": "not-run",
+      "last_run": null
+    },
+    {
+      "id": "T20",
+      "group": "basic",
+      "title": "跨平台流水線",
+      "phase": "P4",
+      "platforms": [
+        "windows",
+        "linux"
+      ],
+      "verifies_cli_behavior": false,
+      "priority": false,
+      "steps": "送 [[ref:protocol]] 的 task-create 範例（linux-box 需有標籤 `browser=chromium`）",
+      "expected": "build-pc 編譯成功後自動建立 E2E 任務，由 linux-box 執行，兩者同一 thread",
+      "observe": "Thread 頁",
+      "status": "not-run",
+      "last_run": null
+    },
+    {
+      "id": "T21",
+      "group": "basic",
+      "title": "編碼與換行稽核",
+      "phase": "P0",
+      "platforms": [
+        "windows",
+        "macos",
+        "linux"
+      ],
+      "verifies_cli_behavior": false,
+      "priority": false,
+      "steps": "從 dev-mac 送含繁體中文的任務給 build-pc，完成後在三台執行 `relayctl doctor --encoding`",
+      "expected": "中文正確；所有 .json / .jsonl / .txt 為 UTF-8 無 BOM、LF；.bat 純 ASCII；.ps1 有 BOM",
+      "observe": "doctor 輸出",
+      "status": "not-run",
+      "last_run": null
+    },
+    {
+      "id": "T22",
+      "group": "basic",
+      "title": "Hub 備份與還原",
+      "phase": "P3",
+      "platforms": [
+        "linux"
+      ],
+      "verifies_cli_behavior": false,
+      "priority": false,
+      "steps": "`relayctl admin backup`；停止 Hub；`relayctl admin restore <file>`；啟動",
+      "expected": "任務與節點資料完整",
+      "observe": "`/var/lib/claude-relay/backup/`",
+      "status": "not-run",
+      "last_run": null
+    },
+    {
+      "id": "T23",
+      "group": "nodes",
+      "title": "加入新機器",
+      "phase": "P0",
+      "platforms": [
+        "any"
+      ],
+      "verifies_cli_behavior": false,
+      "priority": false,
+      "steps": "① `relayctl enroll create --name \"測試機\" --power desktop --role tester` ② 新機器 `relayctl join --hub http://relay-hub:7300 --code <code>` ③ `relayctl service install` ④ Dashboard 按核准",
+      "expected": "join 後為 pending 且 Dashboard 顯示 online；核准後 active，可領任務",
+      "observe": "join 印出寫入的 node.json 路徑；events 中 `node.enrolled`、`node.state`",
+      "status": "not-run",
+      "last_run": null
+    },
+    {
+      "id": "T24",
+      "group": "nodes",
+      "title": "加入碼防護",
+      "phase": "P0",
+      "platforms": [
+        "any"
+      ],
+      "verifies_cli_behavior": false,
+      "priority": false,
+      "steps": "同一加入碼再 join 一次；使用過期加入碼；連續送 6 次錯誤加入碼",
+      "expected": "前兩者 422 `E_ENROLL_INVALID`；第 6 次 429 `E_RATE_LIMIT`",
+      "observe": "enrollments 表 used_at；hub Log",
+      "status": "not-run",
+      "last_run": null
+    },
+    {
+      "id": "T25",
+      "group": "nodes",
+      "title": "metadata 即時生效與衝突",
+      "phase": "P2",
+      "platforms": [
+        "linux"
+      ],
+      "verifies_cli_behavior": false,
+      "priority": false,
+      "steps": "① 送 `--requires-label gpu=yes` 的任務給 role tester（沒有機器符合，排隊）② `relayctl nodes set linux-box --label gpu=yes` ③ 用舊的 meta_version 直接 PATCH 一次",
+      "expected": "② 之後 15 秒內任務被 linux-box 領走；③ 回 409 `E_META_CONFLICT`",
+      "observe": "`relayctl nodes history linux-box` 可見新版本",
+      "status": "not-run",
+      "last_run": null
+    },
+    {
+      "id": "T26",
+      "group": "nodes",
+      "title": "profiles 熱重載",
+      "phase": "P3",
+      "platforms": [
+        "linux"
+      ],
+      "verifies_cli_behavior": false,
+      "priority": false,
+      "steps": "在 linux-box 的 profiles.json 新增 profile 存檔；再故意存一份 JSON 格式錯誤的版本",
+      "expected": "新增後下一次心跳 Dashboard 出現新 profile；錯誤版本時保留原設定、Dashboard 顯示 `profiles_error`",
+      "observe": "worker Log 的 `profiles.reload`",
+      "status": "not-run",
+      "last_run": null
+    },
+    {
+      "id": "T27",
+      "group": "nodes",
+      "title": "派給睡著的筆電（confirm）",
+      "phase": "P1",
+      "platforms": [
+        "macos"
+      ],
+      "verifies_cli_behavior": false,
+      "priority": false,
+      "steps": "macbook-hc 闔蓋 2 分鐘後，在 dev-pc 的 Claude 輸入「叫 macbook-hc 跑 iOS 單元測試」",
+      "expected": "任務未建立；Claude 告知「已 N 分鐘沒有回應，可能睡著」並詢問排隊 / 改派 / 取消",
+      "observe": "MCP Log 中 409 `E_TARGET_UNAVAILABLE`；tasks 表沒有新列",
+      "status": "not-run",
+      "last_run": null
+    },
+    {
+      "id": "T28",
+      "group": "nodes",
+      "title": "排隊等待與醒來通知",
+      "phase": "P1",
+      "platforms": [
+        "macos"
+      ],
+      "verifies_cli_behavior": false,
+      "priority": false,
+      "steps": "接 T27，回答「排隊」；10 分鐘後打開筆電",
+      "expected": "任務建立時帶 `W_TARGET_ASLEEP`；開蓋後 1 分鐘內被領取；dev-pc 下次輸入時 relay-hint 提示「macbook-hc 已回來，開始執行…」",
+      "observe": "信箱 `system.notice`；events 的 `node.presence` asleep → online",
+      "status": "not-run",
+      "last_run": null
+    },
+    {
+      "id": "T29",
+      "group": "nodes",
+      "title": "執行中闔蓋",
+      "phase": "P0",
+      "platforms": [
+        "macos"
+      ],
+      "verifies_cli_behavior": false,
+      "priority": true,
+      "steps": "① 對 macbook-hc 送一個約 5 分鐘的任務，執行中闔蓋 10 分鐘再打開 ② 重做一次，把該節點 `suspend_grace_sec` 設 120，闔蓋 5 分鐘",
+      "expected": "① 任務續跑並 succeeded，發派者收到「執行中的機器睡著了」通知 ② 任務 failed，`E_LEASE_LOST`（detail: node_asleep），醒來後 Worker 終止該任務並保留本機結果",
+      "observe": "tasks.node_asleep_since、asleep_ms_total；worker Log 的 `resumed_from_sleep`",
+      "status": "not-run",
+      "last_run": null
+    },
+    {
+      "id": "T30",
+      "group": "nodes",
+      "title": "逾時只算醒著時間",
+      "phase": "P3",
+      "platforms": [
+        "macos"
+      ],
+      "verifies_cli_behavior": false,
+      "priority": false,
+      "steps": "對 macbook-hc 送 `timeout_sec=300` 的任務（約 4 分鐘），執行 1 分鐘後闔蓋 10 分鐘再打開（suspend_grace 30 分鐘）",
+      "expected": "任務 succeeded，不會因牆上時間超過 300 秒而 `E_TIMEOUT`",
+      "observe": "result.json 的 duration_ms 與 Worker Log 的 sleep gap",
+      "status": "not-run",
+      "last_run": null
+    },
+    {
+      "id": "T31",
+      "group": "nodes",
+      "title": "Ubuntu 26.04 安裝",
+      "phase": "P0",
+      "platforms": [
+        "linux"
+      ],
+      "verifies_cli_behavior": false,
+      "priority": true,
+      "steps": "在全新的 Ubuntu 26.04 LTS 執行 Hub 安裝步驟（[[ref:deploy]]）與 T01、T22",
+      "expected": "install-hub.sh 全部步驟成功；服務正常",
+      "observe": "install-hub.sh 輸出；`systemctl status claude-relay-hub`",
+      "status": "partial",
+      "last_run": {
+        "date": "2026-11-03",
+        "env": "Ubuntu 24.04.5 LTS 容器（GNU coreutils 9.4、systemd 255），非 26.04",
+        "result": "partial",
+        "note": "安裝腳本部分由 A06 在 24.04 實跑通過、unit 由 A05 以 systemd-analyze 驗證；Ubuntu 26.04（Rust coreutils、sudo-rs）尚未執行"
+      }
+    },
+    {
+      "id": "T32",
+      "group": "nodes",
+      "title": "重灌同一台",
+      "phase": "P3",
+      "platforms": [
+        "linux"
+      ],
+      "verifies_cli_behavior": false,
+      "priority": false,
+      "steps": "`relayctl enroll create --node-id linux-box`，在 linux-box 刪除設定後重新 join",
+      "expected": "node_id 不變、metadata 保留、meta_version + 1；舊 token 呼叫 API 回 401",
+      "observe": "tokens 表 revoked_at",
+      "status": "not-run",
+      "last_run": null
+    },
+    {
+      "id": "T33",
+      "group": "nodes",
+      "title": "退役",
+      "phase": "P3",
+      "platforms": [
+        "any"
+      ],
+      "verifies_cli_behavior": false,
+      "priority": false,
+      "steps": "`relayctl nodes retire <id>`，之後在該機觀察 Worker",
+      "expected": "Worker 心跳收到 401 後停止並在 Log 說明「此節點已退役」；`relayctl nodes` 預設不再列出",
+      "observe": "worker Log；Dashboard「已退役」篩選",
+      "status": "not-run",
+      "last_run": null
+    }
+  ]
+}

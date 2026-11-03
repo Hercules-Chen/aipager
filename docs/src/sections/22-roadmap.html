@@ -1,10 +1,4 @@
 <section id="roadmap" data-title="開發階段" data-group="交付">
-  <div class="tablewrap"><table>
-    <tr><th>階段</th><th>內容</th><th>完成條件</th></tr>
-    <tr><td><b>P0</b> 核心</td><td>relay-client（含 Windows / POSIX 平台模組）、Ubuntu Hub（節點登錄、metadata、在線判斷、tasks、blobs）、三平台 Worker 最小版（含睡眠偵測）、relayctl（join、service、nodes、send）、Log、各平台服務設定</td><td>T01–T05、T11–T13、T15、T16、T21、T23、T24、T29、T31 通過</td></tr>
-    <tr><td><b>P1</b> 互動整合</td><td>relay-mcp（兩種模式，含派工確認流程）、relay-hint、信箱、醒來通知</td><td>T06–T08、T27、T28 通過</td></tr>
-    <tr><td><b>P2</b> 審核與 Dashboard</td><td>approvals、permission prompt、Dashboard（含待核准機器、metadata 編輯與歷史）、SSE、webhook</td><td>T09、T10、T25 通過</td></tr>
-    <tr><td><b>P3</b> 穩定性</td><td>租約寬限、睡眠保留、結果補送、離線處理、防迴圈、條件路由、profiles 熱重載、保存期限、備份、重灌與退役</td><td>T14、T17–T19、T22、T26、T30、T32、T33 通過</td></tr>
-    <tr><td><b>P4</b> 流水線</td><td><code>then</code> 鏈結、resume_thread</td><td>T20 通過</td></tr>
-  </table></div>
+  <p>各階段的內容與完成條件由 <code>spec/tests/test-plan.json</code> 產生：每個手動測試標記所屬階段，該階段的測試全部通過才算完成。</p>
+  <!--TESTPLAN:roadmap-->
 </section>

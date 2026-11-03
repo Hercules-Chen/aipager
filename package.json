@@ -1,6 +1,6 @@
 {
   "name": "claude-relay",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "private": true,
   "description": "Claude Relay design spec: lets Claude Code on multiple machines dispatch tasks to each other through a central Hub.",
   "license": "Apache-2.0",
@@ -10,7 +10,9 @@
   "scripts": {
     "validate": "node --no-warnings tools/validate-spec.js",
     "build:doc": "node tools/build-doc.js",
-    "check": "npm run validate && npm run build:doc"
+    "check": "npm run validate && npm run build:doc",
+    "test:posix": "bash tools/tests/posix-start-worker.test.sh && node tools/tests/posix-killtree.test.js && bash tools/tests/static-scripts.test.sh",
+    "test": "npm run check && npm run test:posix"
   },
   "dependencies": {
     "ajv": "^8.20.0",
