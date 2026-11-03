@@ -1,37 +1,30 @@
-// Builds the design document from sources and audits the whole project.
-//   docs/src/layout.html            page shell: <head>, styles, nav, script; placeholders {{TOC}} {{HEADER}} {{SECTIONS}} {{DOC_VERSION}}
-//   docs/src/header.html            page header
-//   docs/src/sections/NN-<id>.html  one file per chapter: <section id="<id>" data-title="..." data-group="...">
+// Builds the HTML documents from sources and audits the whole project.
+//   docs/src/layout.html                     shared page shell; placeholders {{TITLE}} {{NAV_SUBTITLE}} {{TOC}} {{HEADER}} {{SECTIONS}}
+//   docs/src/<doc>/header.html               page header ({{DOC_VERSION}} allowed)
+//   docs/src/<doc>/sections/NN-<id>.html     one file per chapter: <section id="<id>" data-title="..." data-group="...">
 // Generated automatically (never write these by hand):
 //   - chapter numbers (from file order), <h2> headings, the table of contents
-//   - cross references: <a data-ref="<id>"></a>  ->  <a href="#<id>">NN title</a>
+//   - cross references inside a document: <a data-ref="<id>"></a>  ->  <a href="#<id>">NN title</a>
 //   - code blocks: <!--INCLUDE:path-->  ->  HTML-escaped file content
-// Outputs: docs/aipager-design.html (standalone) and docs/artifact/aipager-design.html (fragment for publishing)
+//   - test tables from spec/tests/test-plan.json: <!--TESTPLAN:automated|manual:basic|manual:nodes|roadmap|priority|summary-->
+//     and <!--TESTPLAN:list:T01,T22,A06--> (any ids, with live status)
+// Outputs per document: docs/<out>.html (standalone) and docs/artifact/<out>.html (fragment for publishing)
 // Usage: node tools/build-doc.js
 'use strict';
 const fs = require('node:fs');
 const path = require('node:path');
 
-const DOC_VERSION = 'v0.5';
+const DOCS = [
+  { dir: 'design', out: 'aipager-design', title: 'AIPager 設計規格', version: 'v0.5', subtitle: (v) => `aipager/1.0 · 設計 ${v}` },
+  { dir: 'rollout', out: 'aipager-rollout', title: 'AIPager 上線計畫', version: 'v1.0', subtitle: (v) => `上線計畫 ${v} · 對應實作 v0.5` },
+];
 const root = path.resolve(__dirname, '..');
 const src = path.join(root, 'docs/src');
 let problems = 0;
 const ok = (m) => console.log('[OK]  ' + m);
 const bad = (m) => { problems++; console.log('[ERR] ' + m); };
 const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-const attrEsc = (s) => s.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
 
-// ---------- sections ----------
-const files = fs.readdirSync(path.join(src, 'sections')).filter((f) => /^\d{2}-[a-z-]+\.html$/.test(f)).sort();
-const sections = files.map((f, i) => {
-  const text = fs.readFileSync(path.join(src, 'sections', f), 'utf8');
-  const m = text.match(/^<section id="([a-z-]+)" data-title="([^"]+)" data-group="([^"]+)">/);
-  if (!m) { bad(`${f}: must start with <section id=".." data-title=".." data-group="..">`); return null; }
-  const [, id, title, group] = m;
-  if (f.slice(3, -5) !== id) bad(`${f}: file name does not match section id "${id}"`);
-  const no = String(i + 1).padStart(2, '0');
-  return { file: f, id, title, group, no, body: text.slice(m[0].length) };
-}).filter(Boolean);
 // ---------- test plan (single source: spec/tests/test-plan.json) ----------
 const plan = JSON.parse(fs.readFileSync(path.join(root, 'spec/tests/test-plan.json'), 'utf8'));
 const OS_NAME = { any: '任一', windows: 'Windows', macos: 'macOS', linux: 'Linux' };
@@ -43,7 +36,9 @@ const txt = (t) => esc(t).replace(/`([^`]+)`/g, '<code>$1</code>').replace(/\[\[
 const pill = (st) => `<span class="${STATUS[st][0]}">${STATUS[st][1]}</span>`;
 const runText = (r) => (r ? `${pill(r.result)} ${esc(r.date)}<br>${esc(r.env)}${r.note ? '<br>' + txt(r.note) : ''}` : '—');
 const testIdsOf = (phase) => plan.manual.filter((t) => t.phase === phase).map((t) => t.id).join('、');
-function renderPlan(tag) {
+const plats = (p) => p.map((x) => OS_NAME[x]).join(' / ');
+
+function renderPlan(tag, docDir) {
   if (tag === 'priority') return plan.manual.filter((t) => t.priority).map((t) => t.id).join('、');
   if (tag === 'summary') {
     const count = (st) => plan.manual.filter((t) => t.status === st).length;
@@ -52,7 +47,7 @@ function renderPlan(tag) {
   }
   if (tag === 'automated') {
     return '<div class="tablewrap"><table>\n    <tr><th>#</th><th>項目</th><th>指令</th><th>平台</th><th>涵蓋</th><th>最近一次結果</th></tr>\n' +
-      plan.automated.map((a) => `    <tr><td class="num">${a.id}</td><td>${esc(a.title)}</td><td class="wrap"><code>${esc(a.command)}</code></td><td>${a.platforms.map((p) => OS_NAME[p]).join(' / ')}</td><td>${txt(a.covers)}</td><td>${runText(a.last_result)}</td></tr>`).join('\n') +
+      plan.automated.map((a) => `    <tr><td class="num">${a.id}</td><td>${esc(a.title)}</td><td class="wrap"><code>${esc(a.command)}</code></td><td>${plats(a.platforms)}</td><td>${txt(a.covers)}</td><td>${runText(a.last_result)}</td></tr>`).join('\n') +
       '\n  </table></div>';
   }
   if (tag === 'manual:basic' || tag === 'manual:nodes') {
@@ -61,7 +56,7 @@ function renderPlan(tag) {
       plan.manual.filter((t) => t.group === group).map((t) => {
         const flags = (t.priority ? ' <span class="pill run">優先</span>' : '') + (t.verifies_cli_behavior ? ' <span class="pill">CLI 行為</span>' : '');
         const status = pill(t.status) + (t.last_run ? `<br>${esc(t.last_run.date)}<br>${txt(t.last_run.note || t.last_run.env)}` : '');
-        return `    <tr><td class="num">${t.id}</td><td>${esc(t.title)}${flags}</td><td>${t.phase}</td><td>${t.platforms.map((p) => OS_NAME[p]).join(' / ')}</td><td class="wrap">${txt(t.steps)}</td><td>${txt(t.expected)}</td><td>${txt(t.observe)}</td><td>${status}</td></tr>`;
+        return `    <tr><td class="num">${t.id}</td><td>${esc(t.title)}${flags}</td><td>${t.phase}</td><td>${plats(t.platforms)}</td><td class="wrap">${txt(t.steps)}</td><td>${txt(t.expected)}</td><td>${txt(t.observe)}</td><td>${status}</td></tr>`;
       }).join('\n') + '\n  </table></div>';
   }
   if (tag === 'roadmap') {
@@ -69,99 +64,129 @@ function renderPlan(tag) {
       plan.phases.map((p) => `    <tr><td><b>${p.id}</b> ${esc(p.name)}</td><td>${txt(p.scope)}</td><td>${testIdsOf(p.id)}</td></tr>`).join('\n') +
       '\n  </table></div>';
   }
-  bad('unknown TESTPLAN tag: ' + tag);
+  if (tag.startsWith('list:')) {
+    const rows = tag.slice(5).split(',').map((id) => id.trim()).filter(Boolean).map((id) => {
+      const m = plan.manual.find((x) => x.id === id);
+      if (m) return `    <tr><td class="num">${m.id}</td><td>${esc(m.title)}</td><td>${plats(m.platforms)}</td><td class="wrap">${txt(m.expected)}</td><td>${pill(m.status)}${m.last_run && m.last_run.note ? `<br><span class="muted-note">${txt(m.last_run.note)}</span>` : ''}</td></tr>`;
+      const a = plan.automated.find((x) => x.id === id);
+      if (a) return `    <tr><td class="num">${a.id}</td><td>${esc(a.title)}</td><td>${plats(a.platforms)}</td><td class="wrap"><code>${esc(a.command)}</code></td><td>${a.last_result ? pill(a.last_result.result) : pill('not-run')}</td></tr>`;
+      bad(`${docDir}: TESTPLAN list references unknown id ${id}`);
+      return '';
+    });
+    return '<div class="tablewrap"><table>\n    <tr><th>#</th><th>項目</th><th>平台</th><th>預期結果 / 指令</th><th>目前狀態</th></tr>\n' + rows.join('\n') + '\n  </table></div>';
+  }
+  bad(`${docDir}: unknown TESTPLAN tag ${tag}`);
   return '';
 }
-let planBlocks = 0;
-for (const s of sections) s.body = s.body.replace(/<!--TESTPLAN:([a-z:]+)-->/g, (_, tag) => { planBlocks++; return renderPlan(tag); });
-ok(`test plan rendered into ${planBlocks} blocks (${plan.manual.length} manual, ${plan.automated.length} automated)`);
 
-const byId = Object.fromEntries(sections.map((s) => [s.id, s]));
-if (Object.keys(byId).length !== sections.length) bad('duplicate section ids');
-ok(`${sections.length} sections loaded`);
-
-// ---------- TOC ----------
-let toc = '';
-let lastGroup = null;
-for (const s of sections) {
-  if (s.group !== lastGroup) { toc += `    <li class="group">${s.group}</li>\n`; lastGroup = s.group; }
-  toc += `    <li><a href="#${s.id}">${s.title.replace(/（.*?）$/, '')}</a></li>\n`;
-}
-
-// ---------- assemble ----------
-let refCount = 0;
-const sectionHtml = sections.map((s) => {
-  const body = s.body.replace(/<a data-ref="([a-z-]+)"><\/a>/g, (_, id) => {
-    refCount++;
-    const t = byId[id];
-    if (!t) { bad(`${s.file}: data-ref to unknown section "${id}"`); return `<a href="#${id}">??</a>`; }
-    return `<a href="#${id}">${t.no} ${t.title}</a>`;
-  });
-  return `<!-- ${s.file} -->\n<section id="${s.id}">\n  <h2><span class="no">${s.no}</span>${s.title}</h2>${body}`;
-}).join('\n');
-
+// ---------- one document ----------
 const layout = fs.readFileSync(path.join(src, 'layout.html'), 'utf8');
-const header = fs.readFileSync(path.join(src, 'header.html'), 'utf8');
-let html = layout
-  .replace('{{TOC}}', toc.replace(/\n$/, ''))
-  .replace('{{HEADER}}', header.replace('{{DOC_VERSION}}', DOC_VERSION).replace(/\n$/, ''))
-  .replace('{{SECTIONS}}', sectionHtml)
-  .replace('{{DOC_VERSION}}', DOC_VERSION);
+const outputs = [];
 
-let includes = 0;
-html = html.replace(/<!--INCLUDE:([^>]+?)-->/g, (_, rel) => {
-  const p = path.join(root, rel.trim());
-  if (!fs.existsSync(p)) { bad('include not found: ' + rel); return ''; }
-  includes++;
-  let text = fs.readFileSync(p, 'utf8');
-  if (text.charCodeAt(0) === 0xfeff) text = text.slice(1);
-  return esc(text.replace(/\r\n/g, '\n').replace(/\n+$/, ''));
-});
+function buildDoc(doc) {
+  const dir = path.join(src, doc.dir);
+  const files = fs.readdirSync(path.join(dir, 'sections')).filter((f) => /^\d{2}-[a-z0-9-]+\.html$/.test(f)).sort();
+  const sections = files.map((f, i) => {
+    const text = fs.readFileSync(path.join(dir, 'sections', f), 'utf8');
+    const m = text.match(/^<section id="([a-z0-9-]+)" data-title="([^"]+)" data-group="([^"]+)">/);
+    if (!m) { bad(`${doc.dir}/${f}: must start with <section id=".." data-title=".." data-group="..">`); return null; }
+    const [, id, title, group] = m;
+    if (f.slice(3, -5) !== id) bad(`${doc.dir}/${f}: file name does not match section id "${id}"`);
+    return { file: `${doc.dir}/${f}`, id, title, group, no: String(i + 1).padStart(2, '0'), body: text.slice(m[0].length) };
+  }).filter(Boolean);
+  if (new Set(sections.map((s) => s.id)).size !== sections.length) bad(`${doc.dir}: duplicate section ids`);
 
-const outPath = path.join(root, 'docs/aipager-design.html');
-const standalone = '<!doctype html>\n<html lang="zh-Hant">\n<head>\n<meta charset="utf-8">\n' +
-  '<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">\n' +
-  html.replace(/\n<div class="shell">/, '\n</head>\n<body>\n<div class="shell">') + '\n</body>\n</html>\n';
-fs.writeFileSync(outPath, standalone, { encoding: 'utf8' });
-const fragPath = path.join(root, 'docs/artifact/aipager-design.html');
-fs.mkdirSync(path.dirname(fragPath), { recursive: true });
-fs.writeFileSync(fragPath, html, { encoding: 'utf8' });
-ok(`built ${path.relative(root, outPath)} and artifact fragment (${includes} includes, ${refCount} cross-refs, ${Buffer.byteLength(standalone)} bytes)`);
+  let planBlocks = 0;
+  for (const s of sections) s.body = s.body.replace(/<!--TESTPLAN:([a-z0-9:,\s]+?)-->/gi, (_, tag) => { planBlocks++; return renderPlan(tag.replace(/\s/g, ''), doc.dir); });
+  const byId = Object.fromEntries(sections.map((s) => [s.id, s]));
 
-// ---------- HTML checks ----------
-for (const marker of ['<!--INCLUDE:', '{{TOC}}', '{{HEADER}}', '{{SECTIONS}}', '{{DOC_VERSION}}', '<a data-ref=']) {
-  if (html.includes(marker)) bad('unresolved marker in output: ' + marker);
+  let toc = '';
+  let lastGroup = null;
+  for (const s of sections) {
+    if (s.group !== lastGroup) { toc += `    <li class="group">${s.group}</li>\n`; lastGroup = s.group; }
+    toc += `    <li><a href="#${s.id}">${s.title.replace(/（.*?）$/, '')}</a></li>\n`;
+  }
+  let refCount = 0;
+  const sectionHtml = sections.map((s) => {
+    const body = s.body.replace(/<a data-ref="([a-z0-9-]+)"><\/a>/g, (_, id) => {
+      refCount++;
+      const t = byId[id];
+      if (!t) { bad(`${s.file}: data-ref to unknown section "${id}"`); return `<a href="#${id}">??</a>`; }
+      return `<a href="#${id}">${t.no} ${t.title}</a>`;
+    });
+    return `<!-- ${s.file} -->\n<section id="${s.id}">\n  <h2><span class="no">${s.no}</span>${s.title}</h2>${body}`;
+  }).join('\n');
+
+  const header = fs.readFileSync(path.join(dir, 'header.html'), 'utf8');
+  let html = layout
+    .replace('{{TITLE}}', doc.title)
+    .replace('{{NAV_SUBTITLE}}', doc.subtitle(doc.version))
+    .replace('{{TOC}}', toc.replace(/\n$/, ''))
+    .replace('{{HEADER}}', header.replace(/\{\{DOC_VERSION\}\}/g, doc.version).replace(/\n$/, ''))
+    .replace('{{SECTIONS}}', sectionHtml);
+  let includes = 0;
+  html = html.replace(/<!--INCLUDE:([^>]+?)-->/g, (_, rel) => {
+    const p = path.join(root, rel.trim());
+    if (!fs.existsSync(p)) { bad(`${doc.dir}: include not found: ${rel}`); return ''; }
+    includes++;
+    let text = fs.readFileSync(p, 'utf8');
+    if (text.charCodeAt(0) === 0xfeff) text = text.slice(1);
+    return esc(text.replace(/\r\n/g, '\n').replace(/\n+$/, ''));
+  });
+
+  const standalone = '<!doctype html>\n<html lang="zh-Hant">\n<head>\n<meta charset="utf-8">\n' +
+    '<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">\n' +
+    html.replace(/\n<div class="shell">/, '\n</head>\n<body>\n<div class="shell">') + '\n</body>\n</html>\n';
+  fs.writeFileSync(path.join(root, 'docs', doc.out + '.html'), standalone, { encoding: 'utf8' });
+  fs.mkdirSync(path.join(root, 'docs/artifact'), { recursive: true });
+  fs.writeFileSync(path.join(root, 'docs/artifact', doc.out + '.html'), html, { encoding: 'utf8' });
+  ok(`${doc.dir}: built docs/${doc.out}.html — ${sections.length} sections, ${includes} includes, ${refCount} cross-refs, ${planBlocks} test-plan blocks`);
+
+  // ---------- checks for this document ----------
+  for (const marker of ['<!--INCLUDE:', '<!--TESTPLAN:', '{{TITLE}}', '{{NAV_SUBTITLE}}', '{{TOC}}', '{{HEADER}}', '{{SECTIONS}}', '{{DOC_VERSION}}', '<a data-ref=']) {
+    if (html.includes(marker)) bad(`${doc.dir}: unresolved marker in output: ${marker}`);
+  }
+  if (/<a href="#[^"]+">\d{2} /.test(sections.map((s) => s.body).join(''))) bad(`${doc.dir}: hand-written numbered cross-ref; use <a data-ref="id"></a>`);
+  const ids = new Set([...html.matchAll(/\sid="([^"]+)"/g)].map((m) => m[1]));
+  const hrefs = [...html.matchAll(/href="#([^"]+)"/g)].map((m) => m[1]);
+  const missing = [...new Set(hrefs.filter((h) => !ids.has(h)))];
+  if (missing.length) bad(`${doc.dir}: broken anchors: ${missing.join(', ')}`);
+  for (const m of html.matchAll(/href="(aipager-[a-z]+)\.html#([a-z0-9-]+)"/g)) outputs.push({ from: doc.dir, file: m[1], anchor: m[2] });
+  const reserved = ['settings', 'sidebar', 'customize', 'upgrade', 'downloads'];
+  const clash = [...ids].filter((i) => reserved.includes(i) || i.startsWith('comment-'));
+  if (clash.length) bad(`${doc.dir}: reserved ids used: ${clash.join(', ')}`);
+  const noScripts = html.replace(/<(script|style)[\s\S]*?<\/\1>/g, '');
+  for (const tag of ['section', 'table', 'details', 'div', 'pre', 'code', 'ol', 'ul', 'svg', 'figure']) {
+    const open = (noScripts.match(new RegExp(`<${tag}[\\s>]`, 'g')) || []).length;
+    const close = (noScripts.match(new RegExp(`</${tag}>`, 'g')) || []).length;
+    if (open !== close) bad(`${doc.dir}: <${tag}> open=${open} close=${close}`);
+  }
+  for (const s of sections) {
+    const o = (s.body.match(/<(div|table|details|ul|ol)[\s>]/g) || []).length;
+    const c = (s.body.match(/<\/(div|table|details|ul|ol)>/g) || []).length;
+    if (o !== c) bad(`${s.file}: block tags unbalanced (open ${o}, close ${c})`);
+  }
+  const maxT = plan.manual.length;
+  const maxA = plan.automated.length;
+  const strip = html.replace(/<(script|style)[\s\S]*?<\/\1>/g, '');
+  const badT = [...new Set([...strip.matchAll(/\bT(\d{2})\b/g)].map((m) => Number(m[1])))].filter((n) => n < 1 || n > maxT);
+  const badA = [...new Set([...strip.matchAll(/\bA(\d{2})\b/g)].map((m) => Number(m[1])))].filter((n) => n < 1 || n > maxA);
+  if (badT.length) bad(`${doc.dir}: test ids referenced but not defined: T${badT.join(', T')}`);
+  if (badA.length) bad(`${doc.dir}: automated test ids referenced but not defined: A${badA.join(', A')}`);
+  ok(`${doc.dir}: anchors (${hrefs.length}), tag balance, test id references checked`);
+  return { doc, ids };
 }
-if (/<a href="#[^"]+">\d{2} /.test(sections.map((s) => s.body).join(''))) bad('hand-written numbered cross-ref found in a section source; use <a data-ref="id"></a>');
-const ids = new Set([...html.matchAll(/\sid="([^"]+)"/g)].map((m) => m[1]));
-const hrefs = [...html.matchAll(/href="#([^"]+)"/g)].map((m) => m[1]);
-const missing = [...new Set(hrefs.filter((h) => !ids.has(h)))];
-if (missing.length) bad('broken anchors: ' + missing.join(', ')); else ok(`anchors resolve (${hrefs.length} links)`);
-const reserved = ['settings', 'sidebar', 'customize', 'upgrade', 'downloads'];
-const clash = [...ids].filter((i) => reserved.includes(i) || i.startsWith('comment-'));
-if (clash.length) bad('reserved ids used: ' + clash.join(', '));
-const noScripts = html.replace(/<(script|style)[\s\S]*?<\/\1>/g, '');
-for (const tag of ['section', 'table', 'details', 'div', 'pre', 'code', 'ol', 'ul', 'svg', 'figure']) {
-  const open = (noScripts.match(new RegExp(`<${tag}[\\s>]`, 'g')) || []).length;
-  const close = (noScripts.match(new RegExp(`</${tag}>`, 'g')) || []).length;
-  if (open !== close) bad(`<${tag}> open=${open} close=${close}`);
+
+const built = DOCS.map(buildDoc);
+for (const o of outputs) {
+  const target = built.find((b) => b.doc.out === o.file);
+  if (!target) bad(`${o.from}: link to unknown document ${o.file}.html`);
+  else if (!target.ids.has(o.anchor)) bad(`${o.from}: link ${o.file}.html#${o.anchor} — anchor not found`);
 }
-for (const s of sections) {
-  const o = (s.body.match(/<(div|table|details|ul|ol)[\s>]/g) || []).length;
-  const c = (s.body.match(/<\/(div|table|details|ul|ol)>/g) || []).length;
-  if (o !== c) bad(`${s.file}: block tags unbalanced (open ${o}, close ${c})`);
-}
-ok('tag balance checked (whole page and per section)');
-const tIds = [...new Set([...html.matchAll(/<td class="num">(T\d{2})<\/td>/g)].map((m) => m[1]))];
-tIds.forEach((t, i) => { if (t !== 'T' + String(i + 1).padStart(2, '0')) bad(`test ids not sequential: expected T${String(i + 1).padStart(2, '0')} got ${t}`); });
-const tMentioned = [...new Set([...html.matchAll(/\bT(\d{2})\b/g)].map((m) => Number(m[1])))];
-const tMax = tIds.length;
-const tOutOfRange = tMentioned.filter((n) => n < 1 || n > tMax);
-if (tOutOfRange.length) bad('test ids referenced but not defined: ' + tOutOfRange.join(', '));
-ok(`test plan ids T01..T${String(tMax).padStart(2, '0')} sequential, all references defined`);
+ok(`cross-document links checked (${outputs.length})`);
 
 // ---------- encoding audit of all text files ----------
-const textExt = new Set(['.json', '.jsonl', '.sql', '.txt', '.md', '.html', '.js', '.bat', '.ps1', '.sh', '.service', '.plist']);
+const textExt = new Set(['.json', '.jsonl', '.sql', '.txt', '.md', '.html', '.js', '.css', '.bat', '.ps1', '.sh', '.service', '.plist']);
 const lfOnly = new Set(['.sh', '.service', '.plist']);
 const decoder = new TextDecoder('utf-8', { fatal: true });
 let audited = 0;

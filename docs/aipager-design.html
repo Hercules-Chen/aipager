@@ -99,6 +99,7 @@ td.wrap { min-width: 18em; }
 table.matrix td:first-child { font-weight: 500; white-space: nowrap; }
 table.matrix td code { white-space: normal; }
 .num { font-variant-numeric: tabular-nums; font-family: var(--font-mono); }
+.muted-note { color: var(--muted); font-size: 0.75rem; }
 .note { border: 1px solid var(--line); border-left: 4px solid var(--accent); background: var(--surface); border-radius: 6px; padding: 10px 14px; margin: 12px 0 16px; max-width: 80ch; }
 .note.warn { border-left-color: var(--amber); background: var(--amber-soft); }
 .note b:first-child { font-family: var(--font-head); letter-spacing: 0.02em; }
@@ -219,7 +220,7 @@ details > .inner .codebox { margin-top: 10px; }
   </div>
 </header>
 
-<!-- 01-overview.html -->
+<!-- design/01-overview.html -->
 <section id="overview">
   <h2><span class="no">01</span>目標與範圍</h2>
   <h3>要解決的問題</h3>
@@ -286,7 +287,7 @@ details > .inner .codebox { margin-top: 10px; }
   </table></div>
 </section>
 
-<!-- 02-architecture.html -->
+<!-- design/02-architecture.html -->
 <section id="architecture">
   <h2><span class="no">02</span>整體架構</h2>
   <figure>
@@ -381,7 +382,7 @@ details > .inner .codebox { margin-top: 10px; }
   </ol>
 </section>
 
-<!-- 03-components.html -->
+<!-- design/03-components.html -->
 <section id="components">
   <h2><span class="no">03</span>元件定義</h2>
   <p>共六個元件，全部以 Node.js 撰寫，共用同一個 <code>aipager-client</code> 函式庫（HTTP 呼叫、重試、Log 格式、設定檔讀取、各 OS 預設路徑），避免各元件、各平台各寫一套。</p>
@@ -436,7 +437,7 @@ details > .inner .codebox { margin-top: 10px; }
   </div>
 </section>
 
-<!-- 04-platforms.html -->
+<!-- design/04-platforms.html -->
 <section id="platforms">
   <h2><span class="no">04</span>跨平台差異</h2>
   <p>協定、Hub API、MCP 工具在三個平台完全相同。差異只在「怎麼啟動、檔案放哪、怎麼登入 Claude、怎麼終止程序」，全部集中在下表，實作時由 <code>aipager-client</code> 的平台模組處理。</p>
@@ -487,7 +488,7 @@ details > .inner .codebox { margin-top: 10px; }
   </ul>
 </section>
 
-<!-- 05-identity.html -->
+<!-- design/05-identity.html -->
 <section id="identity">
   <h2><span class="no">05</span>定址與身分</h2>
   <h3>位址格式</h3>
@@ -521,7 +522,7 @@ details > .inner .codebox { margin-top: 10px; }
   </ul>
 </section>
 
-<!-- 06-nodes.html -->
+<!-- design/06-nodes.html -->
 <section id="nodes">
   <h2><span class="no">06</span>節點加入與 metadata</h2>
   <p>機器會陸續增加、更換、搬位置，所以 AIPager 不預先寫死機器清單。新機器用一次性的加入碼自行登錄；顯示名稱、角色、標籤、機器類型等 metadata 都存在 Hub，隨時在 Dashboard 或用 <code>aipagerctl</code> 調整，<b>不需要登入那台機器、也不需要重啟 Worker</b>。唯一不能改的是 <code>node_id</code>，因為它是位址的一部分。</p>
@@ -1009,7 +1010,7 @@ details > .inner .codebox { margin-top: 10px; }
   </details>
 </section>
 
-<!-- 07-presence.html -->
+<!-- design/07-presence.html -->
 <section id="presence">
   <h2><span class="no">07</span>在線狀態與睡眠</h2>
   <p>Worker 每 15 秒向 Hub 發一次心跳。Hub 不去猜機器在做什麼，只看「多久沒有心跳」：超過門檻就當作睡著，再更久就當作離線。門檻依機器類型（<code>power</code>）不同，筆電可以睡很久才算離線。派任務給沒在線的機器時，Hub 會同時提醒發派的那台機器和使用者。</p>
@@ -1273,7 +1274,7 @@ module.exports = {
   </details>
 </section>
 
-<!-- 08-protocol.html -->
+<!-- design/08-protocol.html -->
 <section id="protocol">
   <h2><span class="no">08</span>訊息封包（Envelope）</h2>
   <p>任務、進度、結果、訊息、審核全部使用同一個封包格式，只有 <code>kind</code> 與 <code>payload</code> 不同。完整 JSON Schema（draft 2020-12）見本節最後；所有範例都已用 Ajv 驗證通過。</p>
@@ -1850,7 +1851,7 @@ module.exports = {
   </details>
 </section>
 
-<!-- 09-states.html -->
+<!-- design/09-states.html -->
 <section id="states">
   <h2><span class="no">09</span>任務狀態機</h2>
   <figure>
@@ -1901,7 +1902,7 @@ module.exports = {
   </table></div>
 </section>
 
-<!-- 10-api.html -->
+<!-- design/10-api.html -->
 <section id="api">
   <h2><span class="no">10</span>Hub REST API</h2>
   <ul>
@@ -1998,7 +1999,7 @@ RETURNING tasks.task_id;</code></pre></div>
   <p><code>:free_profiles</code> 由 Worker 提供，已排除目前被 <code>concurrency_key</code> 鎖住的 profile。標籤 key 的格式限制（小寫英數、底線、連字號）保證它能安全放進 JSON path。</p>
 </section>
 
-<!-- 11-mcp.html -->
+<!-- design/11-mcp.html -->
 <section id="mcp">
   <h2><span class="no">11</span>MCP 工具</h2>
   <p>MCP server 名稱固定為 <code>aipager</code>，因此在 Claude Code 中的工具全名為 <code>mcp__aipager__&lt;工具名&gt;</code>。工具說明以英文撰寫（模型理解較穩定），內容可為任何語言。三個平台的工具完全相同。metadata 的修改只開放給人（Dashboard、aipagerctl），MCP 只能讀取。</p>
@@ -2548,7 +2549,7 @@ RETURNING tasks.task_id;</code></pre></div>
   </details>
 </section>
 
-<!-- 12-errors.html -->
+<!-- design/12-errors.html -->
 <section id="errors">
   <h2><span class="no">12</span>錯誤碼</h2>
   <h3>API 錯誤</h3>
@@ -2594,7 +2595,7 @@ RETURNING tasks.task_id;</code></pre></div>
   </table></div>
 </section>
 
-<!-- 13-worker.html -->
+<!-- design/13-worker.html -->
 <section id="worker">
   <h2><span class="no">13</span>Worker 執行流程</h2>
   <h3>主迴圈</h3>
@@ -2870,7 +2871,7 @@ artifacts (collected by the worker after you finish): {{expected_output.artifact
   </details>
 </section>
 
-<!-- 14-interactive.html -->
+<!-- design/14-interactive.html -->
 <section id="interactive">
   <h2><span class="no">14</span>互動 session 整合</h2>
   <h3>註冊 MCP（全機共用，信箱 main）</h3>
@@ -2959,7 +2960,7 @@ artifacts (collected by the worker after you finish): {{expected_output.artifact
   <div class="note"><b>長任務不要佔住 session：</b>每次等待最多 50 秒。Claude 可以先繼續別的工作，任務完成後下一次輸入時 aipager-hint 會提示。如果希望互動 session 自動處理信箱，可用 <code>/loop 10m 用 inbox 檢查未讀，需要回覆的就處理並回覆</code>，但會持續消耗用量，建議只在需要時開。</div>
 </section>
 
-<!-- 15-approval.html -->
+<!-- design/15-approval.html -->
 <section id="approval">
   <h2><span class="no">15</span>審核與 Dashboard</h2>
   <h3>Dashboard 頁面</h3>
@@ -2985,7 +2986,7 @@ artifacts (collected by the worker after you finish): {{expected_output.artifact
   <p>審核請求與任務失敗可透過 webhook 通知（hub.json 的 <code>webhooks</code>），格式支援 <code>ntfy</code>、<code>teams</code>、<code>slack</code>、<code>generic</code>（原始 envelope）。通知內只放標題、節點、Dashboard 連結，不放參數內容。</p>
 </section>
 
-<!-- 16-flows.html -->
+<!-- design/16-flows.html -->
 <section id="flows">
   <h2><span class="no">16</span>流程範例</h2>
   <h3>F1 互動派工並等待結果（Mac 開發機 → Windows 編譯機）</h3>
@@ -3064,7 +3065,7 @@ artifacts (collected by the worker after you finish): {{expected_output.artifact
   </ol>
 </section>
 
-<!-- 17-logging.html -->
+<!-- design/17-logging.html -->
 <section id="logging">
   <h2><span class="no">17</span>Log 與除錯</h2>
   <h3>Log 格式（所有元件、所有平台相同，JSONL，UTF-8 無 BOM）</h3>
@@ -3113,7 +3114,7 @@ artifacts (collected by the worker after you finish): {{expected_output.artifact
   </table></div>
 </section>
 
-<!-- 18-security.html -->
+<!-- design/18-security.html -->
 <section id="security">
   <h2><span class="no">18</span>安全</h2>
   <div class="tablewrap"><table>
@@ -3131,7 +3132,7 @@ artifacts (collected by the worker after you finish): {{expected_output.artifact
   </table></div>
 </section>
 
-<!-- 19-deploy.html -->
+<!-- design/19-deploy.html -->
 <section id="deploy">
   <h2><span class="no">19</span>部署</h2>
   <h3>發行檔結構</h3>
@@ -3698,7 +3699,7 @@ exec node $NODE_ARGS "$APP_DIR/bin/worker.js" --config "$CONFIG"</code></pre></d
   </table></div>
 </section>
 
-<!-- 20-database.html -->
+<!-- design/20-database.html -->
 <section id="database">
   <h2><span class="no">20</span>資料庫</h2>
   <p>SQLite，WAL 模式，使用 Node 內建 <code>node:sqlite</code>，不需要編譯原生模組，Node 版本變動也不會有 ABI 不相容的問題。DDL 可重複執行，已在 Node 22.23 實測建立成功。資料檔在 <code>/var/lib/aipager/aipager.db</code>，每日以 <code>VACUUM INTO</code> 備份到 <code>backup/</code>，保留 14 份。</p>
@@ -3945,7 +3946,7 @@ INSERT OR IGNORE INTO schema_version(version, applied_at) VALUES (1, strftime('%
   </details>
 </section>
 
-<!-- 21-tests.html -->
+<!-- design/21-tests.html -->
 <section id="tests">
   <h2><span class="no">21</span>驗證計畫</h2>
   <p>本章由 <code>spec/tests/test-plan.json</code> 自動產生，那份檔案是測試項目與執行紀錄的唯一來源。執行任何一項後，請在該檔更新 <code>status</code> 與 <code>last_run</code>，再執行 <code>npm run check</code> 重新產生文件，不要直接改本章。</p>
@@ -4915,7 +4916,7 @@ INSERT OR IGNORE INTO schema_version(version, applied_at) VALUES (1, strftime('%
   </details>
 </section>
 
-<!-- 22-roadmap.html -->
+<!-- design/22-roadmap.html -->
 <section id="roadmap">
   <h2><span class="no">22</span>開發階段</h2>
   <p>各階段的內容與完成條件由 <code>spec/tests/test-plan.json</code> 產生：每個手動測試標記所屬階段，該階段的測試全部通過才算完成。</p>
@@ -4928,7 +4929,7 @@ INSERT OR IGNORE INTO schema_version(version, applied_at) VALUES (1, strftime('%
   </table></div>
 </section>
 
-<!-- 23-decisions.html -->
+<!-- design/23-decisions.html -->
 <section id="decisions">
   <h2><span class="no">23</span>設計決策紀錄</h2>
   <p>每項決策寫明「為什麼」，接手的人要推翻時知道原本考量了什麼。</p>
@@ -4965,7 +4966,7 @@ INSERT OR IGNORE INTO schema_version(version, applied_at) VALUES (1, strftime('%
   </table></div>
 </section>
 
-<!-- 24-questions.html -->
+<!-- design/24-questions.html -->
 <section id="questions">
   <h2><span class="no">24</span>待確認事項</h2>
   <h3>已確認</h3>
@@ -4990,7 +4991,7 @@ INSERT OR IGNORE INTO schema_version(version, applied_at) VALUES (1, strftime('%
   </table></div>
 </section>
 
-<!-- 25-files.html -->
+<!-- design/25-files.html -->
 <section id="files">
   <h2><span class="no">25</span>規格檔與變更紀錄</h2>
   <p>本文件的程式碼區塊都是從下列檔案直接嵌入；章節編號、目錄、交叉引用、驗證計畫與開發階段表由建置程式自動產生。修改請改原始檔後執行 <code>npm run check</code>，不要直接改產出的 HTML。</p>
@@ -4998,10 +4999,12 @@ INSERT OR IGNORE INTO schema_version(version, applied_at) VALUES (1, strftime('%
   <h3>文件原始檔</h3>
   <div class="tablewrap"><table>
     <tr><th>檔案</th><th>內容</th></tr>
-    <tr><td><code>docs/src/layout.html</code></td><td>頁面外框：樣式、目錄、腳本</td></tr>
-    <tr><td><code>docs/src/header.html</code></td><td>頁首</td></tr>
-    <tr><td><code>docs/src/sections/NN-&lt;id&gt;.html</code></td><td>一章一個檔案，依檔名排序決定章節編號。開頭固定為 <code>&lt;section id data-title data-group&gt;</code>；交叉引用寫 <code>&lt;a data-ref="id"&gt;&lt;/a&gt;</code>，不要手寫編號；測試表以 <code>&lt;!--TESTPLAN:…--&gt;</code> 佔位</td></tr>
-    <tr><td><code>docs/aipager-design.html</code></td><td>產出：可直接用瀏覽器開啟的完整 HTML</td></tr>
+    <tr><td><code>docs/src/layout.html</code></td><td>兩份文件共用的頁面外框：樣式、目錄、腳本</td></tr>
+    <tr><td><code>docs/src/design/header.html</code></td><td>本文件的頁首</td></tr>
+    <tr><td><code>docs/src/design/sections/NN-&lt;id&gt;.html</code></td><td>一章一個檔案，依檔名排序決定章節編號。開頭固定為 <code>&lt;section id data-title data-group&gt;</code>；交叉引用寫 <code>&lt;a data-ref="id"&gt;&lt;/a&gt;</code>，不要手寫編號；測試表以 <code>&lt;!--TESTPLAN:…--&gt;</code> 佔位</td></tr>
+    <tr><td><code>docs/src/rollout/</code></td><td>《AIPager 上線計畫》的原始檔，結構同上；可用 <code>&lt;!--TESTPLAN:list:T01,A06--&gt;</code> 列出指定測試的狀態</td></tr>
+    <tr><td><code>docs/aipager-design.html</code></td><td>產出：本設計規格，可直接用瀏覽器開啟</td></tr>
+    <tr><td><code>docs/aipager-rollout.html</code></td><td>產出：上線計畫（各階段步驟、驗收、回報方式、待辦與待決定事項）</td></tr>
   </table></div>
 
   <h3>規格檔</h3>

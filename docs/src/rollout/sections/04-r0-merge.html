@@ -1,0 +1,15 @@
+<section id="r0-merge" data-title="R0 合併 PR" data-group="上線步驟">
+  <p>目前 PR #2（實作）疊在 PR #1（規格）上。合併順序與方式如下。</p>
+  <ol class="steps">
+    <li><div>開啟 <code>https://github.com/Hercules-Chen/aipager/pull/1</code>，按 <b>Merge pull request</b></div></li>
+    <li><div>合併後在同一頁按 <b>Delete branch</b> 刪除 <code>claude/relay-design-spec</code>。GitHub 會自動把 PR #2 的目標改成 <code>main</code>（若沒有自動改，在 PR #2 頁面標題旁的 <b>Edit</b> 把 base 改成 <code>main</code>）</div></li>
+    <li><div>確認 PR #2 的 Files changed 只剩實作與 v0.5 文件的差異，按 <b>Merge pull request</b>，再刪除 <code>claude/aipager-impl</code></div></li>
+    <li><div>在任一台有 Node 22 的機器確認 main 正常：</div></li>
+  </ol>
+  <div class="codebox"><div class="label"><span>任一台 Linux / macOS（Windows 用 PowerShell 同樣指令）</span><button type="button" data-copy>複製</button></div><pre><code>git clone https://github.com/Hercules-Chen/aipager.git
+cd aipager
+npm ci
+npm test</code></pre></div>
+  <p><b>預期：</b>看到 <code>ALL CHECKS PASSED</code>、<code>BUILD + AUDIT PASSED</code>、<code># pass 21</code>（Windows 上部分 POSIX 測試會略過，屬預期）。</p>
+  <div class="note"><b>如果合併後 npm test 失敗：</b>不要開始 R1，把完整輸出貼回，先修正。</div>
+</section>

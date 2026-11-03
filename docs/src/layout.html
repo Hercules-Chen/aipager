@@ -1,4 +1,4 @@
-<title>AIPager 設計規格</title>
+<title>{{TITLE}}</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -94,6 +94,7 @@ td.wrap { min-width: 18em; }
 table.matrix td:first-child { font-weight: 500; white-space: nowrap; }
 table.matrix td code { white-space: normal; }
 .num { font-variant-numeric: tabular-nums; font-family: var(--font-mono); }
+.muted-note { color: var(--muted); font-size: 0.75rem; }
 .note { border: 1px solid var(--line); border-left: 4px solid var(--accent); background: var(--surface); border-radius: 6px; padding: 10px 14px; margin: 12px 0 16px; max-width: 80ch; }
 .note.warn { border-left-color: var(--amber); background: var(--amber-soft); }
 .note b:first-child { font-family: var(--font-head); letter-spacing: 0.02em; }
@@ -160,7 +161,7 @@ details > .inner .codebox { margin-top: 10px; }
     <svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><circle cx="4" cy="11" r="3" fill="var(--accent)"/><circle cx="18" cy="5" r="3" fill="var(--accent)"/><circle cx="18" cy="17" r="3" fill="var(--accent)"/><path d="M6.5 10 L15.5 6 M6.5 12 L15.5 16" stroke="var(--accent)" stroke-width="1.6"/></svg>
     AIPager
   </div>
-  <div class="ver">aipager/1.0 · 設計 {{DOC_VERSION}}</div>
+  <div class="ver">{{NAV_SUBTITLE}}</div>
   <ol>
 {{TOC}}
   </ol>

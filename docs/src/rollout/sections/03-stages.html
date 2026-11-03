@@ -1,0 +1,16 @@
+<section id="stages" data-title="階段總覽" data-group="總覽">
+  <p>依 Q8（第一個實際流程是開發機派編譯給 Windows build-pc）安排順序：先把這條路打通，再加入 Mac 筆電與 Linux。每個階段的詳細步驟在後面各章。</p>
+  <div class="tablewrap"><table>
+    <tr><th>階段</th><th>目標</th><th>前置條件</th><th>完成條件</th><th>你的動手時間（估計）</th></tr>
+    <tr><td><b>R0</b> 合併</td><td>main 上有完整規格與實作</td><td>—</td><td>PR #1、#2 合併；main 上 <code>npm test</code> 通過</td><td>10 分鐘</td></tr>
+    <tr><td><b>R1</b> Hub</td><td>Ubuntu 上 Hub 常駐、可從其他機器連線</td><td>R0、Tailscale</td><td>T01、T22 通過；Dashboard 可登入</td><td>30–60 分鐘</td></tr>
+    <tr><td><b>R2</b> Windows build-pc</td><td>Windows Worker 常駐並能執行任務</td><td>R1</td><td>T02、T03、T11、T13、T16 通過</td><td>60–90 分鐘</td></tr>
+    <tr><td><b>R3</b> 開發機互動</td><td>在 Claude 對話中用自然語言派工給 build-pc，完成 Q8 的實際編譯流程</td><td>R2、Q4（Git server）</td><td>T06–T09 通過；實際編譯任務成功</td><td>30–60 分鐘</td></tr>
+    <tr><td><b>R4</b> Mac 筆電</td><td>筆電加入並驗證睡眠相關行為</td><td>R3</td><td>T04、T12、T27–T30、T34 通過</td><td>60 分鐘（含等待闔蓋時間）</td></tr>
+    <tr><td><b>R5</b> Linux 與跨平台</td><td>Linux Worker 加入；跨平台流水線</td><td>R3</td><td>T05、T19、T20、T26 通過</td><td>30–60 分鐘</td></tr>
+    <tr><td><b>R6</b> 強化與演練</td><td>Hub 重啟、備份還原、退役重灌、Ubuntu 26.04</td><td>R2 以後隨時</td><td>T17、T18、T22、T31–T33 通過</td><td>60 分鐘</td></tr>
+    <tr><td><b>R7</b> 日常使用</td><td>開始實際工作；依使用回饋排優先順序處理待辦</td><td>R3</td><td>連續一週無人工轉貼 prompt</td><td>—</td></tr>
+  </table></div>
+  <div class="note"><b>R4、R5、R6 可以平行：</b>R3 完成後，三者互不相依，可依機器手邊方便的順序進行。估計時間只算你的動手時間，不含下載安裝與等待。</div>
+  <p>測試項目的完整定義（步驟、預期、觀察點）見設計規格的 <a href="aipager-design.html#tests">驗證計畫</a>。</p>
+</section>

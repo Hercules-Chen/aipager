@@ -1,0 +1,29 @@
+<section id="status" data-title="目的與現況" data-group="總覽">
+  <h3>這份文件的用途</h3>
+  <ul>
+    <li>把「接下來怎麼把 AIPager 跑在真實機器上」寫成可以照著做的步驟，任何人接手都看得懂、不會做歪</li>
+    <li>每個階段列出要跑的測試項目；測試項目與目前狀態直接取自 <code>spec/tests/test-plan.json</code>，那份檔案更新後本文件重新建置就會反映</li>
+    <li>寫清楚哪些事只能由你在實機上做、哪些事由 Claude 做，以及結果怎麼回報</li>
+  </ul>
+
+  <h3>現況</h3>
+  <div class="note"><b>測試進度：</b><!--TESTPLAN:summary--></div>
+  <div class="tablewrap"><table>
+    <tr><th>項目</th><th>狀態</th><th>說明</th></tr>
+    <tr><td>設計規格</td><td><span class="pill ok">完成</span></td><td>v0.5，PR #1（規格）與 PR #2（實作）尚未合併</td></tr>
+    <tr><td>Hub、Worker、MCP、aipagerctl、aipager-hint、Dashboard</td><td><span class="pill ok">已實作</span></td><td>自動化測試 A01–A12 全部通過（Ubuntu 24.04 容器、單機）</td></tr>
+    <tr><td>真實 Claude Code 行為</td><td><span class="pill ok">已驗證</span></td><td>2.1.317：<code>--permission-prompt-tool</code>、<code>--setting-sources ''</code>、MCP 回報、審核拒絕說明原文送達</td></tr>
+    <tr><td>Ubuntu 24.04 Hub 安裝腳本</td><td><span class="pill ok">已實跑</span></td><td>A06 在容器中實際建立帳號、目錄、權限與 systemd unit</td></tr>
+    <tr><td>Windows 實機</td><td><span class="pill">未執行</span></td><td>taskkill、claude.exe、工作排程器、<code>.ps1</code> 腳本都還沒在 Windows 上跑過</td></tr>
+    <tr><td>macOS 筆電實機</td><td><span class="pill">未執行</span></td><td>launchd、真實闔蓋、caffeinate 未驗證</td></tr>
+    <tr><td>多台機器經 Tailscale</td><td><span class="pill">未執行</span></td><td>目前所有測試都是單機</td></tr>
+    <tr><td>Ubuntu 26.04</td><td><span class="pill wait">部分</span></td><td>24.04 已實跑；26.04 的 Rust coreutils 與 sudo-rs 未驗證</td></tr>
+  </table></div>
+
+  <h3>三條原則</h3>
+  <ol>
+    <li><b>一次只接一台機器。</b>每台機器的驗收項目全部通過（或已記錄原因）才接下一台，出問題時範圍小、好排查</li>
+    <li><b>所有結果都要記錄。</b>每跑完一個測試項目，結果寫回 <code>spec/tests/test-plan.json</code>（日期、環境、結果、說明），文件與測試清單永遠一致</li>
+    <li><b>先實測再下結論。</b>Windows 與 macOS 的程式路徑都還沒在真機跑過，任何「應該可以」都要以實際輸出確認；發現問題先修程式並補自動化測試，再繼續</li>
+  </ol>
+</section>

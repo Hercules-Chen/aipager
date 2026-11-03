@@ -10,6 +10,7 @@
 目前狀態：**v0.5，P0 功能已實作並通過自動化測試；尚未在多台實機（Windows、macOS、經 Tailscale）驗證。** 驗證進度見 [`spec/tests/test-plan.json`](spec/tests/test-plan.json)。
 
 完整設計：用瀏覽器開啟 [`docs/aipager-design.html`](docs/aipager-design.html)。
+上線計畫（各階段怎麼裝、怎麼驗收、怎麼回報、待辦與待決定事項）：[`docs/aipager-rollout.html`](docs/aipager-rollout.html)。
 
 ## 安裝
 
@@ -127,11 +128,11 @@ sudo AIPAGER_TEST_ALLOW_SYSTEM_CHANGES=1 bash tools/tests/linux-install-hub.test
 | `lib/` | `common/`、`hub/`、`worker/`、`mcp/`、`ctl/` |
 | `ui/` | Dashboard |
 | `spec/` | JSON Schema、參考實作、SQL、MCP 工具定義、prompt、設定範本、各 OS 服務腳本、測試清單（執行時直接讀取，與規格同一份） |
-| `docs/` | 設計文件原始檔（`docs/src/`）與產出的 HTML |
+| `docs/` | 文件原始檔（`docs/src/design/`、`docs/src/rollout/`，共用 `docs/src/layout.html`）與產出的 HTML |
 | `tests/`、`tools/` | 測試與驗證、文件建置工具 |
 
 ## 修改規則
 
-- 改文件請改 `docs/src/` 下的原始檔，再執行 `npm run check`，不要直接改產出的 HTML
+- 改文件請改 `docs/src/design/` 或 `docs/src/rollout/` 下的原始檔，再執行 `npm run check`，不要直接改產出的 HTML
 - 測試結果記錄在 `spec/tests/test-plan.json`，文件的驗證計畫由它產生
 - 編碼：一律 UTF-8 無 BOM、LF；例外是 `.bat`（純 ASCII、CRLF）與 `.ps1`（UTF-8 BOM、CRLF），由 `.gitattributes` 與建置稽核把關

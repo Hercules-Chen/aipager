@@ -4,10 +4,12 @@
   <h3>文件原始檔</h3>
   <div class="tablewrap"><table>
     <tr><th>檔案</th><th>內容</th></tr>
-    <tr><td><code>docs/src/layout.html</code></td><td>頁面外框：樣式、目錄、腳本</td></tr>
-    <tr><td><code>docs/src/header.html</code></td><td>頁首</td></tr>
-    <tr><td><code>docs/src/sections/NN-&lt;id&gt;.html</code></td><td>一章一個檔案，依檔名排序決定章節編號。開頭固定為 <code>&lt;section id data-title data-group&gt;</code>；交叉引用寫 <code>&lt;a data-ref="id"&gt;&lt;/a&gt;</code>，不要手寫編號；測試表以 <code>&lt;!--TESTPLAN:…--&gt;</code> 佔位</td></tr>
-    <tr><td><code>docs/aipager-design.html</code></td><td>產出：可直接用瀏覽器開啟的完整 HTML</td></tr>
+    <tr><td><code>docs/src/layout.html</code></td><td>兩份文件共用的頁面外框：樣式、目錄、腳本</td></tr>
+    <tr><td><code>docs/src/design/header.html</code></td><td>本文件的頁首</td></tr>
+    <tr><td><code>docs/src/design/sections/NN-&lt;id&gt;.html</code></td><td>一章一個檔案，依檔名排序決定章節編號。開頭固定為 <code>&lt;section id data-title data-group&gt;</code>；交叉引用寫 <code>&lt;a data-ref="id"&gt;&lt;/a&gt;</code>，不要手寫編號；測試表以 <code>&lt;!--TESTPLAN:…--&gt;</code> 佔位</td></tr>
+    <tr><td><code>docs/src/rollout/</code></td><td>《AIPager 上線計畫》的原始檔，結構同上；可用 <code>&lt;!--TESTPLAN:list:T01,A06--&gt;</code> 列出指定測試的狀態</td></tr>
+    <tr><td><code>docs/aipager-design.html</code></td><td>產出：本設計規格，可直接用瀏覽器開啟</td></tr>
+    <tr><td><code>docs/aipager-rollout.html</code></td><td>產出：上線計畫（各階段步驟、驗收、回報方式、待辦與待決定事項）</td></tr>
   </table></div>
 
   <h3>規格檔</h3>

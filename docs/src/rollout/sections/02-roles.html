@@ -1,0 +1,40 @@
+<section id="roles" data-title="分工與運作方式" data-group="總覽">
+  <h3>誰做什麼</h3>
+  <div class="tablewrap"><table>
+    <tr><th>工作</th><th>你</th><th>Claude</th></tr>
+    <tr><td>在實機安裝、執行指令、闔蓋筆電、重開機</td><td>●</td><td>只能在你接上機器（見下方）後代為執行</td></tr>
+    <tr><td>核准新機器、審核工具呼叫、保管 admin token</td><td>●</td><td></td></tr>
+    <tr><td>提供 Git server、帳號、網路等環境資訊（Q4、Q7）</td><td>●</td><td></td></tr>
+    <tr><td>讀你貼回的輸出與診斷檔，找出原因</td><td></td><td>●</td></tr>
+    <tr><td>修程式、補自動化測試、在 Linux 重跑全部測試</td><td></td><td>●</td></tr>
+    <tr><td>更新 test-plan.json、規格與本文件，開分支與 PR</td><td></td><td>●</td></tr>
+    <tr><td>合併 PR</td><td>●</td><td></td></tr>
+  </table></div>
+
+  <h3>兩種進行方式</h3>
+  <div class="grid2">
+    <div class="card">
+      <h4>A. 你操作，貼回結果 <span class="tag">預設</span></h4>
+      <ul>
+        <li>照本文件每一步的指令在該機器執行</li>
+        <li>把指令與完整輸出貼回對話；失敗時另附診斷檔（<a data-ref="reporting"></a>）</li>
+        <li>Claude 判讀、修正、記錄，再給下一步</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h4>B. 把機器接上 Claude 的 session <span class="tag">較快</span></h4>
+      <ul>
+        <li>在該機器開啟 Claude Desktop 的 Remote Control（設定 → Claude Code → Remote Control），或在專案資料夾執行 <code>claude remote-control</code></li>
+        <li>之後 Claude 可以在你核准下直接在那台機器執行指令、讀 Log，省去來回貼輸出</li>
+        <li>闔蓋、重開機、輸入 Windows 密碼等仍需要你本人操作</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3>分支與 PR 規則</h3>
+  <ul>
+    <li>每個上線階段的修正開一個新分支（例如 <code>claude/rollout-r2-windows</code>），一個階段一個 PR，PR 說明附上該階段的測試結果</li>
+    <li>不直接改 main；不使用 git worktree</li>
+    <li>每個 PR 合併前 <code>npm test</code> 必須全部通過；改到 Worker 執行 claude 的部分時，另跑 <code>npm run test:real-claude</code></li>
+  </ul>
+</section>

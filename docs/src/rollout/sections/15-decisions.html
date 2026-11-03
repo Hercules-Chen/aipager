@@ -1,0 +1,13 @@
+<section id="decisions" data-title="待決定事項" data-group="規劃">
+  <div class="tablewrap"><table>
+    <tr><th>#</th><th>問題</th><th>影響哪個階段</th><th>建議</th></tr>
+    <tr><td class="num">Q4</td><td>Git server 是哪一套？build-pc 用 SSH key 還是 HTTPS 憑證？</td><td>R3（第一個實際編譯流程）</td><td>SSH，並為 Worker 帳號設定唯讀 deploy key</td></tr>
+    <tr><td class="num">Q7</td><td>審核與失敗通知要送到哪裡？</td><td>R7</td><td>先只看 Dashboard；常用手機的話，ntfy 最簡單</td></tr>
+    <tr><td class="num">N1</td><td>是否啟用 GitHub Actions CI（B01）？私人 repo 會用到 Actions 分鐘數，macOS 環境計費較高</td><td>R2 之前</td><td>啟用；macOS 只在 PR 合併到 main 時跑</td></tr>
+    <tr><td class="num">N2</td><td>Hub 放哪一台？能否在 Tailscale 改名為 aipager-hub？</td><td>R1</td><td>選一台不睡眠的 Ubuntu 機器，改名為 aipager-hub</td></tr>
+    <tr><td class="num">N3</td><td>Windows 安裝位置：<code>C:\Program Files\AIPager</code>（升級要系統管理員）或使用者目錄</td><td>R2</td><td>維持 Program Files（與規格一致，避免一般程序改動程式檔）</td></tr>
+    <tr><td class="num">N4</td><td>Worker 上的 Claude Code 要自動更新，還是統一手動升級？</td><td>R2 起</td><td>手動升級，升級前先跑 <code>npm run test:real-claude</code>。關閉自動更新的實際設定方式要在 R2 實機確認</td></tr>
+    <tr><td class="num">N5</td><td>admin token 由誰保管？是否需要多把（例如每個管理者一把）？</td><td>R1</td><td>每位管理者一把，各自用 <code>admin token</code> 建立，方便個別撤銷</td></tr>
+  </table></div>
+  <p>回覆這些問題後，Claude 會更新本文件與設計規格的待確認事項，並依決定調整後續步驟。</p>
+</section>
