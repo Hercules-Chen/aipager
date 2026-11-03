@@ -11,6 +11,7 @@
 
 完整設計：用瀏覽器開啟 [`docs/aipager-design.html`](docs/aipager-design.html)。
 上線計畫（各階段怎麼裝、怎麼驗收、怎麼回報、待辦與待決定事項）：[`docs/aipager-rollout.html`](docs/aipager-rollout.html)。
+在各台機器上讓 Claude 協助安裝時，它會讀 repo 根目錄的 [`CLAUDE.md`](CLAUDE.md)，並依上線計畫的「各機器工作清單」只做該機器角色的步驟。
 
 ## 安裝
 

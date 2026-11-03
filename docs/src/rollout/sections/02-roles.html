@@ -31,6 +31,15 @@
     </div>
   </div>
 
+  <div class="card">
+    <h4>C. 各機器上的 Claude 自己做 <span class="tag">需要 CLAUDE.md</span></h4>
+    <ul>
+      <li>在該機器 clone 的 repo 目錄開啟 Claude Code，告訴它「這台是 H / D / B / M / L」</li>
+      <li>它會讀 <code>CLAUDE.md</code> 與 <a data-ref="machines"></a>，只做該角色的步驟，遇到需要你的地方會停下來</li>
+      <li>每台的結果依 <a data-ref="reporting"></a> 整理成回報，貼到負責協調的 Claude 對話，或由該機器的 Claude 開分支與 PR</li>
+    </ul>
+  </div>
+
   <h3>分支與 PR 規則</h3>
   <ul>
     <li>每個上線階段的修正開一個新分支（例如 <code>claude/rollout-r2-windows</code>），一個階段一個 PR，PR 說明附上該階段的測試結果</li>
