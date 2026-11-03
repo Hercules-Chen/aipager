@@ -1,0 +1,57 @@
+<section id="r1-hub" data-title="R1 Ubuntu Hub" data-group="上線步驟">
+  <p>目標：一台常駐開機的 Ubuntu 24.04（或 26.04）跑 Hub，其他機器透過 Tailscale 用 <code>http://aipager-hub:7300</code> 連到它。詳細設計見規格的 <a href="aipager-design.html#deploy">部署</a> 章節。</p>
+
+  <h3>1. Tailscale 與機器名稱</h3>
+  <div class="codebox"><div class="label"><span>Hub 機</span><button type="button" data-copy>複製</button></div><pre><code>sudo apt-get update &amp;&amp; sudo apt-get install -y git curl xz-utils
+curl -fsSL https://tailscale.com/install.sh | sh
+sudo tailscale up
+tailscale ip -4</code></pre></div>
+  <p>在 Tailscale 管理頁把這台機器改名為 <code>aipager-hub</code>，其他機器才能用這個名稱連線。若不改名，之後所有指令中的 <code>aipager-hub</code> 都換成實際的 MagicDNS 名稱或 100.x 位址。</p>
+
+  <h3>2. Node.js 22（固定路徑）</h3>
+  <div class="codebox"><div class="label"><span>Hub 機（x64；ARM 主機把 linux-x64 換成 linux-arm64）</span><button type="button" data-copy>複製</button></div><pre><code>curl -fsSLO https://nodejs.org/dist/v22.23.4/node-v22.23.4-linux-x64.tar.xz
+sudo mkdir -p /opt/node-v22
+sudo tar -xJf node-v22.23.4-linux-x64.tar.xz -C /opt/node-v22 --strip-components=1
+/opt/node-v22/bin/node -e "require('node:sqlite'); console.log('sqlite ok')"</code></pre></div>
+  <p><b>預期：</b>最後一行印出 <code>sqlite ok</code>（前面可能有一行 ExperimentalWarning，屬正常）。</p>
+
+  <h3>3. 安裝 AIPager 與 Hub 服務</h3>
+  <div class="codebox"><div class="label"><span>Hub 機</span><button type="button" data-copy>複製</button></div><pre><code>sudo git clone https://github.com/Hercules-Chen/aipager.git /opt/aipager
+cd /opt/aipager &amp;&amp; sudo env PATH=/opt/node-v22/bin:$PATH npm ci --omit=dev
+sudo /opt/aipager/spec/scripts/linux/install-hub.sh --allow-cidr 100.64.0.0/10</code></pre></div>
+  <p>接著編輯設定：</p>
+  <div class="codebox"><div class="label"><span>Hub 機</span><button type="button" data-copy>複製</button></div><pre><code>sudoedit /etc/aipager/hub.json</code></pre></div>
+  <ul>
+    <li><code>listen.host</code>：改成步驟 1 的 <code>tailscale ip -4</code> 結果</li>
+    <li><code>public_base_url</code>：<code>http://aipager-hub:7300</code>（加入碼畫面產生的指令會用它）</li>
+    <li><code>webhooks</code>：改成 <code>[]</code>。依 Q7 決定不推播，只用 Hub 查詢；範本裡的 ntfy 位址只是範例，留著只會產生連線失敗的 Log</li>
+  </ul>
+  <div class="codebox"><div class="label"><span>Hub 機：建立 admin token 並啟動</span><button type="button" data-copy>複製</button></div><pre><code>sudo -u aipager /opt/node-v22/bin/node /opt/aipager/bin/aipagerctl.js admin init --config /etc/aipager/hub.json
+sudo systemctl enable --now aipager-hub
+journalctl -u aipager-hub -n 20 --no-pager</code></pre></div>
+  <p><b>預期：</b><code>admin init</code> 印出一次 <code>apa_...</code>，請立刻存到密碼管理工具；journal 中有 <code>[hub] listening on http://100.x.x.x:7300</code>。</p>
+
+  <h3>4. 在你的電腦設定管理工具與 Dashboard</h3>
+  <p>在你平常用的電腦（之後也會是 R3 的開發機）clone 本 repo 並 <code>npm ci</code>，然後：</p>
+  <div class="codebox"><div class="label"><span>你的電腦（repo 目錄）</span><button type="button" data-copy>複製</button></div><pre><code>curl http://aipager-hub:7300/api/v1/health
+node bin/aipagerctl.js admin save-token apa_貼上剛才的token --hub http://aipager-hub:7300
+node bin/aipagerctl.js admin backup --hub http://aipager-hub:7300</code></pre></div>
+  <p>瀏覽器開 <code>http://aipager-hub:7300/ui/</code>，貼上 admin token 登入，首頁四個區塊都應該是空的。</p>
+  <p>其他管理者（N5）：每人各自建立一把 token，不要共用。以已登入的管理工具執行 <code>node bin/aipagerctl.js admin token --label 管理者名稱</code>，把印出的 token 交給對方，對方再於自己的電腦執行 <code>admin save-token</code>。</p>
+
+  <h3>驗收</h3>
+  <!--TESTPLAN:list:T01,T22,A06-->
+  <ul>
+    <li>T01：除了 curl，也確認回應中的 <code>version</code> 為 <code>0.5.0</code></li>
+    <li>T22 在 R1 只做「備份」：<code>/var/lib/aipager/backup/</code> 出現 <code>aipager-*.db</code>；還原演練放在 <a data-ref="r6-hardening"></a></li>
+  </ul>
+
+  <h3>出問題時</h3>
+  <div class="tablewrap"><table>
+    <tr><th>症狀</th><th>先看</th></tr>
+    <tr><td>journal 一直出現 <code>cannot bind ... yet</code></td><td><code>listen.host</code> 是否等於 <code>tailscale ip -4</code>；Tailscale 是否已連線</td></tr>
+    <tr><td>其他機器 curl 連不上</td><td><code>sudo ufw status</code> 是否有 7300 規則；兩台是否都在同一個 tailnet；MagicDNS 名稱是否正確</td></tr>
+    <tr><td><code>install-hub.sh</code> 在 26.04 失敗</td><td>把完整輸出貼回（這正是 T31 要驗證的）。必要時依 Ubuntu 官方說明暫時切回 GNU coreutils 後再試，並記錄是哪一行失敗</td></tr>
+  </table></div>
+  <p><b>退回：</b><code>sudo systemctl disable --now aipager-hub</code>。資料在 <code>/var/lib/aipager</code>，不會被刪除。</p>
+</section>

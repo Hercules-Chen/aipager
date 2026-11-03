@@ -31,10 +31,10 @@
     <tr><td><span class="method post">POST</span></td><td><code>/tasks</code></td><td>node / task / admin</td><td>建立任務。成功回 201 <code>taskCreated</code>（含 <code>target_status</code>、<code>warnings</code>、<code>alternatives</code>）；冪等重送回 200；目標沒在線且 <code>on_unavailable</code> 為 confirm / reject 時回 409 <code>targetUnavailable</code>，<b>不建立任務</b>。發送者為 pending / disabled 節點回 403 <code>E_NODE_NOT_ACTIVE</code></td></tr>
     <tr><td><span class="method post">POST</span></td><td><code>/tasks/claim?wait=25</code></td><td>node</td><td>Worker 領任務。body <code>{profiles:[…], max:1}</code>。角色、標籤、os、arch 一律以 Hub 紀錄為準。只有 active 節點能領。回 200 <code>{task, lease:{lease_id, expires_at}, task_token, resume_session_id?}</code>；無任務回 204</td></tr>
     <tr><td><span class="method post">POST</span></td><td><code>/tasks/{id}/lease</code></td><td>node</td><td>續約，body <code>{lease_id}</code>。回 <code>{expires_at, cancel_requested}</code>；lease 不符回 409 <code>E_LEASE_LOST</code></td></tr>
-    <tr><td><span class="method post">POST</span></td><td><code>/tasks/{id}/progress</code></td><td>node / task</td><td>task.progress payload，回 202</td></tr>
-    <tr><td><span class="method post">POST</span></td><td><code>/tasks/{id}/result</code></td><td>node（需 lease_id）</td><td>task.result payload，回 200 <code>{state}</code></td></tr>
+    <tr><td><span class="method post">POST</span></td><td><code>/tasks/{id}/progress</code></td><td>node / task</td><td>task.progress payload，回 202。<code>seq</code> 可省略，由 Hub 指定下一號（MCP 的 report_progress 與 Worker 共用同一序列，避免撞號）；帶 seq 且 ≤ 已收到的最大值時視為重送並忽略</td></tr>
+    <tr><td><span class="method post">POST</span></td><td><code>/tasks/{id}/result</code></td><td>node（header <code>X-AIPager-Lease: &lt;lease_id&gt;</code>）</td><td>task.result payload（不含 lease），回 200 <code>{state}</code>；lease 不符回 409 <code>E_LEASE_LOST</code></td></tr>
     <tr><td><span class="method post">POST</span></td><td><code>/tasks/{id}/cancel</code></td><td>發送者 node / admin</td><td><code>{reason}</code>，回 202</td></tr>
-    <tr><td><span class="method">GET</span></td><td><code>/tasks</code></td><td>node / admin</td><td>查詢：<code>state</code>、<code>to_node</code>、<code>thread_id</code>、<code>waiting_for_node</code>（排隊等某台醒來的任務）、<code>limit</code>、<code>cursor</code></td></tr>
+    <tr><td><span class="method">GET</span></td><td><code>/tasks</code></td><td>node / admin</td><td>查詢：<code>state</code>、<code>to_node</code>、<code>thread_id</code>、<code>waiting_for_node</code>（排隊等某台醒來的任務）、<code>stuck=1</code>（卡住的任務，回應每筆附 <code>stuck_reason</code> 與說明，見 <a data-ref="presence"></a>）、<code>limit</code>、<code>cursor</code></td></tr>
     <tr><td><span class="method">GET</span></td><td><code>/tasks/{id}</code></td><td>node / task / admin</td><td>完整內容：envelope、狀態、attempt、結果、目標目前的在線狀態</td></tr>
     <tr><td><span class="method">GET</span></td><td><code>/tasks/{id}/wait?timeout=45</code></td><td>node / admin</td><td>等到終態或逾時，回目前狀態 + 最近 5 筆進度 + 結果</td></tr>
     <tr><td><span class="method">GET</span></td><td><code>/tasks/{id}/events?after_seq=0</code></td><td>node / admin</td><td>進度事件清單</td></tr>
@@ -56,7 +56,7 @@
     <tr><td><span class="method">GET</span></td><td><code>/approvals/{id}/wait?timeout=50</code></td><td>task</td><td><code>{state, decision?, note?, updated_input?}</code></td></tr>
     <tr><td><span class="method">GET</span></td><td><code>/approvals?state=pending</code></td><td>admin</td><td>審核佇列</td></tr>
     <tr><td><span class="method post">POST</span></td><td><code>/approvals/{id}/decision</code></td><td>admin</td><td><code>{decision, note?, updated_input?}</code></td></tr>
-    <tr><td><span class="method post">PUT</span></td><td><code>/blobs/{sha256}</code></td><td>node / task</td><td>上傳原始位元組（≤ 50 MB），Hub 驗證雜湊；已存在回 200</td></tr>
+    <tr><td><span class="method post">PUT</span></td><td><code>/blobs/{sha256}</code></td><td>node / task</td><td>上傳原始位元組（<code>Content-Type: application/octet-stream</code>，≤ 50 MB），Hub 驗證雜湊；可用 header <code>X-AIPager-Mime</code> 記錄類型；已存在回 200</td></tr>
     <tr><td><span class="method">GET</span></td><td><code>/blobs/{sha256}</code></td><td>node / task / admin</td><td>下載；<code>HEAD</code> 可查是否存在</td></tr>
     <tr><td><span class="method">GET</span></td><td><code>/threads/{thread_id}</code></td><td>node / admin</td><td>該 thread 全部封包，依時間排序</td></tr>
     <tr><td><span class="method">GET</span></td><td><code>/trace/{trace_id}</code></td><td>admin</td><td>Hub 端所有相關事件</td></tr>

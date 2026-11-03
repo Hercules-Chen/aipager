@@ -1,0 +1,36 @@
+<section id="r3-dev" data-title="R3 開發機互動與第一個實際流程" data-group="上線步驟">
+  <p>目標：在你的 Claude Code 對話中直接說「叫 build-pc 編譯」，完成 Q8 的實際流程。依 Q4，build-pc 以 SSH 唯讀 deploy key 存取 Git server；開始前請提供 Git server 的種類與 repo 網址。</p>
+
+  <h3>1. 註冊 MCP 與未讀提示</h3>
+  <div class="codebox"><div class="label"><span>你的電腦：Windows</span><button type="button" data-copy>複製</button></div><pre><code>claude mcp add --scope user --env AIPAGER_AGENT=main aipager -- node "C:\你的repo路徑\bin\aipager-mcp.js" --mode interactive</code></pre></div>
+  <div class="codebox"><div class="label"><span>你的電腦：macOS / Linux</span><button type="button" data-copy>複製</button></div><pre><code>claude mcp add --scope user --env AIPAGER_AGENT=main aipager -- node /你的repo路徑/bin/aipager-mcp.js --mode interactive</code></pre></div>
+  <p>未讀提示：把 repo 中 <code>spec/claude/settings.hooks.windows.json</code>（或 <code>.posix.json</code>）的 <code>hooks</code> 內容合併進 <code>~/.claude/settings.json</code>，並把其中的路徑改成你的 repo 路徑。若原本已有 <code>hooks</code>，把 <code>SessionStart</code> 與 <code>UserPromptSubmit</code> 陣列各自加一項，不要覆蓋原有內容。</p>
+
+  <h3>2. 互動驗收</h3>
+  <!--TESTPLAN:list:T06,T07,T08-->
+  <ol class="steps">
+    <li><div>開 Claude Code，輸入 <code>/mcp</code>：aipager 為 connected</div></li>
+    <li><div>輸入「列出 aipager 的節點」：看到 dev-pc 與 build-pc、在線狀態與 profile</div></li>
+    <li><div>輸入「叫 build-pc 用 echo profile 執行 hostname，等結果回來告訴我」：Claude 自動派工並回報</div></li>
+    <li><div>在 <b>build-pc</b> 執行 <code>node bin\aipagerctl.js msg --to main@dev-pc --text "測試訊息 中文 ✓"</code>（不能從你自己的電腦送給自己，Hub 會回 <code>E_SELF_TARGET</code>），回到 Claude 隨便輸入一句：回應前出現 <code>[AIPager] 1 則未讀</code></div></li>
+  </ol>
+
+  <h3>3. 第一個實際流程：開發機派編譯給 build-pc（Q8）</h3>
+  <ol class="steps">
+    <li><div>在 build-pc 以 Worker 帳號建立專屬 clone（不要用你平常開發的那份），並確認能 fetch：<code>git clone 你的repo網址 D:\AIPagerWork\專案名</code>。SSH 方式需要為這個 Windows 帳號設定 key（建議唯讀 deploy key）</div></li>
+    <li><div>在 build-pc 的 profiles.json 加入 <code>build</code> profile：以 repo 中 <code>spec/config/profiles.windows.json</code> 的 build 為範本，改 <code>workdir</code>、<code>repo.allow_remote</code>，以及 <code>allowed_tools</code> 中實際的編譯指令（例如 <code>Bash(dotnet build:*)</code> 或你的 build.ps1）</div></li>
+    <li><div>在你的電腦 Claude 對話中：「把目前分支推上 Git，叫 build-pc 用 build profile 編譯這個 commit，等結果回來告訴我」</div></li>
+    <li><div>預期：Claude 先推送、取得 commit，再以 <code>repo={url, ref, commit}</code> 派工；build-pc 在專屬 clone 上 checkout 該 commit 後編譯；結果與錯誤摘要回到對話；Dashboard 任務頁可下載 <code>_stream.jsonl.gz</code></div></li>
+  </ol>
+
+  <h3>4. Windows 上的人工審核</h3>
+  <!--TESTPLAN:list:T09,T10-->
+  <p>在 Claude 對話中要求「叫 build-pc 在工作目錄建立 aipager-test.txt 後執行 git push」。build profile 沒有允許這些動作，Dashboard「等待人工審核」會出現項目，填說明後按拒絕。預期 Claude 收到你的說明原文，沒有推送，並在結果中說明。</p>
+
+  <h3>出問題時</h3>
+  <ul>
+    <li><code>/mcp</code> 顯示 failed：在終端機直接執行 <code>node bin/aipager-mcp.js --mode interactive</code>，若立即結束，看 <code>logs</code> 目錄的 <code>mcp-*.jsonl</code></li>
+    <li>任務失敗 <code>E_REPO_NOT_ALLOWED</code>：profile 的 <code>allow_remote</code> 要與 <code>git remote get-url origin</code> 完全相同</li>
+    <li>任務失敗 <code>E_WORKDIR_DIRTY</code>：專屬 clone 有未提交變更；Worker 不會自動清除，請手動處理</li>
+  </ul>
+</section>

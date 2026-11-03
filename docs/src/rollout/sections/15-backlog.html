@@ -1,0 +1,20 @@
+<section id="backlog" data-title="待辦與技術債" data-group="規劃">
+  <p>以下是規格中寫了、但目前實作不完整或尚未驗證的項目，照實列出，避免接手的人以為已經完成。優先順序依「會不會擋住上線」排列。</p>
+  <div class="tablewrap"><table>
+    <tr><th>#</th><th>項目</th><th>優先</th><th>建議時機</th><th>說明</th></tr>
+    <tr><td class="num">B01</td><td>GitHub Actions CI（Ubuntu、Windows、macOS）</td><td>不做</td><td>—</td><td>依 N1 決定不做：Windows 與 macOS 的問題在 R2、R4 實機驗證時處理。保留此列，避免之後的人以為漏做；若日後改變決定，做法是在三個作業系統跑 <code>npm run test:node</code>，Windows 另以 pwsh 解析 <code>.ps1</code></td></tr>
+    <tr><td class="num">B02</td><td>aipagerctl 與 MCP 送出含 <code>then</code> 的任務</td><td>高</td><td>R5 之前</td><td>目前 <code>send_task</code> 與 <code>aipagerctl send</code> 都不支援 <code>then</code>，T20 無法從工具執行。建議加 <code>aipagerctl send --payload-file</code> 與 MCP 參數</td></tr>
+    <tr><td class="num">B03</td><td>Log 依大小輪替</td><td>中</td><td>R7</td><td>規格寫單檔 50 MB；目前只按日分檔、保留 30 天</td></tr>
+    <tr><td class="num">B04</td><td>保存期限與備份排程</td><td>中</td><td>R7</td><td>目前只清理 events 與 task_events；tasks、messages、blobs 未依 retention 清理；備份是 Hub 啟動後每 24 小時一次，未依 <code>daily_at_utc</code></td></tr>
+    <tr><td class="num">B05</td><td>Dashboard 的 Thread 與 Trace 頁</td><td>中</td><td>R7</td><td>API 與 <code>aipagerctl trace</code> 已有，畫面未做</td></tr>
+    <tr><td class="num">B06</td><td>Dashboard「修改參數後核准」</td><td>中</td><td>R7</td><td>API 已支援 <code>updated_input</code>，畫面只有允許與拒絕</td></tr>
+    <tr><td class="num">B07</td><td>主動推播（ntfy 實測、Teams 與 Slack 格式，或 Dashboard 瀏覽器通知）</td><td>延後</td><td>需要時再排</td><td>依 Q7 先只用 Hub 查詢。若常發生「任務卡在等審核卻沒人知道」，再從這裡挑一種做。目前程式只有 ntfy 與 generic，且尚未實測</td></tr>
+    <tr><td class="num">B08</td><td>MCP <code>send_message</code> 附件大小</td><td>低</td><td>隨時</td><td>目前填 0；<code>send_task</code> 已正確查詢大小</td></tr>
+    <tr><td class="num">B09</td><td>aipagerctl 撤銷 token 指令</td><td>中</td><td>R7</td><td>目前只能用 API <code>DELETE /admin/tokens/{id}</code></td></tr>
+    <tr><td class="num">B10</td><td>呈現 Claude 用量上限</td><td>中</td><td>R7</td><td>Worker 目前略過 <code>rate_limit_event</code>；用量達上限時只看得到任務失敗</td></tr>
+    <tr><td class="num">B11</td><td>resume_thread 以真實 Claude 驗證</td><td>低</td><td>R3 之後</td><td>接續同一個 Claude session 的流程只有 Hub 端測試</td></tr>
+    <tr><td class="num">B12</td><td>E_BUDGET、建立任務速率限制的自動化測試</td><td>低</td><td>隨時</td><td>程式已有，尚無測試</td></tr>
+    <tr><td class="num">B13</td><td>節點層級的 claude 環境變數</td><td>低</td><td>R7</td><td>目前只能在每個 profile 的 <code>env</code> 設定（例如 N4 的 <code>DISABLE_AUTOUPDATER</code>）；建議在 node.json 加一個所有 profile 共用的設定</td></tr>
+  </table></div>
+  <p>B02 由 Claude 在 R5 之前完成並開 PR；其餘在 R7 依實際使用的痛點排序。每完成一項就從本表移除，並在設計規格的變更紀錄記一筆。</p>
+</section>

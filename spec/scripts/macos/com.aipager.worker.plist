@@ -15,7 +15,7 @@
   <key>ProgramArguments</key>
   <array>
     <string>/bin/bash</string>
-    <string>/opt/aipager/scripts/posix/start-worker.sh</string>
+    <string>/opt/aipager/spec/scripts/posix/start-worker.sh</string>
   </array>
   <key>EnvironmentVariables</key>
   <dict>

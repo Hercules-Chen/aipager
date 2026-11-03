@@ -1,0 +1,40 @@
+<section id="r4-mac" data-title="R4 Mac 筆電" data-group="上線步驟">
+  <p>目標：Mac 筆電加入，並實測睡眠相關行為（Q10）：闔蓋時派工會先詢問、排隊的任務在開蓋後自動開始、執行中闔蓋在保留時間內會續跑。睡眠判斷的規則見規格的 <a href="aipager-design.html#presence">在線狀態與睡眠</a>。</p>
+
+  <h3>1. 安裝與加入</h3>
+  <div class="codebox"><div class="label"><span>Mac：終端機</span><button type="button" data-copy>複製</button></div><pre><code>xcode-select --install
+curl https://get.volta.sh | bash
+# 重開終端機
+volta install node@22
+curl -fsSL https://claude.ai/install.sh | bash
+claude --version
+sudo mkdir -p /opt/aipager &amp;&amp; sudo chown "$USER" /opt/aipager
+git clone https://github.com/Hercules-Chen/aipager.git /opt/aipager
+cd /opt/aipager &amp;&amp; npm ci --omit=dev</code></pre></div>
+  <ul>
+    <li>Tailscale 從 App Store 或官網安裝並登入同一個 tailnet</li>
+    <li>執行一次 <code>claude</code> 並用 Max 帳號登入</li>
+  </ul>
+  <div class="codebox"><div class="label"><span>你的電腦建立加入碼，Mac 加入</span><button type="button" data-copy>複製</button></div><pre><code># 你的電腦
+node bin/aipagerctl.js enroll create --name "我的 MacBook" --power laptop --role tester --hub http://aipager-hub:7300
+# Mac
+cd /opt/aipager
+node bin/aipagerctl.js join --hub http://aipager-hub:7300 --code ape_加入碼 --node-id macbook-hc --power laptop
+node bin/aipagerctl.js doctor
+node bin/aipagerctl.js service install</code></pre></div>
+  <p>到 Dashboard 核准 macbook-hc。<code>service install</code> 預設使用 LaunchAgent（你登入時才執行），筆電平常都在登入狀態，先用這個就好。需要登出也能執行時，再改 LaunchDaemon 並搭配 <code>claude setup-token</code>（T16）。</p>
+  <p>在 <code>~/Library/Application Support/AIPager/node/profiles.json</code> 加入與 Windows 相同用途的 <code>longrun</code>，<code>allowed_tools</code> 改為 <code>["Bash(sleep:*)"]</code>，<code>workdir</code> 改為 <code>/Users/你的帳號/Library/Application Support/AIPager/worker/sandbox</code>。並依 N4 關閉 Claude Code 自動更新（見 <a data-ref="operations"></a>）。</p>
+
+  <h3>2. 驗收</h3>
+  <!--TESTPLAN:list:T04,T12,T27,T28,T29,T30,T34-->
+  <ol class="steps">
+    <li><div><b>T04：</b>你的電腦 <code>node bin/aipagerctl.js send --to worker@macbook-hc --profile echo --title 冒煙 --text "執行 sw_vers 並回報" --wait 180</code></div></li>
+    <li><div><b>T12：</b>送 <code>--profile longrun --text "用 Bash 執行 sleep 300"</code>，10 秒後 <code>cancel</code>；在 Mac 執行 <code>pgrep -lf claude</code> 應沒有屬於該任務的程序</div></li>
+    <li><div><b>T27：</b>闔上 Mac 至少 2 分鐘。在你的電腦 Claude 對話中說「叫 macbook-hc 用 echo profile 回報 sw_vers」：Claude 應告訴你它已幾分鐘沒有回應、可能睡著，並問你要排隊、改派或取消</div></li>
+    <li><div><b>T34：</b>同時開 Dashboard 首頁：「睡著或離線的機器」列出 macbook-hc 與沉默時間</div></li>
+    <li><div><b>T28：</b>回答「排隊」。10 分鐘後打開 Mac：1 分鐘內任務被領走；你在 Claude 下一次輸入時出現「macbook-hc 已開始執行…（排隊 N 分鐘）」</div></li>
+    <li><div><b>T29：</b>送 <code>--profile longrun --text "用 Bash 執行 sleep 240"</code>，開始執行後闔蓋 10 分鐘再打開：任務繼續並完成；期間你的電腦（發派方）收到「執行中的機器睡著了」通知，可用 <code>aipagerctl inbox</code> 查看，Claude 下次輸入時也會提示</div></li>
+    <li><div><b>T30：</b>同上但加 <code>--timeout 300s</code>：雖然牆上時間超過 300 秒，仍應 succeeded（只算醒著的時間）</div></li>
+  </ol>
+  <div class="note"><b>Q10 的實際設定：</b>跑完 T29 後，依你闔蓋的習慣在 Dashboard 的 macbook-hc 節點頁調整「執行中睡著保留多久」。例如常常一闔就是一整晚，可以設成 43200（12 小時），代價是任務真的卡住時要更久才會被判失敗。</div>
+</section>

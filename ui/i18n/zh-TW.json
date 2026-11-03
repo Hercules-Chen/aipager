@@ -1,0 +1,19 @@
+{
+  "nav.home": "首頁", "nav.nodes": "節點", "nav.tasks": "任務", "nav.approvals": "審核", "nav.enroll": "新增機器",
+  "logout": "登出", "login.title": "登入 AIPager Dashboard", "login.hint": "貼上 admin token（apa_ 開頭）。只存在這個分頁，關閉分頁即清除。", "login.button": "登入",
+  "home.asleep": "睡著或離線的機器", "home.stuck": "卡住的任務", "home.pendingNodes": "待核准的機器", "home.approvals": "等待人工審核",
+  "home.noneAsleep": "所有機器都在線。", "home.noneStuck": "沒有卡住的任務。", "home.nonePending": "沒有待核准的機器。", "home.noneApprovals": "沒有待審核項目。",
+  "col.node": "節點", "col.name": "名稱", "col.presence": "在線", "col.silent": "沉默", "col.power": "類型", "col.state": "狀態", "col.roles": "角色", "col.labels": "標籤",
+  "col.os": "OS", "col.profiles": "profiles", "col.running": "執行中", "col.waiting": "排隊等它", "col.lastWake": "上次醒來", "col.task": "任務", "col.title": "標題",
+  "col.from": "來源", "col.to": "目的", "col.created": "建立", "col.reason": "原因",
+  "power.server": "伺服器", "power.desktop": "桌機", "power.laptop": "筆電",
+  "btn.approve": "核准", "btn.allow": "允許", "btn.deny": "拒絕", "btn.save": "儲存", "btn.cancelTask": "取消任務", "btn.drain": "暫停接新任務", "btn.disable": "停用",
+  "btn.enable": "啟用", "btn.retire": "退役", "btn.rollback": "還原到這一版", "btn.create": "建立加入碼", "btn.revoke": "撤銷", "btn.copy": "複製", "btn.confirm": "確定", "btn.back": "返回",
+  "node.edit": "編輯 metadata", "node.history": "修改歷史", "node.facts": "機器回報資料（facts）", "node.presenceSettings": "在線判斷設定",
+  "field.display_name": "顯示名稱", "field.description": "說明", "field.roles": "角色（逗號分隔）", "field.labels": "標籤（每行 key=value）", "field.power": "機器類型",
+  "field.asleep_after_sec": "多久沒心跳算睡著（秒）", "field.offline_after_sec": "多久沒心跳算離線（秒）", "field.suspend_grace_sec": "執行中睡著保留多久（秒）", "field.owner": "負責人", "field.notes": "備註",
+  "field.ttl": "有效期限", "field.auto_approve": "加入後自動核准", "field.node_id": "綁定 node_id（重灌用，可留空）", "field.note": "說明（會傳給 Claude）",
+  "enroll.code": "加入碼（只顯示這一次）", "enroll.cmd": "在新機器執行", "enroll.list": "加入碼清單",
+  "task.events": "進度", "task.result": "結果", "task.artifacts": "附件", "filter.state": "狀態", "filter.all": "全部",
+  "confirm.retire": "退役後這台機器的 token 立即失效，確定？", "saved": "已儲存", "done": "完成", "conflict": "metadata 已被其他人修改，已重新載入，請再改一次"
+}

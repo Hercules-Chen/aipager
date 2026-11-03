@@ -1,0 +1,18 @@
+<section id="questions" data-title="待確認事項" data-group="交付">
+  <h3>已確認</h3>
+  <div class="tablewrap"><table>
+    <tr><th>#</th><th>問題</th><th>決定</th></tr>
+    <tr><td class="num">Q1</td><td>機器清單</td><td>不預先列出；改為動態加入、metadata 可隨時調整（<a data-ref="nodes"></a>）</td></tr>
+    <tr><td class="num">Q2</td><td>網路</td><td>使用 Tailscale</td></tr>
+    <tr><td class="num">Q3</td><td>Hub 作業系統</td><td>Ubuntu 24.04 LTS / 26.04 LTS</td></tr>
+    <tr><td class="num">Q4</td><td>Worker 存取 Git server 的方式</td><td>SSH，並為 Worker 帳號設定唯讀 deploy key。Git server 的種類與 repo 網址屬於環境資訊，在上線計畫 R3 開始前提供</td></tr>
+    <tr><td class="num">Q5</td><td>Claude 登入方式</td><td>Claude Max 訂閱。Worker 預設 <code>claude_auth.mode = "login"</code>；需要免登入的機器（例如 Mac LaunchDaemon）才用 <code>claude setup-token</code> 的 <code>oauth_token</code>；不使用 API key</td></tr>
+    <tr><td class="num">Q6</td><td>Mac 是否會睡眠</td><td>一開始是筆電；以心跳判斷，派工時提醒（<a data-ref="presence"></a>）</td></tr>
+    <tr><td class="num">Q7</td><td>審核與失敗通知</td><td>不主動推播，只用 Hub 查詢：Dashboard（瀏覽器，含手機）、<code>aipagerctl</code>、MCP 工具，以及 Claude 對話中的未讀與待審核提示。部署時 <code>webhooks</code> 設為 <code>[]</code>；webhook 功能保留，之後需要推播時再啟用（D29）</td></tr>
+    <tr><td class="num">Q8</td><td>第一個實際流程</td><td>開發機派編譯給 Windows build-pc；P0 以此為驗收情境</td></tr>
+    <tr><td class="num">Q9</td><td>新機器加入是否需核准</td><td>需要人工核准；P0 就提供 <code>aipagerctl nodes approve</code> 與 Dashboard 核准按鈕</td></tr>
+    <tr><td class="num">Q10</td><td>睡眠保留時間</td><td>依機器不同：用每台 metadata 的 <code>presence.suspend_grace_sec</code> 覆寫預設；Dashboard 首頁要能看到誰睡著、睡多久、哪些任務因此卡住（P0）</td></tr>
+    <tr><td class="num">Q11</td><td>MCP 放哪個階段</td><td>放 P0，與 Hub、Worker 一起完成</td></tr>
+  </table></div>
+  <p>設計上的問題目前都已確認。上線過程的決定（CI、Hub 主機、安裝位置、Claude Code 升級方式、admin token 保管）記錄在 <a href="aipager-rollout.html#decisions">上線計畫的決定事項</a>。</p>
+</section>

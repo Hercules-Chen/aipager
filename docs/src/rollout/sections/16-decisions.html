@@ -1,0 +1,21 @@
+<section id="decisions" data-title="決定事項" data-group="規劃">
+  <h3>已決定（2026-11-03）</h3>
+  <div class="tablewrap"><table>
+    <tr><th>#</th><th>問題</th><th>決定</th><th>落實在哪裡</th></tr>
+    <tr><td class="num">Q4</td><td>build-pc 存取 Git server 的方式</td><td>SSH，並為 Worker 帳號設定唯讀 deploy key</td><td><a data-ref="r3-dev"></a> 步驟 3</td></tr>
+    <tr><td class="num">Q7</td><td>審核與失敗通知</td><td>不推播，只用 Hub 查詢：Dashboard（瀏覽器，含手機）、<code>aipagerctl</code>、MCP 工具、Claude 對話中的提示</td><td><a data-ref="r1-hub"></a> 的 <code>webhooks: []</code>；<a data-ref="operations"></a> 的每日檢查；待辦 B07 延後</td></tr>
+    <tr><td class="num">N1</td><td>GitHub Actions CI</td><td>不做。Windows 與 macOS 的問題在 R2、R4 實機驗證時處理（2026-11-03 改變先前的建議）</td><td>待辦 B01 標為不做；<a data-ref="risks"></a> K4</td></tr>
+    <tr><td class="num">N2</td><td>Hub 放哪一台</td><td>一台不睡眠的 Ubuntu 機器，在 Tailscale 改名為 <code>aipager-hub</code></td><td><a data-ref="r1-hub"></a> 步驟 1</td></tr>
+    <tr><td class="num">N3</td><td>Windows 安裝位置</td><td><code>C:\Program Files\AIPager</code>（升級需要系統管理員權限）</td><td><a data-ref="r2-windows"></a></td></tr>
+    <tr><td class="num">N4</td><td>Claude Code 升級方式</td><td>關閉自動更新，統一手動升級；升級後先跑 <code>npm run test:real-claude</code></td><td><a data-ref="operations"></a> 的「Claude Code 升級」；各 Worker 安裝時設定</td></tr>
+    <tr><td class="num">N5</td><td>admin token 保管</td><td>每位管理者一把，各自以 <code>aipagerctl admin token</code> 建立，方便個別撤銷</td><td><a data-ref="r1-hub"></a>、<a data-ref="operations"></a></td></tr>
+  </table></div>
+
+  <h3>開始各階段前要提供的資訊</h3>
+  <div class="tablewrap"><table>
+    <tr><th>什麼時候</th><th>需要提供</th></tr>
+    <tr><td>R1 開始前</td><td>要當 Hub 的是哪一台 Ubuntu 機器（N2）</td></tr>
+    <tr><td>R3 開始前</td><td>Git server 的種類與要編譯的 repo 網址（Q4）；build-pc 上的編譯指令</td></tr>
+  </table></div>
+  <p>有新的待決定事項時，加在本章並標上影響的階段；決定後移到「已決定」，同時更新設計規格的待確認事項與相關步驟。</p>
+</section>

@@ -1,0 +1,15 @@
+<section id="risks" data-title="風險與對策" data-group="規劃">
+  <div class="tablewrap"><table>
+    <tr><th>#</th><th>風險</th><th>可能性</th><th>影響</th><th>怎麼發現</th><th>對策與備案</th></tr>
+    <tr><td class="num">K1</td><td>Windows 排程工作的環境找不到 node 或 claude</td><td>中</td><td>build-pc Worker 起不來</td><td>worker-console.log</td><td>start-worker.ps1 改用絕對路徑；或用 Node 官方 MSI 全機安裝（R2）</td></tr>
+    <tr><td class="num">K2</td><td>重開機未登入時讀不到 Claude 憑證</td><td>中</td><td>重開機後任務都失敗</td><td>T16，錯誤碼 <code>E_CLAUDE_AUTH</code></td><td>改用 <code>claude setup-token</code> 與 oauth_token 模式，或排程改為登入時觸發</td></tr>
+    <tr><td class="num">K3</td><td>Claude Code 更新改變未公開選項的行為</td><td>中</td><td>審核或回報失效，任務卡住或失敗</td><td><code>npm run test:real-claude</code></td><td>升級後先跑真實測試；必要時固定版本（N4）</td></tr>
+    <tr><td class="num">K4</td><td>Windows、macOS 專用程式（taskkill、icacls、PowerShell 腳本、launchd）有未發現的錯誤</td><td>中</td><td>取消不乾淨、權限設定失敗</td><td>R2 的 T11、T13；R4 的 T12</td><td>R2、R4 在實機逐項驗證；出錯時貼回 Log，Claude 修正後補 Linux 可跑的自動化測試（N1 決定不設 CI）</td></tr>
+    <tr><td class="num">K5</td><td>Max 訂閱用量達上限</td><td>中</td><td>任務失敗，且目前只看得到失敗</td><td>任務的 stderr 與結果</td><td>B10：把 rate_limit_event 呈現在 Dashboard；重要任務錯開時間</td></tr>
+    <tr><td class="num">K6</td><td>筆電長時間闔蓋</td><td>高</td><td>任務等待或保留時間用完而失敗</td><td>Dashboard 首頁</td><td>依習慣調整每台的保留時間（Q10）；送任務前先看在線狀態</td></tr>
+    <tr><td class="num">K7</td><td>Hub 機故障</td><td>低</td><td>無法派工；Worker 手上的任務照跑、結果留在本機</td><td>health 檢查、Dashboard 連不上</td><td>每日備份並複製到別處；T22 還原演練</td></tr>
+    <tr><td class="num">K8</td><td>跨機 prompt injection</td><td>低</td><td>被誘導做 profile 以外的事</td><td>審核佇列</td><td>profile 白名單、<code>--setting-sources ''</code>、需要時人工審核；已以真實 Claude 驗證 system prompt 優先</td></tr>
+    <tr><td class="num">K9</td><td>Node 升級後 <code>node:sqlite</code> 行為改變</td><td>低</td><td>Hub 起不來</td><td><code>npm test</code></td><td>維持 Node 22；升 24 前在測試機跑完整測試</td></tr>
+    <tr><td class="num">K10</td><td>Log 與任務目錄長期累積占滿磁碟</td><td>中</td><td>服務異常</td><td>每週檢查</td><td>B03、B04；在完成前每週手動檢查</td></tr>
+  </table></div>
+</section>

@@ -1,0 +1,82 @@
+<section id="r2-windows" data-title="R2 Windows build-pc" data-group="上線步驟">
+  <p>目標：Windows build-pc 以「登入 Claude Code 的那個 Windows 帳號」常駐 Worker，重開機不登入也能接任務。這是 Windows 程式路徑第一次在真機上執行，預期可能遇到問題，每一步都要看輸出。</p>
+
+  <h3>0. 先讓你的電腦以互動機加入</h3>
+  <p><code>aipagerctl send</code> 必須從一台已加入的機器發出。先在你的電腦（R1 步驟 4 那台）建立加入碼並以 <code>--no-worker</code> 加入：</p>
+  <div class="codebox"><div class="label"><span>你的電腦（repo 目錄）</span><button type="button" data-copy>複製</button></div><pre><code>node bin/aipagerctl.js enroll create --name "我的開發機" --power laptop --auto-approve --hub http://aipager-hub:7300
+node bin/aipagerctl.js join --hub http://aipager-hub:7300 --code ape_上一行的加入碼 --no-worker --node-id dev-pc
+node bin/aipagerctl.js doctor</code></pre></div>
+  <p>機器類型依實際情況填 laptop 或 desktop。<code>doctor</code> 會因為沒有 Worker 而略過 claude 檢查，其他項目應為 OK。</p>
+
+  <h3>1. build-pc 前置安裝</h3>
+  <div class="codebox"><div class="label"><span>build-pc：一般 PowerShell，以要跑 Worker 的帳號</span><button type="button" data-copy>複製</button></div><pre><code>winget install --id Tailscale.Tailscale -e
+winget install --id Git.Git -e
+winget install --id Volta.Volta -e
+# 關閉並重開 PowerShell，讓 PATH 生效
+volta install node@22
+node -e "console.log('node-ok')"
+irm https://claude.ai/install.ps1 | iex
+claude --version</code></pre></div>
+  <ul>
+    <li>Tailscale 登入同一個 tailnet；<code>curl.exe http://aipager-hub:7300/api/v1/health</code> 要有回應</li>
+    <li>執行一次 <code>claude</code>，用 Max 帳號登入後 <code>/exit</code>（Q5）</li>
+    <li>Git for Windows 是 Claude 的 Bash 工具所需，不能省略</li>
+    <li><code>node -e</code> 若回傳 <code>-1073741819</code>，是 Node 原生崩潰，先處理 Node 安裝本身</li>
+    <li>依 N4 關閉 Claude Code 自動更新，做法見 <a data-ref="operations"></a> 的「Claude Code 升級」；步驟 3 建立 profile 時記得加上 <code>env</code></li>
+  </ul>
+
+  <h3>2. 安裝 AIPager 並加入</h3>
+  <div class="codebox"><div class="label"><span>build-pc：系統管理員 PowerShell</span><button type="button" data-copy>複製</button></div><pre><code>git clone https://github.com/Hercules-Chen/aipager.git "C:\Program Files\AIPager"
+cd "C:\Program Files\AIPager"
+npm ci --omit=dev</code></pre></div>
+  <p>在你的電腦建立加入碼：</p>
+  <div class="codebox"><div class="label"><span>你的電腦</span><button type="button" data-copy>複製</button></div><pre><code>node bin/aipagerctl.js enroll create --name "Build PC" --power desktop --role builder --hub http://aipager-hub:7300</code></pre></div>
+  <div class="codebox"><div class="label"><span>build-pc：一般 PowerShell（登入 Claude 的帳號）</span><button type="button" data-copy>複製</button></div><pre><code>cd "C:\Program Files\AIPager"
+node bin\aipagerctl.js join --hub http://aipager-hub:7300 --code ape_加入碼 --node-id build-pc
+node bin\aipagerctl.js doctor</code></pre></div>
+  <p><b>預期：</b>join 顯示「狀態 pending（等待管理者核准）」，設定寫在 <code>C:\ProgramData\AIPager\node\</code>，doctor 中 claude、hub、token 皆為 OK。到 Dashboard「待核准的機器」按核准，或在你的電腦執行 <code>node bin/aipagerctl.js nodes approve build-pc --hub http://aipager-hub:7300</code>。</p>
+
+  <h3>3. 測試用 profile</h3>
+  <p>join 只建立了唯讀的 <code>echo</code> profile。T11、T13 需要能跑長時間指令的 profile，編輯 <code>C:\ProgramData\AIPager\node\profiles.json</code>，在 <code>profiles</code> 裡加入：</p>
+  <div class="codebox"><div class="label"><span>profiles.json 內新增（JSON 中反斜線要寫兩個）</span><button type="button" data-copy>複製</button></div><pre><code>"longrun": {
+  "description": "測試用：長時間指令（T11 取消、T13 逾時）",
+  "workdir": "C:\\ProgramData\\AIPager\\worker\\sandbox",
+  "model": "haiku",
+  "permission_mode": "default",
+  "allowed_tools": ["Bash(ping:*)", "Bash(sleep:*)"],
+  "approval": { "auto_deny": ["*"] },
+  "max_turns": 5,
+  "timeout_sec": 900
+}</code></pre></div>
+  <p>存檔後不用重啟：Worker 會自動重新載入，Dashboard 的節點頁會出現 <code>longrun</code>；如果格式錯誤，節點頁會顯示紅色的 <code>profiles.json</code> 錯誤並沿用舊設定。</p>
+
+  <h3>4. 安裝為開機自動執行</h3>
+  <div class="codebox"><div class="label"><span>build-pc：系統管理員 PowerShell（會詢問 Windows 密碼）</span><button type="button" data-copy>複製</button></div><pre><code>cd "C:\Program Files\AIPager"
+node bin\aipagerctl.js service install
+powercfg /change standby-timeout-ac 0
+Get-Content C:\ProgramData\AIPager\logs\worker-console.log -Tail 20</code></pre></div>
+  <p><b>預期：</b>console log 印出 config、node_id、hub_url、claude 版本；Dashboard 節點頁 build-pc 為 online、windows/x64。</p>
+
+  <h3>驗收</h3>
+  <!--TESTPLAN:list:T02,T03,T11,T13,T16-->
+  <div class="codebox"><div class="label"><span>你的電腦：T03、T11、T13</span><button type="button" data-copy>複製</button></div><pre><code>node bin/aipagerctl.js send --to worker@build-pc --profile echo --title 冒煙 --text "執行 hostname 與 whoami 並回報" --wait 180
+node bin/aipagerctl.js send --to worker@build-pc --profile longrun --title 取消測試 --text "用 Bash 執行 ping -n 300 127.0.0.1"
+node bin/aipagerctl.js cancel 上一行的task_id
+node bin/aipagerctl.js send --to worker@build-pc --profile longrun --title 逾時測試 --text "用 Bash 執行 ping -n 300 127.0.0.1" --timeout 60s --wait 300</code></pre></div>
+  <ul>
+    <li>T03：結果 <code>succeeded</code>、來源 <code>submit_tool</code>、summary 含 build-pc 的主機名稱</li>
+    <li>T11：取消後 60 秒內變 cancelled；工作管理員中不能留下 <code>claude.exe</code>、<code>ping.exe</code>（這是 Windows 的 taskkill 路徑第一次實測）</li>
+    <li>T13：約 60 秒後 <code>failed</code>、<code>E_TIMEOUT</code></li>
+    <li>T16：重開 build-pc、不要登入，等 2 分鐘後重跑 T03 那一行</li>
+  </ul>
+
+  <h3>已知風險（這一階段要特別看）</h3>
+  <div class="tablewrap"><table>
+    <tr><th>風險</th><th>徵兆</th><th>處理</th></tr>
+    <tr><td>排程工作找不到 node（Volta 的 PATH 沒載入）</td><td>worker-console.log 出現「node 不是內部或外部命令」</td><td>回報後改成在 start-worker.ps1 使用 node 的絕對路徑，或改用 Node 官方 MSI 安裝到全機</td></tr>
+    <tr><td>未登入時讀不到 Claude 憑證</td><td>T16 失敗，錯誤碼 <code>E_CLAUDE_AUTH</code></td><td>改用 <code>claude setup-token</code> 與 <code>claude_auth.mode = "oauth_token"</code>，或排程改為「登入時」觸發</td></tr>
+    <tr><td><code>.ps1</code> 在 Windows PowerShell 5.x 解析失敗</td><td>console log 有 ParserError</td><td>貼回錯誤，修正腳本；之後改 <code>.ps1</code> 時在 build-pc 用 Windows PowerShell 5.x 實際執行一次</td></tr>
+    <tr><td>taskkill 沒有終止整個程序樹</td><td>T11 後仍有 claude.exe</td><td>貼回 worker Log 的 <code>task.killed</code> 紀錄與工作管理員截圖</td></tr>
+  </table></div>
+  <p><b>退回：</b>系統管理員 PowerShell 執行 <code>node bin\aipagerctl.js service uninstall</code>，Dashboard 上把 build-pc 設為 disabled。</p>
+</section>

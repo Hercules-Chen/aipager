@@ -11,7 +11,7 @@ After=network-online.target
 Type=simple
 Environment=AIPAGER_CONFIG=%h/.config/aipager/node.json
 Environment=PATH=%h/.volta/bin:%h/.local/bin:/usr/local/bin:/usr/bin:/bin
-ExecStart=/bin/bash /opt/aipager/scripts/posix/start-worker.sh
+ExecStart=/bin/bash /opt/aipager/spec/scripts/posix/start-worker.sh
 Restart=always
 RestartSec=5
 # mixed: SIGTERM to the worker first (it stops claude process groups cleanly), then SIGKILL leftovers

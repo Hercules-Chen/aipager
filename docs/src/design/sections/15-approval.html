@@ -19,5 +19,5 @@
     <li>任何裝了 Tailscale 的裝置（包含手機）都能開 Dashboard 審核</li>
   </ul>
   <h3>通知管道</h3>
-  <p>審核請求與任務失敗可透過 webhook 通知（hub.json 的 <code>webhooks</code>），格式支援 <code>ntfy</code>、<code>teams</code>、<code>slack</code>、<code>generic</code>（原始 envelope）。通知內只放標題、節點、Dashboard 連結，不放參數內容。</p>
+  <p>審核請求與任務失敗可透過 webhook 通知（hub.json 的 <code>webhooks</code>），格式支援 <code>ntfy</code>、<code>teams</code>、<code>slack</code>、<code>generic</code>（原始 envelope）。通知內只放標題、節點、Dashboard 連結，不放參數內容。依 Q7，目前部署不設定 webhook（<code>webhooks: []</code>），以 Dashboard 等查詢方式為準。</p>
 </section>

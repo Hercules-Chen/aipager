@@ -46,6 +46,16 @@ env   = 使用者環境 + profile.env + AIPAGER_TASK_ID + MCP_TOOL_TIMEOUT=90000
     <li>launchd 與 systemd 啟動時 PATH 很短，服務設定檔必須明確給 PATH（範本已設定 Volta 與 <code>~/.local/bin</code>）</li>
   </ul>
 
+  <h3>實機驗證到的 Claude Code 行為（2.1.317，Linux）</h3>
+  <ul>
+    <li><b>自家 MCP 工具也需要授權（D25）：</b>沒有放進 allowedTools 的 <code>mcp__aipager__submit_result</code> 會被送進 permission_prompt。Worker 因此一律自動允許 <code>submit_result</code>、<code>report_progress</code>、<code>list_nodes</code>、<code>describe_node</code>、<code>get_task</code>、<code>wait_task</code>；會影響其他機器的 <code>send_task</code>、<code>send_message</code>、<code>cancel_task</code>、附件工具仍走審核，除非 profile 的 allowed_tools 明確列出</li>
+    <li><b><code>--permission-prompt-tool</code> 有效：</b>它不在 <code>--help</code> 清單，但實測會把不在 allowedTools 的工具（含 MCP 工具）交給 <code>permission_prompt</code>；審核者的說明原文會送到 Claude</li>
+    <li><b>等待審核期間工具呼叫可以掛超過 2 分鐘：</b>在 <code>MCP_TOOL_TIMEOUT=900000</code> 下實測 120 秒等待後仍正常回傳</li>
+    <li><b><code>--setting-sources ''</code> 可用（D26）：</b>Worker 預設不載入使用者與專案的 Claude 設定，避免 <code>~/.claude/settings.json</code> 或 repo 內 <code>.claude/settings.json</code> 的 allow 規則繞過 profile。profile 可用 <code>"setting_sources": "user,project"</code> 明確放寬</li>
+    <li><b><code>--max-turns</code> 可用：</b>同樣不在說明清單，但有效</li>
+    <li><b>system prompt 優先於跨機器內容：</b>任務文字要求「被拒絕也回報 succeeded」時，Claude 依 system prompt 第 4 條回報 failed 並說明原因</li>
+  </ul>
+
   <h3>結果判定優先序</h3>
   <ol>
     <li>Claude 有呼叫 <code>submit_result</code> → 採用它（<code>result_source=submit_tool</code>）</li>
@@ -60,6 +70,7 @@ env   = 使用者環境 + profile.env + AIPAGER_TASK_ID + MCP_TOOL_TIMEOUT=90000
     <tr><td><code>type=assistant</code> 含 <code>tool_use</code></td><td>progress phase=tool（工具名 + 參數摘要 ≤ 300 字）</td></tr>
     <tr><td><code>type=assistant</code> 含 text</td><td>只寫入 stream.jsonl，不逐句轉送（避免洗版）</td></tr>
     <tr><td><code>type=result</code></td><td>取 <code>subtype</code>、<code>is_error</code>、<code>result</code>、<code>session_id</code>、<code>total_cost_usd</code>、<code>num_turns</code>、<code>duration_ms</code> 寫入 metrics</td></tr>
+    <tr><td>其他類型（實測：<code>active_goal</code>、<code>autocompact_state</code>、<code>rate_limit_event</code>、<code>system/post_turn_summary</code>）</td><td>只寫入 stream.jsonl，不處理。Claude Code 版本更新可能增加新類型，Worker 一律略過不認識的類型</td></tr>
     <tr><td>無法解析的行</td><td>原樣保留在 stream.jsonl，Log 記 warn，不中斷任務</td></tr>
   </table></div>
 
@@ -94,7 +105,9 @@ env   = 使用者環境 + profile.env + AIPAGER_TASK_ID + MCP_TOOL_TIMEOUT=90000
     <tr><td><code>stream.jsonl</code></td><td>Claude 原始串流輸出</td><td>30 天</td></tr>
     <tr><td><code>stderr.log</code></td><td>Claude 標準錯誤</td><td>30 天</td></tr>
     <tr><td><code>worker.log</code></td><td>此任務的 Worker Log（JSONL）</td><td>30 天</td></tr>
-    <tr><td><code>result.json</code></td><td>送出（或待送出）的結果</td><td>30 天</td></tr>
+    <tr><td><code>result.json</code></td><td>送出（或待送出）的結果；<code>pending=true</code> 代表 Hub 連不上、背景重送中；<code>lease_lost=true</code> 代表租約已失效，只保留在本機</td><td>30 天</td></tr>
+    <tr><td><code>submitted.json</code></td><td>Claude 呼叫 <code>submit_result</code> 時由 MCP 寫入；Worker 在程序結束後讀取並加上 metrics、附件再送出</td><td>30 天</td></tr>
+    <tr><td><code>state.json</code></td><td>lease_id、pid、階段；Worker 重啟時用來判斷中斷的任務（<code>E_WORKER_CRASH</code>）</td><td>30 天</td></tr>
   </table></div>
 
   <details>

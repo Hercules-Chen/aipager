@@ -1,0 +1,27 @@
+<section id="reporting" data-title="回報方式與記錄" data-group="維運">
+  <h3>每次回報請包含</h3>
+  <div class="codebox"><div class="label"><span>回報範本</span><button type="button" data-copy>複製</button></div><pre><code>階段：R2
+測試：T11
+機器：build-pc（Windows 11 23H2）
+指令：（完整貼上）
+輸出：（完整貼上，不要只貼最後一行）
+預期 vs 實際：
+task_id / trace_id：（有的話）</code></pre></div>
+
+  <h3>失敗時附上診斷檔</h3>
+  <p>以下指令只打包 Log 與任務目錄，不含 <code>node.token</code>（任務的 token 檔在任務結束時已刪除）。任務目錄包含送給 Claude 的 prompt 與 Claude 的輸出，可能有程式碼，分享前請自行確認。</p>
+  <div class="codebox"><div class="label"><span>Windows（PowerShell）</span><button type="button" data-copy>複製</button></div><pre><code>Compress-Archive -Path C:\ProgramData\AIPager\logs, C:\ProgramData\AIPager\worker\tasks -DestinationPath "$env:USERPROFILE\Desktop\aipager-diag.zip" -Force</code></pre></div>
+  <div class="codebox"><div class="label"><span>macOS</span><button type="button" data-copy>複製</button></div><pre><code>tar -czf ~/Desktop/aipager-diag.tgz -C ~/Library/Logs AIPager -C "$HOME/Library/Application Support/AIPager" worker/tasks</code></pre></div>
+  <div class="codebox"><div class="label"><span>Linux Worker</span><button type="button" data-copy>複製</button></div><pre><code>tar -czf ~/aipager-diag.tgz -C ~/.local/state aipager/logs aipager/worker/tasks</code></pre></div>
+  <div class="codebox"><div class="label"><span>Hub</span><button type="button" data-copy>複製</button></div><pre><code>journalctl -u aipager-hub --since "2 hours ago" --no-pager &gt; ~/hub-journal.txt
+sudo tar -czf ~/aipager-hub-diag.tgz /var/log/aipager ~/hub-journal.txt</code></pre></div>
+  <p>只想看單一任務時，把 Worker 任務目錄中的 <code>cmdline.txt</code>、<code>stderr.log</code>、<code>result.json</code> 貼上通常就足夠；<code>cmdline.txt</code> 可以直接在該機器手動重跑，重現 Claude 端的問題。</p>
+
+  <h3>結果怎麼記錄</h3>
+  <ol>
+    <li>Claude 依你的回報更新 <code>spec/tests/test-plan.json</code> 中該項的 <code>status</code>（pass / partial / fail / blocked）與 <code>last_run</code>（日期、機器與作業系統、說明）</li>
+    <li>有程式修正時補自動化測試，在 Linux 重跑 <code>npm test</code></li>
+    <li>重新建置文件：設計規格的驗證計畫、本文件各階段的測試狀態都會自動更新</li>
+    <li>開該階段的分支與 PR；PR 說明列出本次變更的測試項目與結果</li>
+  </ol>
+</section>

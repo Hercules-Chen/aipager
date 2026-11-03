@@ -1,0 +1,28 @@
+<section id="r6-hardening" data-title="R6 強化與演練" data-group="上線步驟">
+  <p>目標：在真正依賴它之前，先演練故障與復原。R2 完成後隨時可做，不必等 R4、R5。</p>
+  <!--TESTPLAN:list:T17,T18,T22,T31,T32,T33-->
+
+  <h3>T17 Hub 重啟中任務不中斷</h3>
+  <p>對 build-pc 送 longrun（<code>ping -n 180 127.0.0.1</code>），開始執行後在 Hub 機 <code>sudo systemctl stop aipager-hub</code>，1 分鐘後 <code>sudo systemctl start aipager-hub</code>。預期任務最終 succeeded，build-pc 的 worker Log 有結果補送紀錄。</p>
+
+  <h3>T18 Worker 停止時任務排隊</h3>
+  <p>在 linux-box 執行 <code>systemctl --user stop aipager-worker</code>，從你的電腦以 <code>--on-unavailable queue</code> 送任務給它，2 分鐘後 <code>systemctl --user start aipager-worker</code>。預期 Dashboard 首頁先出現 linux-box 與卡住的任務，啟動後任務完成。</p>
+
+  <h3>T22 備份與還原演練</h3>
+  <div class="codebox"><div class="label"><span>Hub 機</span><button type="button" data-copy>複製</button></div><pre><code>ls -l /var/lib/aipager/backup/
+sudo systemctl stop aipager-hub
+sudo -u aipager /opt/node-v22/bin/node /opt/aipager/bin/aipagerctl.js admin restore /var/lib/aipager/backup/aipager-檔名.db --config /etc/aipager/hub.json
+sudo systemctl start aipager-hub</code></pre></div>
+  <p>預期 Dashboard 的節點與任務與備份當時一致；原資料庫被改名保留為 <code>aipager.db.before-restore-時間</code>。另外把備份檔複製到 Hub 以外的地方保存。</p>
+
+  <h3>T31 Ubuntu 26.04</h3>
+  <p>準備一台全新、用完即丟的 Ubuntu 26.04 VM（不要用正式 Hub）。先跑實際安裝測試，再照 <a data-ref="r1-hub"></a> 安裝一次：</p>
+  <div class="codebox"><div class="label"><span>Ubuntu 26.04 測試 VM（repo 目錄）</span><button type="button" data-copy>複製</button></div><pre><code>sudo AIPAGER_TEST_ALLOW_SYSTEM_CHANGES=1 bash tools/tests/linux-install-hub.test.sh
+bash tools/tests/static-scripts.test.sh</code></pre></div>
+
+  <h3>T32、T33 重灌與退役</h3>
+  <ul>
+    <li><b>T32：</b><code>enroll create --node-id linux-box</code> 產生綁定加入碼；在 linux-box 刪除 <code>~/.config/aipager</code> 後重新 join。預期 node_id 與 metadata 保留、版本加一、舊 token 失效</li>
+    <li><b>T33：</b>建立一台測試節點後在 Dashboard 按「退役」。預期該機 Worker Log 出現「此節點已退役或 token 已撤銷」，之後不再領任務</li>
+  </ul>
+</section>

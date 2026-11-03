@@ -1,0 +1,27 @@
+<section id="r5-linux" data-title="R5 Linux Worker 與跨平台" data-group="上線步驟">
+  <p>目標：一台 Linux 當 tester（例如 E2E），驗證跨平台路由與流水線。</p>
+
+  <h3>1. 安裝與加入</h3>
+  <div class="codebox"><div class="label"><span>Linux：終端機（以要跑 Worker 的帳號）</span><button type="button" data-copy>複製</button></div><pre><code>curl https://get.volta.sh | bash
+# 重開終端機
+volta install node@22
+curl -fsSL https://claude.ai/install.sh | bash
+claude --version
+git clone https://github.com/Hercules-Chen/aipager.git ~/aipager
+cd ~/aipager &amp;&amp; npm ci --omit=dev
+node bin/aipagerctl.js join --hub http://aipager-hub:7300 --code ape_加入碼 --node-id linux-box --label browser=chromium
+node bin/aipagerctl.js doctor
+sudo loginctl enable-linger "$USER"
+node bin/aipagerctl.js service install
+journalctl --user -u aipager-worker -n 20 --no-pager</code></pre></div>
+  <p>加入碼請以 <code>--role tester</code> 建立。依 N4 關閉 Claude Code 自動更新（見 <a data-ref="operations"></a>）。<code>service install</code> 會把 unit 寫到 <code>~/.config/systemd/user/</code>，產生的 unit 已在自動化測試中通過 <code>systemd-analyze verify</code>。</p>
+
+  <h3>2. 驗收</h3>
+  <!--TESTPLAN:list:T05,T19,T20,T26-->
+  <ul>
+    <li><b>T05：</b>同 T03，改送到 <code>worker@linux-box</code>，內容「讀取 /etc/os-release 並回報」</li>
+    <li><b>T19：</b>macbook-hc 與 linux-box 都是 tester 時，<code>send --to worker@role:tester --requires-os macos</code> 只能由 Mac 領走；對 build-pc 送 <code>--requires-os linux</code> 應立即回 <code>E_REQUIREMENT_UNMET</code></li>
+    <li><b>T20：</b>需要待辦 <code>B02</code>（讓 aipagerctl 與 MCP 能送出含 <code>then</code> 的任務）完成後才能從工具執行；Hub 端的鏈結邏輯已有自動化測試</li>
+    <li><b>T26：</b>在 linux-box 編輯 profiles.json 新增一個 profile，Dashboard 應在 15 秒內出現；再故意存成錯誤的 JSON，節點頁應顯示錯誤且原 profile 仍可用</li>
+  </ul>
+</section>
