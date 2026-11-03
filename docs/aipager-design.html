@@ -3185,11 +3185,11 @@ install -d -o aipager -g aipager -m 0750 /var/lib/aipager /var/lib/aipager/blobs
 install -d -o aipager -g aipager -m 0750 /var/log/aipager
 
 if [ ! -f /etc/aipager/hub.json ]; then
-  install -o root -g aipager -m 0640 "$APP_DIR/templates/hub.json" /etc/aipager/hub.json
+  install -o root -g aipager -m 0640 "$APP_DIR/spec/config/hub.json" /etc/aipager/hub.json
   log "copied hub.json template -&gt; /etc/aipager/hub.json (edit listen.host before starting)"
 fi
 
-install -o root -g root -m 0644 "$APP_DIR/scripts/linux/aipager-hub.service" /etc/systemd/system/aipager-hub.service
+install -o root -g root -m 0644 "$APP_DIR/spec/scripts/linux/aipager-hub.service" /etc/systemd/system/aipager-hub.service
 systemctl daemon-reload
 log "installed systemd unit aipager-hub.service"
 
@@ -3442,7 +3442,7 @@ param(
     [string]$User = "$env:USERDOMAIN\$env:USERNAME",
     [string]$AppDir = "C:\Program Files\AIPager"
 )
-$bat = Join-Path $AppDir "scripts\start-worker.bat"
+$bat = Join-Path $AppDir "spec\scripts\windows\start-worker.bat"
 $action  = New-ScheduledTaskAction -Execute "cmd.exe" -Argument "/c `"$bat`" &gt; `"C:\ProgramData\AIPager\logs\worker-console.log`" 2&gt;&amp;1"
 $trigger = New-ScheduledTaskTrigger -AtStartup
 $settings = New-ScheduledTaskSettingsSet -RestartCount 999 -RestartInterval (New-TimeSpan -Minutes 1) `
@@ -3514,7 +3514,7 @@ Write-Host "已註冊排程工作: AIPager Worker (user=$User)"</code></pre></di
   &lt;key&gt;ProgramArguments&lt;/key&gt;
   &lt;array&gt;
     &lt;string&gt;/bin/bash&lt;/string&gt;
-    &lt;string&gt;/opt/aipager/scripts/posix/start-worker.sh&lt;/string&gt;
+    &lt;string&gt;/opt/aipager/spec/scripts/posix/start-worker.sh&lt;/string&gt;
   &lt;/array&gt;
   &lt;key&gt;EnvironmentVariables&lt;/key&gt;
   &lt;dict&gt;
@@ -3593,7 +3593,7 @@ After=network-online.target
 Type=simple
 Environment=AIPAGER_CONFIG=%h/.config/aipager/node.json
 Environment=PATH=%h/.volta/bin:%h/.local/bin:/usr/local/bin:/usr/bin:/bin
-ExecStart=/bin/bash /opt/aipager/scripts/posix/start-worker.sh
+ExecStart=/bin/bash /opt/aipager/spec/scripts/posix/start-worker.sh
 Restart=always
 RestartSec=5
 # mixed: SIGTERM to the worker first (it stops claude process groups cleanly), then SIGKILL leftovers

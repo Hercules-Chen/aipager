@@ -27,10 +27,10 @@ CREATED_NODE=0
 if [ ! -e /opt/node-v22/bin/node ]; then
   mkdir -p /opt/node-v22/bin && ln -s "$(command -v node)" /opt/node-v22/bin/node && CREATED_NODE=1
 fi
-mkdir -p /opt/aipager/bin /opt/aipager/templates /opt/aipager/scripts/linux
+mkdir -p /opt/aipager/bin /opt/aipager/spec/config /opt/aipager/spec/scripts/linux
 printf '// stub hub for install test\n' > /opt/aipager/bin/hub.js
-cp "$ROOT/spec/config/hub.json" /opt/aipager/templates/hub.json
-cp "$ROOT/spec/scripts/linux/aipager-hub.service" /opt/aipager/scripts/linux/
+cp "$ROOT/spec/config/hub.json" /opt/aipager/spec/config/hub.json
+cp "$ROOT/spec/scripts/linux/aipager-hub.service" /opt/aipager/spec/scripts/linux/
 STUB="$(mktemp -d)"
 printf '#!/bin/sh\necho "systemctl $*" >> "%s/calls.log"\n' "$STUB" > "$STUB/systemctl"
 chmod +x "$STUB/systemctl"

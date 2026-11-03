@@ -34,11 +34,11 @@ install -d -o aipager -g aipager -m 0750 /var/lib/aipager /var/lib/aipager/blobs
 install -d -o aipager -g aipager -m 0750 /var/log/aipager
 
 if [ ! -f /etc/aipager/hub.json ]; then
-  install -o root -g aipager -m 0640 "$APP_DIR/templates/hub.json" /etc/aipager/hub.json
+  install -o root -g aipager -m 0640 "$APP_DIR/spec/config/hub.json" /etc/aipager/hub.json
   log "copied hub.json template -> /etc/aipager/hub.json (edit listen.host before starting)"
 fi
 
-install -o root -g root -m 0644 "$APP_DIR/scripts/linux/aipager-hub.service" /etc/systemd/system/aipager-hub.service
+install -o root -g root -m 0644 "$APP_DIR/spec/scripts/linux/aipager-hub.service" /etc/systemd/system/aipager-hub.service
 systemctl daemon-reload
 log "installed systemd unit aipager-hub.service"
 
