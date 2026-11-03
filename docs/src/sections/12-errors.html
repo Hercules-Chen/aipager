@@ -18,6 +18,7 @@
     <tr><td class="num">409</td><td><code>E_META_CONFLICT</code></td><td>修改 metadata 時 If-Match 版本已過期</td><td>重新讀取後再改</td></tr>
     <tr><td class="num">422</td><td><code>E_HOP_LIMIT</code> / <code>E_THREAD_LIMIT</code> / <code>E_BUDGET</code> / <code>E_SELF_TARGET</code></td><td>防迴圈與預算限制</td><td>交由人判斷，不要自動繞過</td></tr>
     <tr><td class="num">429</td><td><code>E_RATE_LIMIT</code></td><td>建立太頻繁</td><td>依 <code>Retry-After</code> 等待</td></tr>
+    <tr><td class="num">500</td><td><code>E_INTERNAL</code></td><td>Hub 內部錯誤；hub Log 中同一個 trace_id 有完整堆疊</td><td>回報問題時附上 trace_id</td></tr>
     <tr><td class="num">503</td><td><code>E_UNAVAILABLE</code></td><td>Hub 正在關閉或 DB 忙碌</td><td>指數退避重試（1、2、4、8、16 秒）</td></tr>
   </table></div>
 
@@ -36,6 +37,7 @@
     <tr><td><code>E_OUTPUT_SCHEMA</code></td><td>Worker</td><td>要求 json 輸出但不符合 schema；原始輸出仍附在 output</td></tr>
     <tr><td><code>E_CANCELLED</code></td><td>Worker</td><td>收到取消並已終止</td></tr>
     <tr><td><code>E_LEASE_LOST</code></td><td>Hub</td><td>Worker 失聯且無重試次數</td></tr>
-    <tr><td><code>E_WORKER_CRASH</code></td><td>Worker</td><td>Worker 重啟時發現上次中斷的任務</td></tr>
+    <tr><td><code>E_WORKER_CRASH</code></td><td>Worker</td><td>Worker 重啟時發現上次中斷的任務，或 Worker 本身發生未預期錯誤</td></tr>
+    <tr><td><code>E_TASK_FAILED</code></td><td>Claude</td><td>Claude 以 <code>submit_result(status=failed)</code> 回報但沒有指定 error_code</td></tr>
   </table></div>
 </section>

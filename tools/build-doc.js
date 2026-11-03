@@ -12,7 +12,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 
-const DOC_VERSION = 'v0.4';
+const DOC_VERSION = 'v0.5';
 const root = path.resolve(__dirname, '..');
 const src = path.join(root, 'docs/src');
 let problems = 0;

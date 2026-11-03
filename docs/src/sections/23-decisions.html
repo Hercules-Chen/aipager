@@ -26,5 +26,9 @@
     <tr><td class="num">D22</td><td>Dashboard 的節點與卡住任務頁放 P0（使用者決定）</td><td>保留時間依機器而異，需要一眼看出誰睡著、哪些任務因此停住</td><td>只用 aipagerctl 查詢</td></tr>
     <tr><td class="num">D23</td><td>Worker 預設 <code>login</code> 登入模式</td><td>使用者為 Claude Max 訂閱；沿用該帳號登入最單純，免登入需求才用 setup-token</td><td>API key</td></tr>
     <tr><td class="num">D24</td><td>Worker 略過不認識的 stream-json 類型</td><td>實測 Claude Code 2.1.317 會輸出設計時未列出的事件類型；版本更新可能再增加</td><td>遇到未知類型就報錯</td></tr>
+    <tr><td class="num">D25</td><td>Worker 自動允許 aipager 的回報與唯讀 MCP 工具</td><td>實測 Claude Code 對自家 MCP 工具也要授權；不自動允許的話 submit_result 會卡在審核</td><td>每個 profile 自己列（容易漏，漏了任務就回報不了）</td></tr>
+    <tr><td class="num">D26</td><td>Worker 預設 <code>--setting-sources ''</code></td><td>使用者或 repo 的 Claude 設定可能允許更多工具，會繞過 profile 這個權限邊界；repo 內容來自其他機器，不能信任</td><td>沿用預設設定來源</td></tr>
+    <tr><td class="num">D27</td><td>發行檔就是 repo 本身；執行時直接讀 spec/ 下的 schema、參考實作、prompt、MCP 工具定義</td><td>規格與實作只有一份，不會各自演進；驗證腳本檢查的就是正式執行時用的檔案</td><td>建置時複製到 templates/ 等另一份</td></tr>
+    <tr><td class="num">D28</td><td>progress 的 seq 可由 Hub 指定；結果的 lease 放在 header</td><td>Worker 與 Claude 端的 MCP 都會回報進度，各自編號會撞號；result payload 維持與 schema 一致</td><td>只讓 Worker 回報進度</td></tr>
   </table></div>
 </section>

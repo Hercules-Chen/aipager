@@ -167,7 +167,7 @@ details > .inner .codebox { margin-top: 10px; }
     <svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><circle cx="4" cy="11" r="3" fill="var(--accent)"/><circle cx="18" cy="5" r="3" fill="var(--accent)"/><circle cx="18" cy="17" r="3" fill="var(--accent)"/><path d="M6.5 10 L15.5 6 M6.5 12 L15.5 16" stroke="var(--accent)" stroke-width="1.6"/></svg>
     AIPager
   </div>
-  <div class="ver">aipager/1.0 · 設計 v0.4</div>
+  <div class="ver">aipager/1.0 · 設計 v0.5</div>
   <ol>
     <li class="group">總覽</li>
     <li><a href="#overview">目標與範圍</a></li>
@@ -210,7 +210,7 @@ details > .inner .codebox { margin-top: 10px; }
   <p class="lede">在任何一台機器下指令，其他機器上的 Claude 會收到任務、執行、把結果送回來。Hub 跑在 Linux 上，Windows、macOS、Linux 都可以隨時加入當執行節點，機器資料在 Hub 上隨時調整。中間不需要人轉貼 prompt，機器睡著時會主動提醒，只有需要授權的危險動作才請人按核准。</p>
   <div class="meta-row">
     <span>協定 <b>aipager/1.0</b></span>
-    <span>文件 <b>v0.4</b></span>
+    <span>文件 <b>v0.5</b></span>
     <span>日期 <b>2026-11-03</b></span>
     <span>Hub <b>Ubuntu 24.04 / 26.04（systemd）</b></span>
     <span>節點 <b>Windows · macOS · Linux，動態加入</b></span>
@@ -1936,8 +1936,8 @@ module.exports = {
     <tr><td><span class="method post">POST</span></td><td><code>/tasks</code></td><td>node / task / admin</td><td>建立任務。成功回 201 <code>taskCreated</code>（含 <code>target_status</code>、<code>warnings</code>、<code>alternatives</code>）；冪等重送回 200；目標沒在線且 <code>on_unavailable</code> 為 confirm / reject 時回 409 <code>targetUnavailable</code>，<b>不建立任務</b>。發送者為 pending / disabled 節點回 403 <code>E_NODE_NOT_ACTIVE</code></td></tr>
     <tr><td><span class="method post">POST</span></td><td><code>/tasks/claim?wait=25</code></td><td>node</td><td>Worker 領任務。body <code>{profiles:[…], max:1}</code>。角色、標籤、os、arch 一律以 Hub 紀錄為準。只有 active 節點能領。回 200 <code>{task, lease:{lease_id, expires_at}, task_token, resume_session_id?}</code>；無任務回 204</td></tr>
     <tr><td><span class="method post">POST</span></td><td><code>/tasks/{id}/lease</code></td><td>node</td><td>續約，body <code>{lease_id}</code>。回 <code>{expires_at, cancel_requested}</code>；lease 不符回 409 <code>E_LEASE_LOST</code></td></tr>
-    <tr><td><span class="method post">POST</span></td><td><code>/tasks/{id}/progress</code></td><td>node / task</td><td>task.progress payload，回 202</td></tr>
-    <tr><td><span class="method post">POST</span></td><td><code>/tasks/{id}/result</code></td><td>node（需 lease_id）</td><td>task.result payload，回 200 <code>{state}</code></td></tr>
+    <tr><td><span class="method post">POST</span></td><td><code>/tasks/{id}/progress</code></td><td>node / task</td><td>task.progress payload，回 202。<code>seq</code> 可省略，由 Hub 指定下一號（MCP 的 report_progress 與 Worker 共用同一序列，避免撞號）；帶 seq 且 ≤ 已收到的最大值時視為重送並忽略</td></tr>
+    <tr><td><span class="method post">POST</span></td><td><code>/tasks/{id}/result</code></td><td>node（header <code>X-AIPager-Lease: &lt;lease_id&gt;</code>）</td><td>task.result payload（不含 lease），回 200 <code>{state}</code>；lease 不符回 409 <code>E_LEASE_LOST</code></td></tr>
     <tr><td><span class="method post">POST</span></td><td><code>/tasks/{id}/cancel</code></td><td>發送者 node / admin</td><td><code>{reason}</code>，回 202</td></tr>
     <tr><td><span class="method">GET</span></td><td><code>/tasks</code></td><td>node / admin</td><td>查詢：<code>state</code>、<code>to_node</code>、<code>thread_id</code>、<code>waiting_for_node</code>（排隊等某台醒來的任務）、<code>stuck=1</code>（卡住的任務，回應每筆附 <code>stuck_reason</code> 與說明，見 <a href="#presence">07 在線狀態與睡眠</a>）、<code>limit</code>、<code>cursor</code></td></tr>
     <tr><td><span class="method">GET</span></td><td><code>/tasks/{id}</code></td><td>node / task / admin</td><td>完整內容：envelope、狀態、attempt、結果、目標目前的在線狀態</td></tr>
@@ -1961,7 +1961,7 @@ module.exports = {
     <tr><td><span class="method">GET</span></td><td><code>/approvals/{id}/wait?timeout=50</code></td><td>task</td><td><code>{state, decision?, note?, updated_input?}</code></td></tr>
     <tr><td><span class="method">GET</span></td><td><code>/approvals?state=pending</code></td><td>admin</td><td>審核佇列</td></tr>
     <tr><td><span class="method post">POST</span></td><td><code>/approvals/{id}/decision</code></td><td>admin</td><td><code>{decision, note?, updated_input?}</code></td></tr>
-    <tr><td><span class="method post">PUT</span></td><td><code>/blobs/{sha256}</code></td><td>node / task</td><td>上傳原始位元組（≤ 50 MB），Hub 驗證雜湊；已存在回 200</td></tr>
+    <tr><td><span class="method post">PUT</span></td><td><code>/blobs/{sha256}</code></td><td>node / task</td><td>上傳原始位元組（<code>Content-Type: application/octet-stream</code>，≤ 50 MB），Hub 驗證雜湊；可用 header <code>X-AIPager-Mime</code> 記錄類型；已存在回 200</td></tr>
     <tr><td><span class="method">GET</span></td><td><code>/blobs/{sha256}</code></td><td>node / task / admin</td><td>下載；<code>HEAD</code> 可查是否存在</td></tr>
     <tr><td><span class="method">GET</span></td><td><code>/threads/{thread_id}</code></td><td>node / admin</td><td>該 thread 全部封包，依時間排序</td></tr>
     <tr><td><span class="method">GET</span></td><td><code>/trace/{trace_id}</code></td><td>admin</td><td>Hub 端所有相關事件</td></tr>
@@ -2570,6 +2570,7 @@ RETURNING tasks.task_id;</code></pre></div>
     <tr><td class="num">409</td><td><code>E_META_CONFLICT</code></td><td>修改 metadata 時 If-Match 版本已過期</td><td>重新讀取後再改</td></tr>
     <tr><td class="num">422</td><td><code>E_HOP_LIMIT</code> / <code>E_THREAD_LIMIT</code> / <code>E_BUDGET</code> / <code>E_SELF_TARGET</code></td><td>防迴圈與預算限制</td><td>交由人判斷，不要自動繞過</td></tr>
     <tr><td class="num">429</td><td><code>E_RATE_LIMIT</code></td><td>建立太頻繁</td><td>依 <code>Retry-After</code> 等待</td></tr>
+    <tr><td class="num">500</td><td><code>E_INTERNAL</code></td><td>Hub 內部錯誤；hub Log 中同一個 trace_id 有完整堆疊</td><td>回報問題時附上 trace_id</td></tr>
     <tr><td class="num">503</td><td><code>E_UNAVAILABLE</code></td><td>Hub 正在關閉或 DB 忙碌</td><td>指數退避重試（1、2、4、8、16 秒）</td></tr>
   </table></div>
 
@@ -2588,7 +2589,8 @@ RETURNING tasks.task_id;</code></pre></div>
     <tr><td><code>E_OUTPUT_SCHEMA</code></td><td>Worker</td><td>要求 json 輸出但不符合 schema；原始輸出仍附在 output</td></tr>
     <tr><td><code>E_CANCELLED</code></td><td>Worker</td><td>收到取消並已終止</td></tr>
     <tr><td><code>E_LEASE_LOST</code></td><td>Hub</td><td>Worker 失聯且無重試次數</td></tr>
-    <tr><td><code>E_WORKER_CRASH</code></td><td>Worker</td><td>Worker 重啟時發現上次中斷的任務</td></tr>
+    <tr><td><code>E_WORKER_CRASH</code></td><td>Worker</td><td>Worker 重啟時發現上次中斷的任務，或 Worker 本身發生未預期錯誤</td></tr>
+    <tr><td><code>E_TASK_FAILED</code></td><td>Claude</td><td>Claude 以 <code>submit_result(status=failed)</code> 回報但沒有指定 error_code</td></tr>
   </table></div>
 </section>
 
@@ -2640,6 +2642,16 @@ env   = 使用者環境 + profile.env + AIPAGER_TASK_ID + MCP_TOOL_TIMEOUT=90000
     <li><code>--strict-mcp-config</code> 讓任務 session 只載入 aipager，不受操作者個人 MCP 設定影響</li>
     <li><code>--resume</code> 只能在同一台、同一個 cwd 找到舊 session，因此 resume 記錄以 (thread, node, profile) 為鍵</li>
     <li>launchd 與 systemd 啟動時 PATH 很短，服務設定檔必須明確給 PATH（範本已設定 Volta 與 <code>~/.local/bin</code>）</li>
+  </ul>
+
+  <h3>實機驗證到的 Claude Code 行為（2.1.317，Linux）</h3>
+  <ul>
+    <li><b>自家 MCP 工具也需要授權（D25）：</b>沒有放進 allowedTools 的 <code>mcp__aipager__submit_result</code> 會被送進 permission_prompt。Worker 因此一律自動允許 <code>submit_result</code>、<code>report_progress</code>、<code>list_nodes</code>、<code>describe_node</code>、<code>get_task</code>、<code>wait_task</code>；會影響其他機器的 <code>send_task</code>、<code>send_message</code>、<code>cancel_task</code>、附件工具仍走審核，除非 profile 的 allowed_tools 明確列出</li>
+    <li><b><code>--permission-prompt-tool</code> 有效：</b>它不在 <code>--help</code> 清單，但實測會把不在 allowedTools 的工具（含 MCP 工具）交給 <code>permission_prompt</code>；審核者的說明原文會送到 Claude</li>
+    <li><b>等待審核期間工具呼叫可以掛超過 2 分鐘：</b>在 <code>MCP_TOOL_TIMEOUT=900000</code> 下實測 120 秒等待後仍正常回傳</li>
+    <li><b><code>--setting-sources ''</code> 可用（D26）：</b>Worker 預設不載入使用者與專案的 Claude 設定，避免 <code>~/.claude/settings.json</code> 或 repo 內 <code>.claude/settings.json</code> 的 allow 規則繞過 profile。profile 可用 <code>"setting_sources": "user,project"</code> 明確放寬</li>
+    <li><b><code>--max-turns</code> 可用：</b>同樣不在說明清單，但有效</li>
+    <li><b>system prompt 優先於跨機器內容：</b>任務文字要求「被拒絕也回報 succeeded」時，Claude 依 system prompt 第 4 條回報 failed 並說明原因</li>
   </ul>
 
   <h3>結果判定優先序</h3>
@@ -2802,7 +2814,9 @@ env   = 使用者環境 + profile.env + AIPAGER_TASK_ID + MCP_TOOL_TIMEOUT=90000
     <tr><td><code>stream.jsonl</code></td><td>Claude 原始串流輸出</td><td>30 天</td></tr>
     <tr><td><code>stderr.log</code></td><td>Claude 標準錯誤</td><td>30 天</td></tr>
     <tr><td><code>worker.log</code></td><td>此任務的 Worker Log（JSONL）</td><td>30 天</td></tr>
-    <tr><td><code>result.json</code></td><td>送出（或待送出）的結果</td><td>30 天</td></tr>
+    <tr><td><code>result.json</code></td><td>送出（或待送出）的結果；<code>pending=true</code> 代表 Hub 連不上、背景重送中；<code>lease_lost=true</code> 代表租約已失效，只保留在本機</td><td>30 天</td></tr>
+    <tr><td><code>submitted.json</code></td><td>Claude 呼叫 <code>submit_result</code> 時由 MCP 寫入；Worker 在程序結束後讀取並加上 metrics、附件再送出</td><td>30 天</td></tr>
+    <tr><td><code>state.json</code></td><td>lease_id、pid、階段；Worker 重啟時用來判斷中斷的任務（<code>E_WORKER_CRASH</code>）</td><td>30 天</td></tr>
   </table></div>
 
   <details>
@@ -3121,18 +3135,19 @@ artifacts (collected by the worker after you finish): {{expected_output.artifact
 <section id="deploy">
   <h2><span class="no">19</span>部署</h2>
   <h3>發行檔結構</h3>
-  <div class="codebox"><div class="label"><span>同一份發行檔用於三個平台；Windows 放 C:\Program Files\AIPager，其他放 /opt/aipager</span><button type="button" data-copy>複製</button></div><pre><code>aipager/
+  <div class="codebox"><div class="label"><span>同一份發行檔用於三個平台；Windows 放 C:\Program Files\AIPager，其他放 /opt/aipager</span><button type="button" data-copy>複製</button></div><pre><code>aipager/                 ← 發行檔就是這個 repo（git clone 或下載 zip），再執行 npm ci --omit=dev
   bin/        hub.js  worker.js  aipager-mcp.js  aipager-hint.js  aipagerctl.js
-  lib/        aipager-client/ …（含 platform/windows.js、platform/posix.js）
-  ui/         index.html  app.js  i18n/zh-TW.json  i18n/en.json
-  templates/  hub.json  node.*.json  profiles.*.json
-  scripts/
-    windows/  start-worker.bat  start-worker.ps1  register-worker-task.ps1
-    posix/    start-worker.sh
-    linux/    aipager-hub.service  aipager-worker.service  install-hub.sh
-    macos/    com.aipager.worker.plist
+  lib/        common/（路徑、Log、client、平台）  hub/  worker/  mcp/  ctl/
+  ui/         index.html  app.js  style.css  i18n/zh-TW.json  i18n/en.json
+  spec/       schemas/  reference/  sql/  mcp/  prompts/（執行時直接讀取，與規格同一份）
+    config/   hub.json  node.*.json  profiles.*.json（範本）
+    scripts/
+      windows/  start-worker.bat  start-worker.ps1  register-worker-task.ps1
+      posix/    start-worker.sh
+      linux/    aipager-hub.service  aipager-worker.service  install-hub.sh
+      macos/    com.aipager.worker.plist
   node_modules/
-  package.json   ← "volta": { "node": "22.x.x" }</code></pre></div>
+  package.json</code></pre></div>
 
   <h3>Hub（Ubuntu 24.04 / 26.04）</h3>
   <div class="note"><b>Ubuntu 26.04 注意：</b>Ubuntu 從 25.10 開始預設改用 Rust 版 coreutils（uutils）與 sudo-rs，26.04 LTS 預期沿用。install-hub.sh 只用 <code>install</code>、<code>useradd</code>、<code>date</code> 等常見參數，理論上相容，但仍列為實機驗證項目 T31。若遇到不相容，可先安裝 GNU 版 coreutils 再執行。</div>
@@ -3142,7 +3157,7 @@ artifacts (collected by the worker after you finish): {{expected_output.artifact
     <li><div>發行檔放到 <code>/opt/aipager</code>，執行 <code>/opt/node-v22/bin/npm ci --omit=dev</code></div></li>
     <li><div><code>sudo /opt/aipager/scripts/linux/install-hub.sh --allow-cidr 100.64.0.0/10</code>：建立系統帳號、目錄與權限、systemd unit、防火牆規則</div></li>
     <li><div>編輯 <code>/etc/aipager/hub.json</code> 的 <code>listen.host</code> 為步驟 1 的 IP</div></li>
-    <li><div><code>sudo -u aipager /opt/node-v22/bin/node /opt/aipager/bin/aipagerctl.js admin init --config /etc/aipager/hub.json</code>：初始化 DB、印出 admin token（只顯示一次，請存進你自己的 aipagerctl 設定）</div></li>
+    <li><div><code>sudo -u aipager /opt/node-v22/bin/node /opt/aipager/bin/aipagerctl.js admin init --config /etc/aipager/hub.json</code>（之後在你自己的電腦執行 <code>aipagerctl admin save-token &lt;token&gt; --hub http://aipager-hub:7300</code>）：初始化 DB、印出 admin token（只顯示一次，請存進你自己的 aipagerctl 設定）</div></li>
     <li><div><code>sudo systemctl enable --now aipager-hub</code>，用 <code>journalctl -u aipager-hub -f</code> 觀察</div></li>
     <li><div>驗證 T01、T22；Ubuntu 26.04 另做 T31</div></li>
   </ol>
@@ -3443,6 +3458,8 @@ param(
     [string]$AppDir = "C:\Program Files\AIPager"
 )
 $bat = Join-Path $AppDir "spec\scripts\windows\start-worker.bat"
+$logDir = "C:\ProgramData\AIPager\logs"
+New-Item -ItemType Directory -Path $logDir -Force | Out-Null  # cmd redirection fails if the folder does not exist
 $action  = New-ScheduledTaskAction -Execute "cmd.exe" -Argument "/c `"$bat`" &gt; `"C:\ProgramData\AIPager\logs\worker-console.log`" 2&gt;&amp;1"
 $trigger = New-ScheduledTaskTrigger -AtStartup
 $settings = New-ScheduledTaskSettingsSet -RestartCount 999 -RestartInterval (New-TimeSpan -Minutes 1) `
@@ -3932,7 +3949,7 @@ INSERT OR IGNORE INTO schema_version(version, applied_at) VALUES (1, strftime('%
 <section id="tests">
   <h2><span class="no">21</span>驗證計畫</h2>
   <p>本章由 <code>spec/tests/test-plan.json</code> 自動產生，那份檔案是測試項目與執行紀錄的唯一來源。執行任何一項後，請在該檔更新 <code>status</code> 與 <code>last_run</code>，再執行 <code>npm run check</code> 重新產生文件，不要直接改本章。</p>
-  <div class="note"><b>目前進度：</b>手動測試 34 項：未執行 33、部分完成 1、通過 0、失敗 0。自動化測試 7 項，最近一次通過 7 項。</div>
+  <div class="note"><b>目前進度：</b>手動測試 34 項：未執行 11、部分完成 20、通過 3、失敗 0。自動化測試 12 項，最近一次通過 12 項。</div>
 
   <h3>自動化測試與執行紀錄</h3>
   <p>這些測試不需要 Hub 或 Claude 登入，任何人都可以在自己的機器上重跑。A06 會修改系統，只能在用完即丟的 Ubuntu 機器或容器中執行。</p>
@@ -3945,6 +3962,11 @@ INSERT OR IGNORE INTO schema_version(version, applied_at) VALUES (1, strftime('%
     <tr><td class="num">A05</td><td>服務腳本靜態檢查</td><td class="wrap"><code>bash tools/tests/static-scripts.test.sh</code></td><td>任一</td><td>所有 .sh 的 bash -n、launchd plist 解析與必要欄位、systemd unit 以 systemd-analyze verify 實際驗證、.ps1 以 pwsh 解析（有 pwsh 時）</td><td><span class="pill ok">通過</span> 2026-11-03<br>Ubuntu 24.04.5 LTS 容器，Node.js v22.23.4，systemd 255<br>兩個 systemd unit 通過 systemd-analyze；.ps1 因沒有 pwsh 而略過（SKIP），尚未驗證；v0.3.2 改名後重跑通過</td></tr>
     <tr><td class="num">A06</td><td>Hub 安裝腳本實跑</td><td class="wrap"><code>sudo AIPAGER_TEST_ALLOW_SYSTEM_CHANGES=1 bash tools/tests/linux-install-hub.test.sh</code></td><td>Linux</td><td>install-hub.sh 實際建立系統帳號、目錄擁有者與權限、hub.json 權限、systemd unit 安裝、daemon-reload、防火牆提示；第二次執行冪等且不覆蓋已修改的 hub.json；結束後清除</td><td><span class="pill ok">通過</span> 2026-11-03<br>Ubuntu 24.04.5 LTS 容器（GNU coreutils 9.4），以 stub 取代 systemctl<br>13 項通過；Ubuntu 26.04 尚未執行；v0.3.2 改名後重跑通過</td></tr>
     <tr><td class="num">A07</td><td>乾淨 clone 重現</td><td class="wrap"><code>git clone &lt;repo&gt; &amp;&amp; npm ci &amp;&amp; npm run check</code></td><td>任一</td><td>從 GitHub 分支取出後 .bat 為 ASCII+CRLF、.ps1 為 UTF-8 BOM+CRLF、.sh 保有執行權限，且 A01、A02 通過</td><td><span class="pill ok">通過</span> 2026-11-03<br>Ubuntu 24.04.5 LTS 容器，Node.js v22.23.4<br>commit e22269c 驗證通過</td></tr>
+    <tr><td class="num">A08</td><td>Hub 整合測試</td><td class="wrap"><code>node --test tests/hub.test.js</code></td><td>任一</td><td>加入碼（一次性、重複 node_id、速率限制）、待核准、metadata If-Match 與還原、派給睡著筆電（confirm / queue）、條件路由、租約、進度、結果與信箱、取消、冪等、防迴圈、審核與逾時、筆電睡眠保留與超時判定、server 失聯重排、then 鏈結、附件、重灌與退役、排隊過期</td><td><span class="pill ok">通過</span> 2026-11-03<br>Ubuntu 24.04.5 LTS 容器，單機（Hub、Worker、互動端在同一台），Node 22.23.4<br>13 項通過；以可調整的時鐘模擬睡眠</td></tr>
+    <tr><td class="num">A09</td><td>端對端（stub claude）</td><td class="wrap"><code>node --test tests/e2e.test.js</code></td><td>macOS / Linux</td><td>真實 Hub + Worker + aipager-mcp（task 與 interactive）+ 會講真 MCP 的 stub claude：submit_result、附件與 stream log、任務目錄檔案、final_text 後備、輸出 schema 驗證、登入失敗分類、permission_prompt 審核拒絕、取消終止程序群組、逾時、互動 confirm 流程、信箱、profiles 熱重載</td><td><span class="pill ok">通過</span> 2026-11-03<br>Ubuntu 24.04.5 LTS 容器，單機（Hub、Worker、互動端在同一台），Node 22.23.4<br>6 項通過</td></tr>
+    <tr><td class="num">A10</td><td>操作流程（真實程序）</td><td class="wrap"><code>node --test tests/cli.test.js</code></td><td>macOS / Linux</td><td>bin/hub.js、aipagerctl admin init / save-token / enroll / join / nodes approve / send --wait / doctor --encoding / nodes set / tasks --stuck、start-worker.sh、aipager-hint、service install --dry-run（產生的 unit 經 systemd-analyze verify）</td><td><span class="pill ok">通過</span> 2026-11-03<br>Ubuntu 24.04.5 LTS 容器，單機（Hub、Worker、互動端在同一台），Node 22.23.4<br>1 項通過（4.3 秒）</td></tr>
+    <tr><td class="num">A11</td><td>Dashboard 瀏覽器測試</td><td class="wrap"><code>node --test tests/dashboard.test.js</code></td><td>任一</td><td>Chromium 1366px 與 400px：首頁睡著機器與卡住任務、核准機器、拒絕審核並附說明、修改保留時間、建立加入碼、debug 模式、手機無水平捲動、無 console 錯誤</td><td><span class="pill ok">通過</span> 2026-11-03<br>Ubuntu 24.04.5 LTS 容器，單機（Hub、Worker、互動端在同一台），Node 22.23.4<br>通過；截圖見 PR 說明</td></tr>
+    <tr><td class="num">A12</td><td>真實 Claude Code</td><td class="wrap"><code>AIPAGER_TEST_REAL_CLAUDE=1 node --test tests/real-claude.test.js</code></td><td>Linux</td><td>Worker 啟動真正的 claude -p（haiku）：stream-json 解析、MCP task server 連線、submit_result、--permission-prompt-tool 把 Bash touch 送審並把拒絕說明原文送到 Claude、--setting-sources ''</td><td><span class="pill ok">通過</span> 2026-11-03<br>Ubuntu 24.04.5 LTS 容器，單機（Hub、Worker、互動端在同一台），Node 22.23.4<br>Claude Code 2.1.317，兩個任務約 0.007 USD；過程中發現自家 MCP 工具需預先允許（D25）</td></tr>
   </table></div>
 
   <h3>手動測試的環境與優先順序</h3>
@@ -3962,22 +3984,22 @@ INSERT OR IGNORE INTO schema_version(version, applied_at) VALUES (1, strftime('%
     <tr><td class="num">T02</td><td>Worker 上線</td><td>P0</td><td>Windows / macOS / Linux</td><td class="wrap">三台以 T23 的流程加入並核准後執行 <code>aipagerctl nodes</code></td><td>三台 active / online，facts 中 os / arch 正確</td><td>各平台服務主控台輸出印出 config、node_id、claude 版本</td><td><span class="pill">未執行</span></td></tr>
     <tr><td class="num">T03</td><td>Windows 冒煙任務 <span class="pill run">優先</span> <span class="pill">CLI 行為</span></td><td>P0</td><td>Windows</td><td class="wrap"><code>aipagerctl send --to worker@build-pc --profile echo --title "冒煙" --text "執行 hostname 與 whoami 並回報" --wait 120</code></td><td>succeeded；summary 含 build-pc 主機名；<code>result_source=submit_tool</code></td><td>任務目錄檔案齊全；stream.jsonl 第一筆 <code>type=system</code>、最後一筆 <code>type=result</code></td><td><span class="pill">未執行</span></td></tr>
     <tr><td class="num">T04</td><td>macOS 冒煙任務 <span class="pill run">優先</span> <span class="pill">CLI 行為</span></td><td>P0</td><td>macOS</td><td class="wrap">同 T03，改 <code>--to worker@macbook-hc</code>，內容加「執行 sw_vers」</td><td>succeeded；回報 macOS 版本</td><td>同 T03</td><td><span class="pill">未執行</span></td></tr>
-    <tr><td class="num">T05</td><td>Linux 冒煙任務 <span class="pill run">優先</span> <span class="pill">CLI 行為</span></td><td>P0</td><td>Linux</td><td class="wrap">同 T03，改 <code>--to worker@linux-box</code>，內容加「讀取 /etc/os-release」</td><td>succeeded；回報發行版</td><td>同 T03</td><td><span class="pill">未執行</span></td></tr>
-    <tr><td class="num">T06</td><td>互動 MCP</td><td>P0</td><td>任一</td><td class="wrap">在 dev 機開 Claude Code，輸入 <code>/mcp</code>；再輸入「列出 aipager 節點」</td><td>aipager 為 connected；列出各機器、顯示名稱與在線狀態</td><td>mcp Log</td><td><span class="pill">未執行</span></td></tr>
+    <tr><td class="num">T05</td><td>Linux 冒煙任務 <span class="pill run">優先</span> <span class="pill">CLI 行為</span></td><td>P0</td><td>Linux</td><td class="wrap">同 T03，改 <code>--to worker@linux-box</code>，內容加「讀取 /etc/os-release」</td><td>succeeded；回報發行版</td><td>同 T03</td><td><span class="pill wait">部分完成</span><br>2026-11-03<br>以真實 Claude Code 在 Linux 跑通 Worker（A12）；尚未在獨立的 Linux 機器經 Tailscale 與已安裝服務執行</td></tr>
+    <tr><td class="num">T06</td><td>互動 MCP</td><td>P0</td><td>任一</td><td class="wrap">在 dev 機開 Claude Code，輸入 <code>/mcp</code>；再輸入「列出 aipager 節點」</td><td>aipager 為 connected；列出各機器、顯示名稱與在線狀態</td><td>mcp Log</td><td><span class="pill wait">部分完成</span><br>2026-11-03<br>interactive MCP 以 MCP client 驗證（A09）；尚未在真實 Claude Code 互動 session 用 /mcp 確認</td></tr>
     <tr><td class="num">T07</td><td>跨 OS 互動派工</td><td>P0</td><td>macOS / Windows</td><td class="wrap">在 dev-mac 的 Claude 輸入「叫 build-pc 用 echo profile 回報 dotnet --info 的 SDK 版本」</td><td>Claude 自動派工、等待、回報版本</td><td>Dashboard 任務詳情的時間軸</td><td><span class="pill">未執行</span></td></tr>
-    <tr><td class="num">T08</td><td>訊息與未讀提示</td><td>P0</td><td>Linux / Windows</td><td class="wrap">在 linux-box：<code>aipagerctl msg --to main@dev-pc --text "測試訊息 中文 ✓"</code>；在 dev-pc 的 Claude 隨便輸入一句</td><td>回應前出現 <code>[AIPager] 1 則未讀…</code>；請 Claude 讀信箱，中文正確</td><td>hint Log</td><td><span class="pill">未執行</span></td></tr>
-    <tr><td class="num">T09</td><td>人工審核（確認 permission-prompt-tool 與 MCP_TOOL_TIMEOUT） <span class="pill">CLI 行為</span></td><td>P1</td><td>Windows</td><td class="wrap">對 build profile 送「在工作目錄建立 aipager-test.txt 後執行 git push」，在 Dashboard 按拒絕</td><td>任務出現 waiting_approval；拒絕後 Claude 改為不推送，結果說明原因</td><td>approvals 表；stream.jsonl 中的 permission 往返</td><td><span class="pill">未執行</span></td></tr>
-    <tr><td class="num">T10</td><td>審核逾時</td><td>P1</td><td>Windows</td><td class="wrap">同 T09，但 <code>approval.timeout_sec</code> 設 60，不處理</td><td>60 秒後自動 deny，任務繼續並完成</td><td>approvals.state = expired</td><td><span class="pill">未執行</span></td></tr>
+    <tr><td class="num">T08</td><td>訊息與未讀提示</td><td>P0</td><td>Linux / Windows</td><td class="wrap">在 linux-box：<code>aipagerctl msg --to main@dev-pc --text "測試訊息 中文 ✓"</code>；在 dev-pc 的 Claude 隨便輸入一句</td><td>回應前出現 <code>[AIPager] 1 則未讀…</code>；請 Claude 讀信箱，中文正確</td><td>hint Log</td><td><span class="pill wait">部分完成</span><br>2026-11-03<br>aipager-hint 輸出與任務內靜默已驗證（A10）；尚未掛在真實 Claude Code hook</td></tr>
+    <tr><td class="num">T09</td><td>人工審核（確認 permission-prompt-tool 與 MCP_TOOL_TIMEOUT） <span class="pill">CLI 行為</span></td><td>P1</td><td>Windows</td><td class="wrap">對 build profile 送「在工作目錄建立 aipager-test.txt 後執行 git push」，在 Dashboard 按拒絕</td><td>任務出現 waiting_approval；拒絕後 Claude 改為不推送，結果說明原因</td><td>approvals 表；stream.jsonl 中的 permission 往返</td><td><span class="pill wait">部分完成</span><br>2026-11-03<br>Linux 上以真實 Claude Code 驗證 permission_prompt 與拒絕說明（A12），Dashboard 拒絕按鈕以 stub 驗證（A11）；Windows build-pc 尚未執行</td></tr>
+    <tr><td class="num">T10</td><td>審核逾時</td><td>P1</td><td>Windows</td><td class="wrap">同 T09，但 <code>approval.timeout_sec</code> 設 60，不處理</td><td>60 秒後自動 deny，任務繼續並完成</td><td>approvals.state = expired</td><td><span class="pill wait">部分完成</span><br>2026-11-03<br>Hub 端逾時自動拒絕已驗證（A08）；真實 Claude 曾在 120 秒逾時後正確收到拒絕</td></tr>
     <tr><td class="num">T11</td><td>取消（Windows）</td><td>P0</td><td>Windows</td><td class="wrap">對 build-pc 送「執行 <code>ping -n 300 127.0.0.1</code>」，10 秒後 <code>aipagerctl cancel</code></td><td>60 秒內 cancelled；工作管理員中沒有殘留 claude.exe / ping.exe</td><td>worker Log 的 <code>taskkill</code> 紀錄</td><td><span class="pill">未執行</span></td></tr>
-    <tr><td class="num">T12</td><td>取消（macOS / Linux）</td><td>P0</td><td>macOS / Linux</td><td class="wrap">對 macbook-hc 與 linux-box 送「執行 <code>sleep 300</code>」，10 秒後取消；再執行 <code>ps -o pid,stat,comm -g &lt;pgid&gt;</code></td><td>cancelled；群組內沒有非 Z 狀態的程序</td><td>worker Log 的 pgid 與信號紀錄</td><td><span class="pill">未執行</span></td></tr>
-    <tr><td class="num">T13</td><td>逾時</td><td>P0</td><td>任一</td><td class="wrap">同 T11 / T12 但 <code>timeout_sec=60</code>，不取消</td><td>failed，<code>E_TIMEOUT</code></td><td>result.json</td><td><span class="pill">未執行</span></td></tr>
-    <tr><td class="num">T14</td><td>防迴圈</td><td>P2</td><td>任一</td><td class="wrap">送任務要求「把這個任務原封不動轉給 worker@build-pc」</td><td>第 5 層建立時被拒，<code>E_HOP_LIMIT</code></td><td>trace 頁可見 4 層</td><td><span class="pill">未執行</span></td></tr>
-    <tr><td class="num">T15</td><td>冪等</td><td>P0</td><td>任一</td><td class="wrap">用相同 <code>idempotency_key</code> 呼叫兩次 <code>POST /tasks</code></td><td>第二次回 200 與相同 task_id</td><td>tasks 表只有一筆</td><td><span class="pill">未執行</span></td></tr>
+    <tr><td class="num">T12</td><td>取消（macOS / Linux）</td><td>P0</td><td>macOS / Linux</td><td class="wrap">對 macbook-hc 與 linux-box 送「執行 <code>sleep 300</code>」，10 秒後取消；再執行 <code>ps -o pid,stat,comm -g &lt;pgid&gt;</code></td><td>cancelled；群組內沒有非 Z 狀態的程序</td><td>worker Log 的 pgid 與信號紀錄</td><td><span class="pill wait">部分完成</span><br>2026-11-03<br>Linux 上以 stub 驗證取消會終止整個程序群組（A09、A04）；macOS 尚未執行</td></tr>
+    <tr><td class="num">T13</td><td>逾時</td><td>P0</td><td>任一</td><td class="wrap">同 T11 / T12 但 <code>timeout_sec=60</code>，不取消</td><td>failed，<code>E_TIMEOUT</code></td><td>result.json</td><td><span class="pill wait">部分完成</span><br>2026-11-03<br>Linux 上以 stub 驗證逾時終止（A09）；Windows、macOS 尚未執行</td></tr>
+    <tr><td class="num">T14</td><td>防迴圈</td><td>P2</td><td>任一</td><td class="wrap">送任務要求「把這個任務原封不動轉給 worker@build-pc」</td><td>第 5 層建立時被拒，<code>E_HOP_LIMIT</code></td><td>trace 頁可見 4 層</td><td><span class="pill ok">通過</span><br>2026-11-03<br>Hub 端邏輯與平台無關，A08 驗證第 3 層被拒（max_hops=2 設定）</td></tr>
+    <tr><td class="num">T15</td><td>冪等</td><td>P0</td><td>任一</td><td class="wrap">用相同 <code>idempotency_key</code> 呼叫兩次 <code>POST /tasks</code></td><td>第二次回 200 與相同 task_id</td><td>tasks 表只有一筆</td><td><span class="pill ok">通過</span><br>2026-11-03<br>A08 驗證相同 idempotency_key 回 200 與同一 task_id</td></tr>
     <tr><td class="num">T16</td><td>重開機免登入（確認各平台的 Claude 登入方式） <span class="pill run">優先</span> <span class="pill">CLI 行為</span></td><td>P0</td><td>Windows / macOS / Linux</td><td class="wrap">三台 Worker 重開機、不登入，再跑 T03–T05。macOS 使用 LaunchDaemon + oauth_token</td><td>三台結果與 T03–T05 相同</td><td>Windows 排程上次結果；<code>launchctl print system/com.aipager.worker</code>；<code>systemctl --user status</code></td><td><span class="pill">未執行</span></td></tr>
     <tr><td class="num">T17</td><td>Hub 重啟</td><td>P2</td><td>Linux</td><td class="wrap">送 3 分鐘的任務，執行中 <code>sudo systemctl stop aipager-hub</code>，1 分鐘後再 start</td><td>任務最終 succeeded，結果有送達</td><td>worker Log 的 pending result 重送紀錄</td><td><span class="pill">未執行</span></td></tr>
-    <tr><td class="num">T18</td><td>Worker 離線</td><td>P2</td><td>Linux</td><td class="wrap">停止 linux-box Worker，用 <code>--on-unavailable queue</code> 送任務，2 分鐘後再啟動</td><td>45 秒內轉 asleep；任務維持 queued；啟動後被領走完成</td><td>nodes 表 last_seen、presence</td><td><span class="pill">未執行</span></td></tr>
-    <tr><td class="num">T19</td><td>平台路由</td><td>P2</td><td>macOS / Linux / Windows</td><td class="wrap">macbook-hc 與 linux-box 都是 tester；送 <code>--to worker@role:tester --requires-os macos</code>，再對 build-pc 送 <code>--requires-os linux</code></td><td>第一筆只由 macbook-hc 領取；第二筆建立時回 <code>E_REQUIREMENT_UNMET</code></td><td>tasks.assigned_node</td><td><span class="pill">未執行</span></td></tr>
-    <tr><td class="num">T20</td><td>跨平台流水線</td><td>P3</td><td>Windows / Linux</td><td class="wrap">送 <a href="#protocol">08 訊息封包（Envelope）</a> 的 task-create 範例（linux-box 需有標籤 <code>browser=chromium</code>）</td><td>build-pc 編譯成功後自動建立 E2E 任務，由 linux-box 執行，兩者同一 thread</td><td>Thread 頁</td><td><span class="pill">未執行</span></td></tr>
+    <tr><td class="num">T18</td><td>Worker 離線</td><td>P2</td><td>Linux</td><td class="wrap">停止 linux-box Worker，用 <code>--on-unavailable queue</code> 送任務，2 分鐘後再啟動</td><td>45 秒內轉 asleep；任務維持 queued；啟動後被領走完成</td><td>nodes 表 last_seen、presence</td><td><span class="pill wait">部分完成</span><br>2026-11-03<br>Hub 端租約過期後重新排隊已驗證（A08，模擬時鐘）；真實停止 Worker 尚未執行</td></tr>
+    <tr><td class="num">T19</td><td>平台路由</td><td>P2</td><td>macOS / Linux / Windows</td><td class="wrap">macbook-hc 與 linux-box 都是 tester；送 <code>--to worker@role:tester --requires-os macos</code>，再對 build-pc 送 <code>--requires-os linux</code></td><td>第一筆只由 macbook-hc 領取；第二筆建立時回 <code>E_REQUIREMENT_UNMET</code></td><td>tasks.assigned_node</td><td><span class="pill wait">部分完成</span><br>2026-11-03<br>Hub 端角色、os、標籤路由已驗證（A08）；真實多平台節點尚未執行</td></tr>
+    <tr><td class="num">T20</td><td>跨平台流水線</td><td>P3</td><td>Windows / Linux</td><td class="wrap">送 <a href="#protocol">08 訊息封包（Envelope）</a> 的 task-create 範例（linux-box 需有標籤 <code>browser=chromium</code>）</td><td>build-pc 編譯成功後自動建立 E2E 任務，由 linux-box 執行，兩者同一 thread</td><td>Thread 頁</td><td><span class="pill wait">部分完成</span><br>2026-11-03<br>Hub 端 then 鏈結與變數代入已驗證（A08）；真實 Windows 編譯 + Linux E2E 尚未執行</td></tr>
     <tr><td class="num">T21</td><td>編碼與換行稽核</td><td>P0</td><td>Windows / macOS / Linux</td><td class="wrap">從 dev-mac 送含繁體中文的任務給 build-pc，完成後在三台執行 <code>aipagerctl doctor --encoding</code></td><td>中文正確；所有 .json / .jsonl / .txt 為 UTF-8 無 BOM、LF；.bat 純 ASCII；.ps1 有 BOM</td><td>doctor 輸出</td><td><span class="pill">未執行</span></td></tr>
     <tr><td class="num">T22</td><td>Hub 備份與還原</td><td>P2</td><td>Linux</td><td class="wrap"><code>aipagerctl admin backup</code>；停止 Hub；<code>aipagerctl admin restore &lt;file&gt;</code>；啟動</td><td>任務與節點資料完整</td><td><code>/var/lib/aipager/backup/</code></td><td><span class="pill">未執行</span></td></tr>
   </table></div>
@@ -3985,25 +4007,25 @@ INSERT OR IGNORE INTO schema_version(version, applied_at) VALUES (1, strftime('%
   <h3>節點管理與在線狀態</h3>
   <div class="tablewrap"><table>
     <tr><th>#</th><th>項目</th><th>階段</th><th>平台</th><th>步驟</th><th>預期結果</th><th>觀察點</th><th>狀態</th></tr>
-    <tr><td class="num">T23</td><td>加入新機器</td><td>P0</td><td>任一</td><td class="wrap">① <code>aipagerctl enroll create --name "測試機" --power desktop --role tester</code> ② 新機器 <code>aipagerctl join --hub http://aipager-hub:7300 --code &lt;code&gt;</code> ③ <code>aipagerctl service install</code> ④ Dashboard 按核准</td><td>join 後為 pending 且 Dashboard 顯示 online；核准後 active，可領任務</td><td>join 印出寫入的 node.json 路徑；events 中 <code>node.enrolled</code>、<code>node.state</code></td><td><span class="pill">未執行</span></td></tr>
-    <tr><td class="num">T24</td><td>加入碼防護</td><td>P0</td><td>任一</td><td class="wrap">同一加入碼再 join 一次；使用過期加入碼；連續送 6 次錯誤加入碼</td><td>前兩者 422 <code>E_ENROLL_INVALID</code>；第 6 次 429 <code>E_RATE_LIMIT</code></td><td>enrollments 表 used_at；hub Log</td><td><span class="pill">未執行</span></td></tr>
-    <tr><td class="num">T25</td><td>metadata 即時生效與衝突</td><td>P0</td><td>Linux</td><td class="wrap">① 送 <code>--requires-label gpu=yes</code> 的任務給 role tester（沒有機器符合，排隊）② <code>aipagerctl nodes set linux-box --label gpu=yes</code> ③ 用舊的 meta_version 直接 PATCH 一次</td><td>② 之後 15 秒內任務被 linux-box 領走；③ 回 409 <code>E_META_CONFLICT</code></td><td><code>aipagerctl nodes history linux-box</code> 可見新版本</td><td><span class="pill">未執行</span></td></tr>
-    <tr><td class="num">T26</td><td>profiles 熱重載</td><td>P2</td><td>Linux</td><td class="wrap">在 linux-box 的 profiles.json 新增 profile 存檔；再故意存一份 JSON 格式錯誤的版本</td><td>新增後下一次心跳 Dashboard 出現新 profile；錯誤版本時保留原設定、Dashboard 顯示 <code>profiles_error</code></td><td>worker Log 的 <code>profiles.reload</code></td><td><span class="pill">未執行</span></td></tr>
-    <tr><td class="num">T27</td><td>派給睡著的筆電（confirm）</td><td>P0</td><td>macOS</td><td class="wrap">macbook-hc 闔蓋 2 分鐘後，在 dev-pc 的 Claude 輸入「叫 macbook-hc 跑 iOS 單元測試」</td><td>任務未建立；Claude 告知「已 N 分鐘沒有回應，可能睡著」並詢問排隊 / 改派 / 取消</td><td>MCP Log 中 409 <code>E_TARGET_UNAVAILABLE</code>；tasks 表沒有新列</td><td><span class="pill">未執行</span></td></tr>
-    <tr><td class="num">T28</td><td>排隊等待與醒來通知</td><td>P0</td><td>macOS</td><td class="wrap">接 T27，回答「排隊」；10 分鐘後打開筆電</td><td>任務建立時帶 <code>W_TARGET_ASLEEP</code>；開蓋後 1 分鐘內被領取；dev-pc 下次輸入時 aipager-hint 提示「macbook-hc 已回來，開始執行…」</td><td>信箱 <code>system.notice</code>；events 的 <code>node.presence</code> asleep → online</td><td><span class="pill">未執行</span></td></tr>
-    <tr><td class="num">T29</td><td>執行中闔蓋 <span class="pill run">優先</span></td><td>P0</td><td>macOS</td><td class="wrap">① 對 macbook-hc 送一個約 5 分鐘的任務，執行中闔蓋 10 分鐘再打開 ② 重做一次，把該節點 <code>suspend_grace_sec</code> 設 120，闔蓋 5 分鐘</td><td>① 任務續跑並 succeeded，發派者收到「執行中的機器睡著了」通知 ② 任務 failed，<code>E_LEASE_LOST</code>（detail: node_asleep），醒來後 Worker 終止該任務並保留本機結果</td><td>tasks.node_asleep_since、asleep_ms_total；worker Log 的 <code>resumed_from_sleep</code></td><td><span class="pill">未執行</span></td></tr>
+    <tr><td class="num">T23</td><td>加入新機器</td><td>P0</td><td>任一</td><td class="wrap">① <code>aipagerctl enroll create --name "測試機" --power desktop --role tester</code> ② 新機器 <code>aipagerctl join --hub http://aipager-hub:7300 --code &lt;code&gt;</code> ③ <code>aipagerctl service install</code> ④ Dashboard 按核准</td><td>join 後為 pending 且 Dashboard 顯示 online；核准後 active，可領任務</td><td>join 印出寫入的 node.json 路徑；events 中 <code>node.enrolled</code>、<code>node.state</code></td><td><span class="pill wait">部分完成</span><br>2026-11-03<br>單機以真實程序跑完 enroll create → join → 待核准 → approve（A10），Dashboard 核准按鈕（A11）；多台實機尚未執行</td></tr>
+    <tr><td class="num">T24</td><td>加入碼防護</td><td>P0</td><td>任一</td><td class="wrap">同一加入碼再 join 一次；使用過期加入碼；連續送 6 次錯誤加入碼</td><td>前兩者 422 <code>E_ENROLL_INVALID</code>；第 6 次 429 <code>E_RATE_LIMIT</code></td><td>enrollments 表 used_at；hub Log</td><td><span class="pill wait">部分完成</span><br>2026-11-03<br>重複使用、錯誤加入碼與速率限制已驗證（A08）；過期加入碼尚未測</td></tr>
+    <tr><td class="num">T25</td><td>metadata 即時生效與衝突</td><td>P0</td><td>Linux</td><td class="wrap">① 送 <code>--requires-label gpu=yes</code> 的任務給 role tester（沒有機器符合，排隊）② <code>aipagerctl nodes set linux-box --label gpu=yes</code> ③ 用舊的 meta_version 直接 PATCH 一次</td><td>② 之後 15 秒內任務被 linux-box 領走；③ 回 409 <code>E_META_CONFLICT</code></td><td><code>aipagerctl nodes history linux-box</code> 可見新版本</td><td><span class="pill wait">部分完成</span><br>2026-11-03<br>If-Match 衝突、版本與還原、Dashboard 編輯已驗證（A08、A11）；「改標籤後 15 秒內被領走」尚未測</td></tr>
+    <tr><td class="num">T26</td><td>profiles 熱重載</td><td>P2</td><td>Linux</td><td class="wrap">在 linux-box 的 profiles.json 新增 profile 存檔；再故意存一份 JSON 格式錯誤的版本</td><td>新增後下一次心跳 Dashboard 出現新 profile；錯誤版本時保留原設定、Dashboard 顯示 <code>profiles_error</code></td><td>worker Log 的 <code>profiles.reload</code></td><td><span class="pill wait">部分完成</span><br>2026-11-03<br>Linux 上熱重載與錯誤時保留舊設定已驗證（A09）</td></tr>
+    <tr><td class="num">T27</td><td>派給睡著的筆電（confirm）</td><td>P0</td><td>macOS</td><td class="wrap">macbook-hc 闔蓋 2 分鐘後，在 dev-pc 的 Claude 輸入「叫 macbook-hc 跑 iOS 單元測試」</td><td>任務未建立；Claude 告知「已 N 分鐘沒有回應，可能睡著」並詢問排隊 / 改派 / 取消</td><td>MCP Log 中 409 <code>E_TARGET_UNAVAILABLE</code>；tasks 表沒有新列</td><td><span class="pill wait">部分完成</span><br>2026-11-03<br>confirm 流程以 MCP client 驗證（A09、A08）；尚未在真實 Claude 互動 session 與真實闔蓋的筆電執行</td></tr>
+    <tr><td class="num">T28</td><td>排隊等待與醒來通知</td><td>P0</td><td>macOS</td><td class="wrap">接 T27，回答「排隊」；10 分鐘後打開筆電</td><td>任務建立時帶 <code>W_TARGET_ASLEEP</code>；開蓋後 1 分鐘內被領取；dev-pc 下次輸入時 aipager-hint 提示「macbook-hc 已回來，開始執行…」</td><td>信箱 <code>system.notice</code>；events 的 <code>node.presence</code> asleep → online</td><td><span class="pill wait">部分完成</span><br>2026-11-03<br>排隊與 W_TARGET_ASLEEP 警告已驗證（A08）；醒來後的「已開始執行」通知尚未測</td></tr>
+    <tr><td class="num">T29</td><td>執行中闔蓋 <span class="pill run">優先</span></td><td>P0</td><td>macOS</td><td class="wrap">① 對 macbook-hc 送一個約 5 分鐘的任務，執行中闔蓋 10 分鐘再打開 ② 重做一次，把該節點 <code>suspend_grace_sec</code> 設 120，闔蓋 5 分鐘</td><td>① 任務續跑並 succeeded，發派者收到「執行中的機器睡著了」通知 ② 任務 failed，<code>E_LEASE_LOST</code>（detail: node_asleep），醒來後 Worker 終止該任務並保留本機結果</td><td>tasks.node_asleep_since、asleep_ms_total；worker Log 的 <code>resumed_from_sleep</code></td><td><span class="pill wait">部分完成</span><br>2026-11-03<br>Hub 端睡眠保留、通知、超時判定以模擬時鐘驗證（A08）；真實闔蓋尚未執行</td></tr>
     <tr><td class="num">T30</td><td>逾時只算醒著時間</td><td>P2</td><td>macOS</td><td class="wrap">對 macbook-hc 送 <code>timeout_sec=300</code> 的任務（約 4 分鐘），執行 1 分鐘後闔蓋 10 分鐘再打開（suspend_grace 30 分鐘）</td><td>任務 succeeded，不會因牆上時間超過 300 秒而 <code>E_TIMEOUT</code></td><td>result.json 的 duration_ms 與 Worker Log 的 sleep gap</td><td><span class="pill">未執行</span></td></tr>
     <tr><td class="num">T31</td><td>Ubuntu 26.04 安裝 <span class="pill run">優先</span></td><td>P0</td><td>Linux</td><td class="wrap">在全新的 Ubuntu 26.04 LTS 執行 Hub 安裝步驟（<a href="#deploy">19 部署</a>）與 T01、T22</td><td>install-hub.sh 全部步驟成功；服務正常</td><td>install-hub.sh 輸出；<code>systemctl status aipager-hub</code></td><td><span class="pill wait">部分完成</span><br>2026-11-03<br>安裝腳本部分由 A06 在 24.04 實跑通過、unit 由 A05 以 systemd-analyze 驗證；Ubuntu 26.04（Rust coreutils、sudo-rs）尚未執行</td></tr>
-    <tr><td class="num">T32</td><td>重灌同一台</td><td>P2</td><td>Linux</td><td class="wrap"><code>aipagerctl enroll create --node-id linux-box</code>，在 linux-box 刪除設定後重新 join</td><td>node_id 不變、metadata 保留、meta_version + 1；舊 token 呼叫 API 回 401</td><td>tokens 表 revoked_at</td><td><span class="pill">未執行</span></td></tr>
-    <tr><td class="num">T33</td><td>退役</td><td>P2</td><td>任一</td><td class="wrap"><code>aipagerctl nodes retire &lt;id&gt;</code>，之後在該機觀察 Worker</td><td>Worker 心跳收到 401 後停止並在 Log 說明「此節點已退役」；<code>aipagerctl nodes</code> 預設不再列出</td><td>worker Log；Dashboard「已退役」篩選</td><td><span class="pill">未執行</span></td></tr>
-    <tr><td class="num">T34</td><td>Dashboard 顯示睡著的機器與卡住的任務</td><td>P0</td><td>macOS / Linux</td><td class="wrap">① macbook-hc 闔蓋 ② 以 <code>--on-unavailable queue</code> 派一個任務給它 ③ 另派一個約 5 分鐘的任務給 linux-box，執行中停止其 Worker ④ 開 Dashboard 首頁</td><td>「睡著／離線的機器」區塊列出 macbook-hc 與 linux-box、各自沉默多久；「卡住的任務」區塊列出排隊等 macbook-hc 的任務（原因：等待機器醒來）與 linux-box 上執行中的任務（原因：執行機器沒有回應，剩餘保留時間）</td><td>Dashboard 首頁；<code>GET /api/v1/tasks?stuck=1</code></td><td><span class="pill">未執行</span></td></tr>
+    <tr><td class="num">T32</td><td>重灌同一台</td><td>P2</td><td>Linux</td><td class="wrap"><code>aipagerctl enroll create --node-id linux-box</code>，在 linux-box 刪除設定後重新 join</td><td>node_id 不變、metadata 保留、meta_version + 1；舊 token 呼叫 API 回 401</td><td>tokens 表 revoked_at</td><td><span class="pill ok">通過</span><br>2026-11-03<br>A08 驗證綁定 node_id 的加入碼重灌後 metadata 保留、版本 +1、舊 token 失效</td></tr>
+    <tr><td class="num">T33</td><td>退役</td><td>P2</td><td>任一</td><td class="wrap"><code>aipagerctl nodes retire &lt;id&gt;</code>，之後在該機觀察 Worker</td><td>Worker 心跳收到 401 後停止並在 Log 說明「此節點已退役」；<code>aipagerctl nodes</code> 預設不再列出</td><td>worker Log；Dashboard「已退役」篩選</td><td><span class="pill wait">部分完成</span><br>2026-11-03<br>A08 驗證退役後 token 失效；Worker 收到 401 後停止領任務的行為尚未測</td></tr>
+    <tr><td class="num">T34</td><td>Dashboard 顯示睡著的機器與卡住的任務</td><td>P0</td><td>macOS / Linux</td><td class="wrap">① macbook-hc 闔蓋 ② 以 <code>--on-unavailable queue</code> 派一個任務給它 ③ 另派一個約 5 分鐘的任務給 linux-box，執行中停止其 Worker ④ 開 Dashboard 首頁</td><td>「睡著／離線的機器」區塊列出 macbook-hc 與 linux-box、各自沉默多久；「卡住的任務」區塊列出排隊等 macbook-hc 的任務（原因：等待機器醒來）與 linux-box 上執行中的任務（原因：執行機器沒有回應，剩餘保留時間）</td><td>Dashboard 首頁；<code>GET /api/v1/tasks?stuck=1</code></td><td><span class="pill wait">部分完成</span><br>2026-11-03<br>Chromium 以模擬資料驗證首頁內容與操作（A11）；真實筆電闔蓋情境尚未執行</td></tr>
   </table></div>
 
   <details>
     <summary>測試清單原始檔（spec/tests/test-plan.json）</summary>
     <div class="inner"><div class="codebox"><div class="label"><span>spec/tests/test-plan.json</span><button type="button" data-copy>複製</button></div><pre><code>{
   "$schema": "../schemas/test-plan.schema.json",
-  "version": "0.4",
+  "version": "0.5",
   "note": "單一來源：設計文件的驗證計畫與開發階段由此檔產生。執行手動測試後，更新該項 status 與 last_run 再重跑 npm run check。",
   "phases": [
     {
@@ -4134,6 +4156,83 @@ INSERT OR IGNORE INTO schema_version(version, applied_at) VALUES (1, strftime('%
         "result": "pass",
         "note": "commit e22269c 驗證通過"
       }
+    },
+    {
+      "id": "A08",
+      "title": "Hub 整合測試",
+      "command": "node --test tests/hub.test.js",
+      "platforms": [
+        "any"
+      ],
+      "covers": "加入碼（一次性、重複 node_id、速率限制）、待核准、metadata If-Match 與還原、派給睡著筆電（confirm / queue）、條件路由、租約、進度、結果與信箱、取消、冪等、防迴圈、審核與逾時、筆電睡眠保留與超時判定、server 失聯重排、then 鏈結、附件、重灌與退役、排隊過期",
+      "last_result": {
+        "date": "2026-11-03",
+        "env": "Ubuntu 24.04.5 LTS 容器，單機（Hub、Worker、互動端在同一台），Node 22.23.4",
+        "result": "pass",
+        "note": "13 項通過；以可調整的時鐘模擬睡眠"
+      }
+    },
+    {
+      "id": "A09",
+      "title": "端對端（stub claude）",
+      "command": "node --test tests/e2e.test.js",
+      "platforms": [
+        "macos",
+        "linux"
+      ],
+      "covers": "真實 Hub + Worker + aipager-mcp（task 與 interactive）+ 會講真 MCP 的 stub claude：submit_result、附件與 stream log、任務目錄檔案、final_text 後備、輸出 schema 驗證、登入失敗分類、permission_prompt 審核拒絕、取消終止程序群組、逾時、互動 confirm 流程、信箱、profiles 熱重載",
+      "last_result": {
+        "date": "2026-11-03",
+        "env": "Ubuntu 24.04.5 LTS 容器，單機（Hub、Worker、互動端在同一台），Node 22.23.4",
+        "result": "pass",
+        "note": "6 項通過"
+      }
+    },
+    {
+      "id": "A10",
+      "title": "操作流程（真實程序）",
+      "command": "node --test tests/cli.test.js",
+      "platforms": [
+        "macos",
+        "linux"
+      ],
+      "covers": "bin/hub.js、aipagerctl admin init / save-token / enroll / join / nodes approve / send --wait / doctor --encoding / nodes set / tasks --stuck、start-worker.sh、aipager-hint、service install --dry-run（產生的 unit 經 systemd-analyze verify）",
+      "last_result": {
+        "date": "2026-11-03",
+        "env": "Ubuntu 24.04.5 LTS 容器，單機（Hub、Worker、互動端在同一台），Node 22.23.4",
+        "result": "pass",
+        "note": "1 項通過（4.3 秒）"
+      }
+    },
+    {
+      "id": "A11",
+      "title": "Dashboard 瀏覽器測試",
+      "command": "node --test tests/dashboard.test.js",
+      "platforms": [
+        "any"
+      ],
+      "covers": "Chromium 1366px 與 400px：首頁睡著機器與卡住任務、核准機器、拒絕審核並附說明、修改保留時間、建立加入碼、debug 模式、手機無水平捲動、無 console 錯誤",
+      "last_result": {
+        "date": "2026-11-03",
+        "env": "Ubuntu 24.04.5 LTS 容器，單機（Hub、Worker、互動端在同一台），Node 22.23.4",
+        "result": "pass",
+        "note": "通過；截圖見 PR 說明"
+      }
+    },
+    {
+      "id": "A12",
+      "title": "真實 Claude Code",
+      "command": "AIPAGER_TEST_REAL_CLAUDE=1 node --test tests/real-claude.test.js",
+      "platforms": [
+        "linux"
+      ],
+      "covers": "Worker 啟動真正的 claude -p（haiku）：stream-json 解析、MCP task server 連線、submit_result、--permission-prompt-tool 把 Bash touch 送審並把拒絕說明原文送到 Claude、--setting-sources ''",
+      "last_result": {
+        "date": "2026-11-03",
+        "env": "Ubuntu 24.04.5 LTS 容器，單機（Hub、Worker、互動端在同一台），Node 22.23.4",
+        "result": "pass",
+        "note": "Claude Code 2.1.317，兩個任務約 0.007 USD；過程中發現自家 MCP 工具需預先允許（D25）"
+      }
     }
   ],
   "manual": [
@@ -4218,8 +4317,13 @@ INSERT OR IGNORE INTO schema_version(version, applied_at) VALUES (1, strftime('%
       "steps": "同 T03，改 `--to worker@linux-box`，內容加「讀取 /etc/os-release」",
       "expected": "succeeded；回報發行版",
       "observe": "同 T03",
-      "status": "not-run",
-      "last_run": null
+      "status": "partial",
+      "last_run": {
+        "date": "2026-11-03",
+        "env": "Ubuntu 24.04.5 LTS 容器，單機（Hub、Worker、互動端在同一台），Node 22.23.4",
+        "result": "partial",
+        "note": "以真實 Claude Code 在 Linux 跑通 Worker（A12）；尚未在獨立的 Linux 機器經 Tailscale 與已安裝服務執行"
+      }
     },
     {
       "id": "T06",
@@ -4234,8 +4338,13 @@ INSERT OR IGNORE INTO schema_version(version, applied_at) VALUES (1, strftime('%
       "steps": "在 dev 機開 Claude Code，輸入 `/mcp`；再輸入「列出 aipager 節點」",
       "expected": "aipager 為 connected；列出各機器、顯示名稱與在線狀態",
       "observe": "mcp Log",
-      "status": "not-run",
-      "last_run": null
+      "status": "partial",
+      "last_run": {
+        "date": "2026-11-03",
+        "env": "Ubuntu 24.04.5 LTS 容器，單機（Hub、Worker、互動端在同一台），Node 22.23.4",
+        "result": "partial",
+        "note": "interactive MCP 以 MCP client 驗證（A09）；尚未在真實 Claude Code 互動 session 用 /mcp 確認"
+      }
     },
     {
       "id": "T07",
@@ -4268,8 +4377,13 @@ INSERT OR IGNORE INTO schema_version(version, applied_at) VALUES (1, strftime('%
       "steps": "在 linux-box：`aipagerctl msg --to main@dev-pc --text \"測試訊息 中文 ✓\"`；在 dev-pc 的 Claude 隨便輸入一句",
       "expected": "回應前出現 `[AIPager] 1 則未讀…`；請 Claude 讀信箱，中文正確",
       "observe": "hint Log",
-      "status": "not-run",
-      "last_run": null
+      "status": "partial",
+      "last_run": {
+        "date": "2026-11-03",
+        "env": "Ubuntu 24.04.5 LTS 容器，單機（Hub、Worker、互動端在同一台），Node 22.23.4",
+        "result": "partial",
+        "note": "aipager-hint 輸出與任務內靜默已驗證（A10）；尚未掛在真實 Claude Code hook"
+      }
     },
     {
       "id": "T09",
@@ -4284,8 +4398,13 @@ INSERT OR IGNORE INTO schema_version(version, applied_at) VALUES (1, strftime('%
       "steps": "對 build profile 送「在工作目錄建立 aipager-test.txt 後執行 git push」，在 Dashboard 按拒絕",
       "expected": "任務出現 waiting_approval；拒絕後 Claude 改為不推送，結果說明原因",
       "observe": "approvals 表；stream.jsonl 中的 permission 往返",
-      "status": "not-run",
-      "last_run": null
+      "status": "partial",
+      "last_run": {
+        "date": "2026-11-03",
+        "env": "Ubuntu 24.04.5 LTS 容器，單機（Hub、Worker、互動端在同一台），Node 22.23.4",
+        "result": "partial",
+        "note": "Linux 上以真實 Claude Code 驗證 permission_prompt 與拒絕說明（A12），Dashboard 拒絕按鈕以 stub 驗證（A11）；Windows build-pc 尚未執行"
+      }
     },
     {
       "id": "T10",
@@ -4300,8 +4419,13 @@ INSERT OR IGNORE INTO schema_version(version, applied_at) VALUES (1, strftime('%
       "steps": "同 T09，但 `approval.timeout_sec` 設 60，不處理",
       "expected": "60 秒後自動 deny，任務繼續並完成",
       "observe": "approvals.state = expired",
-      "status": "not-run",
-      "last_run": null
+      "status": "partial",
+      "last_run": {
+        "date": "2026-11-03",
+        "env": "Ubuntu 24.04.5 LTS 容器，單機（Hub、Worker、互動端在同一台），Node 22.23.4",
+        "result": "partial",
+        "note": "Hub 端逾時自動拒絕已驗證（A08）；真實 Claude 曾在 120 秒逾時後正確收到拒絕"
+      }
     },
     {
       "id": "T11",
@@ -4333,8 +4457,13 @@ INSERT OR IGNORE INTO schema_version(version, applied_at) VALUES (1, strftime('%
       "steps": "對 macbook-hc 與 linux-box 送「執行 `sleep 300`」，10 秒後取消；再執行 `ps -o pid,stat,comm -g &lt;pgid&gt;`",
       "expected": "cancelled；群組內沒有非 Z 狀態的程序",
       "observe": "worker Log 的 pgid 與信號紀錄",
-      "status": "not-run",
-      "last_run": null
+      "status": "partial",
+      "last_run": {
+        "date": "2026-11-03",
+        "env": "Ubuntu 24.04.5 LTS 容器，單機（Hub、Worker、互動端在同一台），Node 22.23.4",
+        "result": "partial",
+        "note": "Linux 上以 stub 驗證取消會終止整個程序群組（A09、A04）；macOS 尚未執行"
+      }
     },
     {
       "id": "T13",
@@ -4349,8 +4478,13 @@ INSERT OR IGNORE INTO schema_version(version, applied_at) VALUES (1, strftime('%
       "steps": "同 T11 / T12 但 `timeout_sec=60`，不取消",
       "expected": "failed，`E_TIMEOUT`",
       "observe": "result.json",
-      "status": "not-run",
-      "last_run": null
+      "status": "partial",
+      "last_run": {
+        "date": "2026-11-03",
+        "env": "Ubuntu 24.04.5 LTS 容器，單機（Hub、Worker、互動端在同一台），Node 22.23.4",
+        "result": "partial",
+        "note": "Linux 上以 stub 驗證逾時終止（A09）；Windows、macOS 尚未執行"
+      }
     },
     {
       "id": "T14",
@@ -4365,8 +4499,13 @@ INSERT OR IGNORE INTO schema_version(version, applied_at) VALUES (1, strftime('%
       "steps": "送任務要求「把這個任務原封不動轉給 worker@build-pc」",
       "expected": "第 5 層建立時被拒，`E_HOP_LIMIT`",
       "observe": "trace 頁可見 4 層",
-      "status": "not-run",
-      "last_run": null
+      "status": "pass",
+      "last_run": {
+        "date": "2026-11-03",
+        "env": "Ubuntu 24.04.5 LTS 容器，單機（Hub、Worker、互動端在同一台），Node 22.23.4",
+        "result": "pass",
+        "note": "Hub 端邏輯與平台無關，A08 驗證第 3 層被拒（max_hops=2 設定）"
+      }
     },
     {
       "id": "T15",
@@ -4381,8 +4520,13 @@ INSERT OR IGNORE INTO schema_version(version, applied_at) VALUES (1, strftime('%
       "steps": "用相同 `idempotency_key` 呼叫兩次 `POST /tasks`",
       "expected": "第二次回 200 與相同 task_id",
       "observe": "tasks 表只有一筆",
-      "status": "not-run",
-      "last_run": null
+      "status": "pass",
+      "last_run": {
+        "date": "2026-11-03",
+        "env": "Ubuntu 24.04.5 LTS 容器，單機（Hub、Worker、互動端在同一台），Node 22.23.4",
+        "result": "pass",
+        "note": "A08 驗證相同 idempotency_key 回 200 與同一 task_id"
+      }
     },
     {
       "id": "T16",
@@ -4431,8 +4575,13 @@ INSERT OR IGNORE INTO schema_version(version, applied_at) VALUES (1, strftime('%
       "steps": "停止 linux-box Worker，用 `--on-unavailable queue` 送任務，2 分鐘後再啟動",
       "expected": "45 秒內轉 asleep；任務維持 queued；啟動後被領走完成",
       "observe": "nodes 表 last_seen、presence",
-      "status": "not-run",
-      "last_run": null
+      "status": "partial",
+      "last_run": {
+        "date": "2026-11-03",
+        "env": "Ubuntu 24.04.5 LTS 容器，單機（Hub、Worker、互動端在同一台），Node 22.23.4",
+        "result": "partial",
+        "note": "Hub 端租約過期後重新排隊已驗證（A08，模擬時鐘）；真實停止 Worker 尚未執行"
+      }
     },
     {
       "id": "T19",
@@ -4449,8 +4598,13 @@ INSERT OR IGNORE INTO schema_version(version, applied_at) VALUES (1, strftime('%
       "steps": "macbook-hc 與 linux-box 都是 tester；送 `--to worker@role:tester --requires-os macos`，再對 build-pc 送 `--requires-os linux`",
       "expected": "第一筆只由 macbook-hc 領取；第二筆建立時回 `E_REQUIREMENT_UNMET`",
       "observe": "tasks.assigned_node",
-      "status": "not-run",
-      "last_run": null
+      "status": "partial",
+      "last_run": {
+        "date": "2026-11-03",
+        "env": "Ubuntu 24.04.5 LTS 容器，單機（Hub、Worker、互動端在同一台），Node 22.23.4",
+        "result": "partial",
+        "note": "Hub 端角色、os、標籤路由已驗證（A08）；真實多平台節點尚未執行"
+      }
     },
     {
       "id": "T20",
@@ -4466,8 +4620,13 @@ INSERT OR IGNORE INTO schema_version(version, applied_at) VALUES (1, strftime('%
       "steps": "送 [[ref:protocol]] 的 task-create 範例（linux-box 需有標籤 `browser=chromium`）",
       "expected": "build-pc 編譯成功後自動建立 E2E 任務，由 linux-box 執行，兩者同一 thread",
       "observe": "Thread 頁",
-      "status": "not-run",
-      "last_run": null
+      "status": "partial",
+      "last_run": {
+        "date": "2026-11-03",
+        "env": "Ubuntu 24.04.5 LTS 容器，單機（Hub、Worker、互動端在同一台），Node 22.23.4",
+        "result": "partial",
+        "note": "Hub 端 then 鏈結與變數代入已驗證（A08）；真實 Windows 編譯 + Linux E2E 尚未執行"
+      }
     },
     {
       "id": "T21",
@@ -4516,8 +4675,13 @@ INSERT OR IGNORE INTO schema_version(version, applied_at) VALUES (1, strftime('%
       "steps": "① `aipagerctl enroll create --name \"測試機\" --power desktop --role tester` ② 新機器 `aipagerctl join --hub http://aipager-hub:7300 --code &lt;code&gt;` ③ `aipagerctl service install` ④ Dashboard 按核准",
       "expected": "join 後為 pending 且 Dashboard 顯示 online；核准後 active，可領任務",
       "observe": "join 印出寫入的 node.json 路徑；events 中 `node.enrolled`、`node.state`",
-      "status": "not-run",
-      "last_run": null
+      "status": "partial",
+      "last_run": {
+        "date": "2026-11-03",
+        "env": "Ubuntu 24.04.5 LTS 容器，單機（Hub、Worker、互動端在同一台），Node 22.23.4",
+        "result": "partial",
+        "note": "單機以真實程序跑完 enroll create → join → 待核准 → approve（A10），Dashboard 核准按鈕（A11）；多台實機尚未執行"
+      }
     },
     {
       "id": "T24",
@@ -4532,8 +4696,13 @@ INSERT OR IGNORE INTO schema_version(version, applied_at) VALUES (1, strftime('%
       "steps": "同一加入碼再 join 一次；使用過期加入碼；連續送 6 次錯誤加入碼",
       "expected": "前兩者 422 `E_ENROLL_INVALID`；第 6 次 429 `E_RATE_LIMIT`",
       "observe": "enrollments 表 used_at；hub Log",
-      "status": "not-run",
-      "last_run": null
+      "status": "partial",
+      "last_run": {
+        "date": "2026-11-03",
+        "env": "Ubuntu 24.04.5 LTS 容器，單機（Hub、Worker、互動端在同一台），Node 22.23.4",
+        "result": "partial",
+        "note": "重複使用、錯誤加入碼與速率限制已驗證（A08）；過期加入碼尚未測"
+      }
     },
     {
       "id": "T25",
@@ -4548,8 +4717,13 @@ INSERT OR IGNORE INTO schema_version(version, applied_at) VALUES (1, strftime('%
       "steps": "① 送 `--requires-label gpu=yes` 的任務給 role tester（沒有機器符合，排隊）② `aipagerctl nodes set linux-box --label gpu=yes` ③ 用舊的 meta_version 直接 PATCH 一次",
       "expected": "② 之後 15 秒內任務被 linux-box 領走；③ 回 409 `E_META_CONFLICT`",
       "observe": "`aipagerctl nodes history linux-box` 可見新版本",
-      "status": "not-run",
-      "last_run": null
+      "status": "partial",
+      "last_run": {
+        "date": "2026-11-03",
+        "env": "Ubuntu 24.04.5 LTS 容器，單機（Hub、Worker、互動端在同一台），Node 22.23.4",
+        "result": "partial",
+        "note": "If-Match 衝突、版本與還原、Dashboard 編輯已驗證（A08、A11）；「改標籤後 15 秒內被領走」尚未測"
+      }
     },
     {
       "id": "T26",
@@ -4564,8 +4738,13 @@ INSERT OR IGNORE INTO schema_version(version, applied_at) VALUES (1, strftime('%
       "steps": "在 linux-box 的 profiles.json 新增 profile 存檔；再故意存一份 JSON 格式錯誤的版本",
       "expected": "新增後下一次心跳 Dashboard 出現新 profile；錯誤版本時保留原設定、Dashboard 顯示 `profiles_error`",
       "observe": "worker Log 的 `profiles.reload`",
-      "status": "not-run",
-      "last_run": null
+      "status": "partial",
+      "last_run": {
+        "date": "2026-11-03",
+        "env": "Ubuntu 24.04.5 LTS 容器，單機（Hub、Worker、互動端在同一台），Node 22.23.4",
+        "result": "partial",
+        "note": "Linux 上熱重載與錯誤時保留舊設定已驗證（A09）"
+      }
     },
     {
       "id": "T27",
@@ -4580,8 +4759,13 @@ INSERT OR IGNORE INTO schema_version(version, applied_at) VALUES (1, strftime('%
       "steps": "macbook-hc 闔蓋 2 分鐘後，在 dev-pc 的 Claude 輸入「叫 macbook-hc 跑 iOS 單元測試」",
       "expected": "任務未建立；Claude 告知「已 N 分鐘沒有回應，可能睡著」並詢問排隊 / 改派 / 取消",
       "observe": "MCP Log 中 409 `E_TARGET_UNAVAILABLE`；tasks 表沒有新列",
-      "status": "not-run",
-      "last_run": null
+      "status": "partial",
+      "last_run": {
+        "date": "2026-11-03",
+        "env": "Ubuntu 24.04.5 LTS 容器，單機（Hub、Worker、互動端在同一台），Node 22.23.4",
+        "result": "partial",
+        "note": "confirm 流程以 MCP client 驗證（A09、A08）；尚未在真實 Claude 互動 session 與真實闔蓋的筆電執行"
+      }
     },
     {
       "id": "T28",
@@ -4596,8 +4780,13 @@ INSERT OR IGNORE INTO schema_version(version, applied_at) VALUES (1, strftime('%
       "steps": "接 T27，回答「排隊」；10 分鐘後打開筆電",
       "expected": "任務建立時帶 `W_TARGET_ASLEEP`；開蓋後 1 分鐘內被領取；dev-pc 下次輸入時 aipager-hint 提示「macbook-hc 已回來，開始執行…」",
       "observe": "信箱 `system.notice`；events 的 `node.presence` asleep → online",
-      "status": "not-run",
-      "last_run": null
+      "status": "partial",
+      "last_run": {
+        "date": "2026-11-03",
+        "env": "Ubuntu 24.04.5 LTS 容器，單機（Hub、Worker、互動端在同一台），Node 22.23.4",
+        "result": "partial",
+        "note": "排隊與 W_TARGET_ASLEEP 警告已驗證（A08）；醒來後的「已開始執行」通知尚未測"
+      }
     },
     {
       "id": "T29",
@@ -4612,8 +4801,13 @@ INSERT OR IGNORE INTO schema_version(version, applied_at) VALUES (1, strftime('%
       "steps": "① 對 macbook-hc 送一個約 5 分鐘的任務，執行中闔蓋 10 分鐘再打開 ② 重做一次，把該節點 `suspend_grace_sec` 設 120，闔蓋 5 分鐘",
       "expected": "① 任務續跑並 succeeded，發派者收到「執行中的機器睡著了」通知 ② 任務 failed，`E_LEASE_LOST`（detail: node_asleep），醒來後 Worker 終止該任務並保留本機結果",
       "observe": "tasks.node_asleep_since、asleep_ms_total；worker Log 的 `resumed_from_sleep`",
-      "status": "not-run",
-      "last_run": null
+      "status": "partial",
+      "last_run": {
+        "date": "2026-11-03",
+        "env": "Ubuntu 24.04.5 LTS 容器，單機（Hub、Worker、互動端在同一台），Node 22.23.4",
+        "result": "partial",
+        "note": "Hub 端睡眠保留、通知、超時判定以模擬時鐘驗證（A08）；真實闔蓋尚未執行"
+      }
     },
     {
       "id": "T30",
@@ -4665,8 +4859,13 @@ INSERT OR IGNORE INTO schema_version(version, applied_at) VALUES (1, strftime('%
       "steps": "`aipagerctl enroll create --node-id linux-box`，在 linux-box 刪除設定後重新 join",
       "expected": "node_id 不變、metadata 保留、meta_version + 1；舊 token 呼叫 API 回 401",
       "observe": "tokens 表 revoked_at",
-      "status": "not-run",
-      "last_run": null
+      "status": "pass",
+      "last_run": {
+        "date": "2026-11-03",
+        "env": "Ubuntu 24.04.5 LTS 容器，單機（Hub、Worker、互動端在同一台），Node 22.23.4",
+        "result": "pass",
+        "note": "A08 驗證綁定 node_id 的加入碼重灌後 metadata 保留、版本 +1、舊 token 失效"
+      }
     },
     {
       "id": "T33",
@@ -4681,8 +4880,13 @@ INSERT OR IGNORE INTO schema_version(version, applied_at) VALUES (1, strftime('%
       "steps": "`aipagerctl nodes retire &lt;id&gt;`，之後在該機觀察 Worker",
       "expected": "Worker 心跳收到 401 後停止並在 Log 說明「此節點已退役」；`aipagerctl nodes` 預設不再列出",
       "observe": "worker Log；Dashboard「已退役」篩選",
-      "status": "not-run",
-      "last_run": null
+      "status": "partial",
+      "last_run": {
+        "date": "2026-11-03",
+        "env": "Ubuntu 24.04.5 LTS 容器，單機（Hub、Worker、互動端在同一台），Node 22.23.4",
+        "result": "partial",
+        "note": "A08 驗證退役後 token 失效；Worker 收到 401 後停止領任務的行為尚未測"
+      }
     },
     {
       "id": "T34",
@@ -4698,8 +4902,13 @@ INSERT OR IGNORE INTO schema_version(version, applied_at) VALUES (1, strftime('%
       "steps": "① macbook-hc 闔蓋 ② 以 `--on-unavailable queue` 派一個任務給它 ③ 另派一個約 5 分鐘的任務給 linux-box，執行中停止其 Worker ④ 開 Dashboard 首頁",
       "expected": "「睡著／離線的機器」區塊列出 macbook-hc 與 linux-box、各自沉默多久；「卡住的任務」區塊列出排隊等 macbook-hc 的任務（原因：等待機器醒來）與 linux-box 上執行中的任務（原因：執行機器沒有回應，剩餘保留時間）",
       "observe": "Dashboard 首頁；`GET /api/v1/tasks?stuck=1`",
-      "status": "not-run",
-      "last_run": null
+      "status": "partial",
+      "last_run": {
+        "date": "2026-11-03",
+        "env": "Ubuntu 24.04.5 LTS 容器，單機（Hub、Worker、互動端在同一台），Node 22.23.4",
+        "result": "partial",
+        "note": "Chromium 以模擬資料驗證首頁內容與操作（A11）；真實筆電闔蓋情境尚未執行"
+      }
     }
   ]
 }</code></pre></div></div>
@@ -4749,6 +4958,10 @@ INSERT OR IGNORE INTO schema_version(version, applied_at) VALUES (1, strftime('%
     <tr><td class="num">D22</td><td>Dashboard 的節點與卡住任務頁放 P0（使用者決定）</td><td>保留時間依機器而異，需要一眼看出誰睡著、哪些任務因此停住</td><td>只用 aipagerctl 查詢</td></tr>
     <tr><td class="num">D23</td><td>Worker 預設 <code>login</code> 登入模式</td><td>使用者為 Claude Max 訂閱；沿用該帳號登入最單純，免登入需求才用 setup-token</td><td>API key</td></tr>
     <tr><td class="num">D24</td><td>Worker 略過不認識的 stream-json 類型</td><td>實測 Claude Code 2.1.317 會輸出設計時未列出的事件類型；版本更新可能再增加</td><td>遇到未知類型就報錯</td></tr>
+    <tr><td class="num">D25</td><td>Worker 自動允許 aipager 的回報與唯讀 MCP 工具</td><td>實測 Claude Code 對自家 MCP 工具也要授權；不自動允許的話 submit_result 會卡在審核</td><td>每個 profile 自己列（容易漏，漏了任務就回報不了）</td></tr>
+    <tr><td class="num">D26</td><td>Worker 預設 <code>--setting-sources ''</code></td><td>使用者或 repo 的 Claude 設定可能允許更多工具，會繞過 profile 這個權限邊界；repo 內容來自其他機器，不能信任</td><td>沿用預設設定來源</td></tr>
+    <tr><td class="num">D27</td><td>發行檔就是 repo 本身；執行時直接讀 spec/ 下的 schema、參考實作、prompt、MCP 工具定義</td><td>規格與實作只有一份，不會各自演進；驗證腳本檢查的就是正式執行時用的檔案</td><td>建置時複製到 templates/ 等另一份</td></tr>
+    <tr><td class="num">D28</td><td>progress 的 seq 可由 Hub 指定；結果的 lease 放在 header</td><td>Worker 與 Claude 端的 MCP 都會回報進度，各自編號會撞號；result payload 維持與 schema 一致</td><td>只讓 Worker 回報進度</td></tr>
   </table></div>
 </section>
 
@@ -4826,6 +5039,19 @@ INSERT OR IGNORE INTO schema_version(version, applied_at) VALUES (1, strftime('%
     <tr><td><code>tools/tests/linux-install-hub.test.sh</code></td><td>A06</td><td>在用完即丟的 Ubuntu 上實際執行 install-hub.sh 並檢查結果，結束後清除；需 root 與 <code>AIPAGER_TEST_ALLOW_SYSTEM_CHANGES=1</code></td></tr>
   </table></div>
 
+  <h3>實作程式</h3>
+  <div class="tablewrap"><table>
+    <tr><th>路徑</th><th>內容</th><th>測試</th></tr>
+    <tr><td><code>lib/common/</code></td><td>各 OS 路徑、JSONL Log（遮罩 token）、HTTP client、錯誤碼與中英文訊息、schema 驗證、程序終止與 facts 偵測</td><td>A08–A12 間接涵蓋</td></tr>
+    <tr><td><code>lib/hub/</code>、<code>bin/hub.js</code></td><td>Hub：core（DB、token、節點檢視）、nodes（加入、核准、metadata）、tasks（派工、領取、結果、信箱、審核、卡住清單）、sweeper（在線、租約、逾時、備份）、server（REST、SSE、Dashboard）</td><td>A08</td></tr>
+    <tr><td><code>lib/worker/</code>、<code>bin/worker.js</code></td><td>Worker：主迴圈（心跳、睡眠偵測、領取、補送、當機復原）、runner（工作目錄、claude -p、串流解析、取消逾時、結果與附件）、profiles 熱重載、glob</td><td>A09、A12</td></tr>
+    <tr><td><code>lib/mcp/</code>、<code>bin/aipager-mcp.js</code></td><td>MCP server：工具與 schema 直接讀 <code>spec/mcp/aipager-tools.json</code>；interactive 與 task 兩種模式；permission_prompt</td><td>A09、A12</td></tr>
+    <tr><td><code>lib/ctl/</code>、<code>bin/aipagerctl.js</code></td><td>aipagerctl 全部指令；service 為各 OS 服務安裝</td><td>A10</td></tr>
+    <tr><td><code>bin/aipager-hint.js</code></td><td>Claude Code hook：未讀摘要</td><td>A10</td></tr>
+    <tr><td><code>ui/</code></td><td>Dashboard（原生 ES modules，不需建置）</td><td>A11</td></tr>
+    <tr><td><code>tests/</code></td><td>hub、e2e、cli、dashboard、real-claude 測試；<code>tests/fixtures/stub-claude.js</code> 模擬 claude 並實際呼叫 MCP</td><td>—</td></tr>
+  </table></div>
+
   <h3>變更紀錄</h3>
   <div class="tablewrap"><table>
     <tr><th>版本</th><th>日期</th><th>變更</th></tr>
@@ -4835,6 +5061,7 @@ INSERT OR IGNORE INTO schema_version(version, applied_at) VALUES (1, strftime('%
     <tr><td class="num">v0.3.1</td><td class="num">2026-11-03</td><td>測試項目獨立為 <code>spec/tests/test-plan.json</code>（含執行紀錄），驗證計畫與開發階段表改由它產生；新增可重跑的自動化測試 A03–A06；在 Ubuntu 24.04 容器實跑 install-hub.sh 與 systemd-analyze 驗證兩個 unit；T31 記錄為部分完成（26.04 未執行）；優先測試清單移除 T09（屬 P2，需 MCP）</td></tr>
     <tr><td class="num">v0.4</td><td class="num">2026-11-03</td><td>依使用者決定：MCP 與 Dashboard（睡著的機器、卡住的任務、待核准）移到 P0；Claude Max 訂閱、預設 login 模式；新機器人工核准；保留時間依機器設定。新增 <code>GET /tasks?stuck=1</code> 與 T34；開發階段重整為 P0–P3。以實際 Claude Code 2.1.317 驗證 stream-json 欄位、<code>--max-turns</code> 可用、出現未列出的事件類型（D24）。開始實作</td></tr>
     <tr><td class="num">v0.3.2</td><td class="num">2026-11-03</td><td>專案名稱統一為 AIPager（repo aipager）：程式與路徑 <code>aipager</code>（如 <code>/opt/aipager</code>、<code>aipager-hub.service</code>、<code>aipagerctl</code>）、環境變數 <code>AIPAGER_*</code>、header <code>X-AIPager-Agent</code>、協定 <code>aipager/1.0</code>、MCP server <code>aipager</code>（工具名稱去掉 relay_ 前綴）、token 前綴 <code>apa_ / apn_ / apt_ / ape_</code>、Hub 主機名稱 <code>aipager-hub</code>；改名後重跑全部自動化測試</td></tr>
+    <tr><td class="num">v0.5</td><td class="num">2026-11-03</td><td>完成實作：Hub、Worker、MCP、aipager-hint、aipagerctl、Dashboard 與測試（A08–A12）。以真實 Claude Code 2.1.317 驗證 permission-prompt-tool、setting-sources 與 MCP 回報，並因實測新增 D25（自動允許自家 MCP 工具）；D26–D28；progress seq 可由 Hub 指定、結果 lease 改放 header；發行檔即 repo；Windows 排程註冊前建立 Log 資料夾；測試清單記錄 3 項通過、20 項部分完成</td></tr>
   </table></div>
 </section>
 

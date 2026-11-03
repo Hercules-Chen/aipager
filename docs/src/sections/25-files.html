@@ -45,6 +45,19 @@
     <tr><td><code>tools/tests/linux-install-hub.test.sh</code></td><td>A06</td><td>在用完即丟的 Ubuntu 上實際執行 install-hub.sh 並檢查結果，結束後清除；需 root 與 <code>AIPAGER_TEST_ALLOW_SYSTEM_CHANGES=1</code></td></tr>
   </table></div>
 
+  <h3>實作程式</h3>
+  <div class="tablewrap"><table>
+    <tr><th>路徑</th><th>內容</th><th>測試</th></tr>
+    <tr><td><code>lib/common/</code></td><td>各 OS 路徑、JSONL Log（遮罩 token）、HTTP client、錯誤碼與中英文訊息、schema 驗證、程序終止與 facts 偵測</td><td>A08–A12 間接涵蓋</td></tr>
+    <tr><td><code>lib/hub/</code>、<code>bin/hub.js</code></td><td>Hub：core（DB、token、節點檢視）、nodes（加入、核准、metadata）、tasks（派工、領取、結果、信箱、審核、卡住清單）、sweeper（在線、租約、逾時、備份）、server（REST、SSE、Dashboard）</td><td>A08</td></tr>
+    <tr><td><code>lib/worker/</code>、<code>bin/worker.js</code></td><td>Worker：主迴圈（心跳、睡眠偵測、領取、補送、當機復原）、runner（工作目錄、claude -p、串流解析、取消逾時、結果與附件）、profiles 熱重載、glob</td><td>A09、A12</td></tr>
+    <tr><td><code>lib/mcp/</code>、<code>bin/aipager-mcp.js</code></td><td>MCP server：工具與 schema 直接讀 <code>spec/mcp/aipager-tools.json</code>；interactive 與 task 兩種模式；permission_prompt</td><td>A09、A12</td></tr>
+    <tr><td><code>lib/ctl/</code>、<code>bin/aipagerctl.js</code></td><td>aipagerctl 全部指令；service 為各 OS 服務安裝</td><td>A10</td></tr>
+    <tr><td><code>bin/aipager-hint.js</code></td><td>Claude Code hook：未讀摘要</td><td>A10</td></tr>
+    <tr><td><code>ui/</code></td><td>Dashboard（原生 ES modules，不需建置）</td><td>A11</td></tr>
+    <tr><td><code>tests/</code></td><td>hub、e2e、cli、dashboard、real-claude 測試；<code>tests/fixtures/stub-claude.js</code> 模擬 claude 並實際呼叫 MCP</td><td>—</td></tr>
+  </table></div>
+
   <h3>變更紀錄</h3>
   <div class="tablewrap"><table>
     <tr><th>版本</th><th>日期</th><th>變更</th></tr>
@@ -54,5 +67,6 @@
     <tr><td class="num">v0.3.1</td><td class="num">2026-11-03</td><td>測試項目獨立為 <code>spec/tests/test-plan.json</code>（含執行紀錄），驗證計畫與開發階段表改由它產生；新增可重跑的自動化測試 A03–A06；在 Ubuntu 24.04 容器實跑 install-hub.sh 與 systemd-analyze 驗證兩個 unit；T31 記錄為部分完成（26.04 未執行）；優先測試清單移除 T09（屬 P2，需 MCP）</td></tr>
     <tr><td class="num">v0.4</td><td class="num">2026-11-03</td><td>依使用者決定：MCP 與 Dashboard（睡著的機器、卡住的任務、待核准）移到 P0；Claude Max 訂閱、預設 login 模式；新機器人工核准；保留時間依機器設定。新增 <code>GET /tasks?stuck=1</code> 與 T34；開發階段重整為 P0–P3。以實際 Claude Code 2.1.317 驗證 stream-json 欄位、<code>--max-turns</code> 可用、出現未列出的事件類型（D24）。開始實作</td></tr>
     <tr><td class="num">v0.3.2</td><td class="num">2026-11-03</td><td>專案名稱統一為 AIPager（repo aipager）：程式與路徑 <code>aipager</code>（如 <code>/opt/aipager</code>、<code>aipager-hub.service</code>、<code>aipagerctl</code>）、環境變數 <code>AIPAGER_*</code>、header <code>X-AIPager-Agent</code>、協定 <code>aipager/1.0</code>、MCP server <code>aipager</code>（工具名稱去掉 relay_ 前綴）、token 前綴 <code>apa_ / apn_ / apt_ / ape_</code>、Hub 主機名稱 <code>aipager-hub</code>；改名後重跑全部自動化測試</td></tr>
+    <tr><td class="num">v0.5</td><td class="num">2026-11-03</td><td>完成實作：Hub、Worker、MCP、aipager-hint、aipagerctl、Dashboard 與測試（A08–A12）。以真實 Claude Code 2.1.317 驗證 permission-prompt-tool、setting-sources 與 MCP 回報，並因實測新增 D25（自動允許自家 MCP 工具）；D26–D28；progress seq 可由 Hub 指定、結果 lease 改放 header；發行檔即 repo；Windows 排程註冊前建立 Log 資料夾；測試清單記錄 3 項通過、20 項部分完成</td></tr>
   </table></div>
 </section>

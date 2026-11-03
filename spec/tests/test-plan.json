@@ -1,6 +1,6 @@
 {
   "$schema": "../schemas/test-plan.schema.json",
-  "version": "0.4",
+  "version": "0.5",
   "note": "單一來源：設計文件的驗證計畫與開發階段由此檔產生。執行手動測試後，更新該項 status 與 last_run 再重跑 npm run check。",
   "phases": [
     {
@@ -131,6 +131,83 @@
         "result": "pass",
         "note": "commit e22269c 驗證通過"
       }
+    },
+    {
+      "id": "A08",
+      "title": "Hub 整合測試",
+      "command": "node --test tests/hub.test.js",
+      "platforms": [
+        "any"
+      ],
+      "covers": "加入碼（一次性、重複 node_id、速率限制）、待核准、metadata If-Match 與還原、派給睡著筆電（confirm / queue）、條件路由、租約、進度、結果與信箱、取消、冪等、防迴圈、審核與逾時、筆電睡眠保留與超時判定、server 失聯重排、then 鏈結、附件、重灌與退役、排隊過期",
+      "last_result": {
+        "date": "2026-11-03",
+        "env": "Ubuntu 24.04.5 LTS 容器，單機（Hub、Worker、互動端在同一台），Node 22.23.4",
+        "result": "pass",
+        "note": "13 項通過；以可調整的時鐘模擬睡眠"
+      }
+    },
+    {
+      "id": "A09",
+      "title": "端對端（stub claude）",
+      "command": "node --test tests/e2e.test.js",
+      "platforms": [
+        "macos",
+        "linux"
+      ],
+      "covers": "真實 Hub + Worker + aipager-mcp（task 與 interactive）+ 會講真 MCP 的 stub claude：submit_result、附件與 stream log、任務目錄檔案、final_text 後備、輸出 schema 驗證、登入失敗分類、permission_prompt 審核拒絕、取消終止程序群組、逾時、互動 confirm 流程、信箱、profiles 熱重載",
+      "last_result": {
+        "date": "2026-11-03",
+        "env": "Ubuntu 24.04.5 LTS 容器，單機（Hub、Worker、互動端在同一台），Node 22.23.4",
+        "result": "pass",
+        "note": "6 項通過"
+      }
+    },
+    {
+      "id": "A10",
+      "title": "操作流程（真實程序）",
+      "command": "node --test tests/cli.test.js",
+      "platforms": [
+        "macos",
+        "linux"
+      ],
+      "covers": "bin/hub.js、aipagerctl admin init / save-token / enroll / join / nodes approve / send --wait / doctor --encoding / nodes set / tasks --stuck、start-worker.sh、aipager-hint、service install --dry-run（產生的 unit 經 systemd-analyze verify）",
+      "last_result": {
+        "date": "2026-11-03",
+        "env": "Ubuntu 24.04.5 LTS 容器，單機（Hub、Worker、互動端在同一台），Node 22.23.4",
+        "result": "pass",
+        "note": "1 項通過（4.3 秒）"
+      }
+    },
+    {
+      "id": "A11",
+      "title": "Dashboard 瀏覽器測試",
+      "command": "node --test tests/dashboard.test.js",
+      "platforms": [
+        "any"
+      ],
+      "covers": "Chromium 1366px 與 400px：首頁睡著機器與卡住任務、核准機器、拒絕審核並附說明、修改保留時間、建立加入碼、debug 模式、手機無水平捲動、無 console 錯誤",
+      "last_result": {
+        "date": "2026-11-03",
+        "env": "Ubuntu 24.04.5 LTS 容器，單機（Hub、Worker、互動端在同一台），Node 22.23.4",
+        "result": "pass",
+        "note": "通過；截圖見 PR 說明"
+      }
+    },
+    {
+      "id": "A12",
+      "title": "真實 Claude Code",
+      "command": "AIPAGER_TEST_REAL_CLAUDE=1 node --test tests/real-claude.test.js",
+      "platforms": [
+        "linux"
+      ],
+      "covers": "Worker 啟動真正的 claude -p（haiku）：stream-json 解析、MCP task server 連線、submit_result、--permission-prompt-tool 把 Bash touch 送審並把拒絕說明原文送到 Claude、--setting-sources ''",
+      "last_result": {
+        "date": "2026-11-03",
+        "env": "Ubuntu 24.04.5 LTS 容器，單機（Hub、Worker、互動端在同一台），Node 22.23.4",
+        "result": "pass",
+        "note": "Claude Code 2.1.317，兩個任務約 0.007 USD；過程中發現自家 MCP 工具需預先允許（D25）"
+      }
     }
   ],
   "manual": [
@@ -215,8 +292,13 @@
       "steps": "同 T03，改 `--to worker@linux-box`，內容加「讀取 /etc/os-release」",
       "expected": "succeeded；回報發行版",
       "observe": "同 T03",
-      "status": "not-run",
-      "last_run": null
+      "status": "partial",
+      "last_run": {
+        "date": "2026-11-03",
+        "env": "Ubuntu 24.04.5 LTS 容器，單機（Hub、Worker、互動端在同一台），Node 22.23.4",
+        "result": "partial",
+        "note": "以真實 Claude Code 在 Linux 跑通 Worker（A12）；尚未在獨立的 Linux 機器經 Tailscale 與已安裝服務執行"
+      }
     },
     {
       "id": "T06",
@@ -231,8 +313,13 @@
       "steps": "在 dev 機開 Claude Code，輸入 `/mcp`；再輸入「列出 aipager 節點」",
       "expected": "aipager 為 connected；列出各機器、顯示名稱與在線狀態",
       "observe": "mcp Log",
-      "status": "not-run",
-      "last_run": null
+      "status": "partial",
+      "last_run": {
+        "date": "2026-11-03",
+        "env": "Ubuntu 24.04.5 LTS 容器，單機（Hub、Worker、互動端在同一台），Node 22.23.4",
+        "result": "partial",
+        "note": "interactive MCP 以 MCP client 驗證（A09）；尚未在真實 Claude Code 互動 session 用 /mcp 確認"
+      }
     },
     {
       "id": "T07",
@@ -265,8 +352,13 @@
       "steps": "在 linux-box：`aipagerctl msg --to main@dev-pc --text \"測試訊息 中文 ✓\"`；在 dev-pc 的 Claude 隨便輸入一句",
       "expected": "回應前出現 `[AIPager] 1 則未讀…`；請 Claude 讀信箱，中文正確",
       "observe": "hint Log",
-      "status": "not-run",
-      "last_run": null
+      "status": "partial",
+      "last_run": {
+        "date": "2026-11-03",
+        "env": "Ubuntu 24.04.5 LTS 容器，單機（Hub、Worker、互動端在同一台），Node 22.23.4",
+        "result": "partial",
+        "note": "aipager-hint 輸出與任務內靜默已驗證（A10）；尚未掛在真實 Claude Code hook"
+      }
     },
     {
       "id": "T09",
@@ -281,8 +373,13 @@
       "steps": "對 build profile 送「在工作目錄建立 aipager-test.txt 後執行 git push」，在 Dashboard 按拒絕",
       "expected": "任務出現 waiting_approval；拒絕後 Claude 改為不推送，結果說明原因",
       "observe": "approvals 表；stream.jsonl 中的 permission 往返",
-      "status": "not-run",
-      "last_run": null
+      "status": "partial",
+      "last_run": {
+        "date": "2026-11-03",
+        "env": "Ubuntu 24.04.5 LTS 容器，單機（Hub、Worker、互動端在同一台），Node 22.23.4",
+        "result": "partial",
+        "note": "Linux 上以真實 Claude Code 驗證 permission_prompt 與拒絕說明（A12），Dashboard 拒絕按鈕以 stub 驗證（A11）；Windows build-pc 尚未執行"
+      }
     },
     {
       "id": "T10",
@@ -297,8 +394,13 @@
       "steps": "同 T09，但 `approval.timeout_sec` 設 60，不處理",
       "expected": "60 秒後自動 deny，任務繼續並完成",
       "observe": "approvals.state = expired",
-      "status": "not-run",
-      "last_run": null
+      "status": "partial",
+      "last_run": {
+        "date": "2026-11-03",
+        "env": "Ubuntu 24.04.5 LTS 容器，單機（Hub、Worker、互動端在同一台），Node 22.23.4",
+        "result": "partial",
+        "note": "Hub 端逾時自動拒絕已驗證（A08）；真實 Claude 曾在 120 秒逾時後正確收到拒絕"
+      }
     },
     {
       "id": "T11",
@@ -330,8 +432,13 @@
       "steps": "對 macbook-hc 與 linux-box 送「執行 `sleep 300`」，10 秒後取消；再執行 `ps -o pid,stat,comm -g <pgid>`",
       "expected": "cancelled；群組內沒有非 Z 狀態的程序",
       "observe": "worker Log 的 pgid 與信號紀錄",
-      "status": "not-run",
-      "last_run": null
+      "status": "partial",
+      "last_run": {
+        "date": "2026-11-03",
+        "env": "Ubuntu 24.04.5 LTS 容器，單機（Hub、Worker、互動端在同一台），Node 22.23.4",
+        "result": "partial",
+        "note": "Linux 上以 stub 驗證取消會終止整個程序群組（A09、A04）；macOS 尚未執行"
+      }
     },
     {
       "id": "T13",
@@ -346,8 +453,13 @@
       "steps": "同 T11 / T12 但 `timeout_sec=60`，不取消",
       "expected": "failed，`E_TIMEOUT`",
       "observe": "result.json",
-      "status": "not-run",
-      "last_run": null
+      "status": "partial",
+      "last_run": {
+        "date": "2026-11-03",
+        "env": "Ubuntu 24.04.5 LTS 容器，單機（Hub、Worker、互動端在同一台），Node 22.23.4",
+        "result": "partial",
+        "note": "Linux 上以 stub 驗證逾時終止（A09）；Windows、macOS 尚未執行"
+      }
     },
     {
       "id": "T14",
@@ -362,8 +474,13 @@
       "steps": "送任務要求「把這個任務原封不動轉給 worker@build-pc」",
       "expected": "第 5 層建立時被拒，`E_HOP_LIMIT`",
       "observe": "trace 頁可見 4 層",
-      "status": "not-run",
-      "last_run": null
+      "status": "pass",
+      "last_run": {
+        "date": "2026-11-03",
+        "env": "Ubuntu 24.04.5 LTS 容器，單機（Hub、Worker、互動端在同一台），Node 22.23.4",
+        "result": "pass",
+        "note": "Hub 端邏輯與平台無關，A08 驗證第 3 層被拒（max_hops=2 設定）"
+      }
     },
     {
       "id": "T15",
@@ -378,8 +495,13 @@
       "steps": "用相同 `idempotency_key` 呼叫兩次 `POST /tasks`",
       "expected": "第二次回 200 與相同 task_id",
       "observe": "tasks 表只有一筆",
-      "status": "not-run",
-      "last_run": null
+      "status": "pass",
+      "last_run": {
+        "date": "2026-11-03",
+        "env": "Ubuntu 24.04.5 LTS 容器，單機（Hub、Worker、互動端在同一台），Node 22.23.4",
+        "result": "pass",
+        "note": "A08 驗證相同 idempotency_key 回 200 與同一 task_id"
+      }
     },
     {
       "id": "T16",
@@ -428,8 +550,13 @@
       "steps": "停止 linux-box Worker，用 `--on-unavailable queue` 送任務，2 分鐘後再啟動",
       "expected": "45 秒內轉 asleep；任務維持 queued；啟動後被領走完成",
       "observe": "nodes 表 last_seen、presence",
-      "status": "not-run",
-      "last_run": null
+      "status": "partial",
+      "last_run": {
+        "date": "2026-11-03",
+        "env": "Ubuntu 24.04.5 LTS 容器，單機（Hub、Worker、互動端在同一台），Node 22.23.4",
+        "result": "partial",
+        "note": "Hub 端租約過期後重新排隊已驗證（A08，模擬時鐘）；真實停止 Worker 尚未執行"
+      }
     },
     {
       "id": "T19",
@@ -446,8 +573,13 @@
       "steps": "macbook-hc 與 linux-box 都是 tester；送 `--to worker@role:tester --requires-os macos`，再對 build-pc 送 `--requires-os linux`",
       "expected": "第一筆只由 macbook-hc 領取；第二筆建立時回 `E_REQUIREMENT_UNMET`",
       "observe": "tasks.assigned_node",
-      "status": "not-run",
-      "last_run": null
+      "status": "partial",
+      "last_run": {
+        "date": "2026-11-03",
+        "env": "Ubuntu 24.04.5 LTS 容器，單機（Hub、Worker、互動端在同一台），Node 22.23.4",
+        "result": "partial",
+        "note": "Hub 端角色、os、標籤路由已驗證（A08）；真實多平台節點尚未執行"
+      }
     },
     {
       "id": "T20",
@@ -463,8 +595,13 @@
       "steps": "送 [[ref:protocol]] 的 task-create 範例（linux-box 需有標籤 `browser=chromium`）",
       "expected": "build-pc 編譯成功後自動建立 E2E 任務，由 linux-box 執行，兩者同一 thread",
       "observe": "Thread 頁",
-      "status": "not-run",
-      "last_run": null
+      "status": "partial",
+      "last_run": {
+        "date": "2026-11-03",
+        "env": "Ubuntu 24.04.5 LTS 容器，單機（Hub、Worker、互動端在同一台），Node 22.23.4",
+        "result": "partial",
+        "note": "Hub 端 then 鏈結與變數代入已驗證（A08）；真實 Windows 編譯 + Linux E2E 尚未執行"
+      }
     },
     {
       "id": "T21",
@@ -513,8 +650,13 @@
       "steps": "① `aipagerctl enroll create --name \"測試機\" --power desktop --role tester` ② 新機器 `aipagerctl join --hub http://aipager-hub:7300 --code <code>` ③ `aipagerctl service install` ④ Dashboard 按核准",
       "expected": "join 後為 pending 且 Dashboard 顯示 online；核准後 active，可領任務",
       "observe": "join 印出寫入的 node.json 路徑；events 中 `node.enrolled`、`node.state`",
-      "status": "not-run",
-      "last_run": null
+      "status": "partial",
+      "last_run": {
+        "date": "2026-11-03",
+        "env": "Ubuntu 24.04.5 LTS 容器，單機（Hub、Worker、互動端在同一台），Node 22.23.4",
+        "result": "partial",
+        "note": "單機以真實程序跑完 enroll create → join → 待核准 → approve（A10），Dashboard 核准按鈕（A11）；多台實機尚未執行"
+      }
     },
     {
       "id": "T24",
@@ -529,8 +671,13 @@
       "steps": "同一加入碼再 join 一次；使用過期加入碼；連續送 6 次錯誤加入碼",
       "expected": "前兩者 422 `E_ENROLL_INVALID`；第 6 次 429 `E_RATE_LIMIT`",
       "observe": "enrollments 表 used_at；hub Log",
-      "status": "not-run",
-      "last_run": null
+      "status": "partial",
+      "last_run": {
+        "date": "2026-11-03",
+        "env": "Ubuntu 24.04.5 LTS 容器，單機（Hub、Worker、互動端在同一台），Node 22.23.4",
+        "result": "partial",
+        "note": "重複使用、錯誤加入碼與速率限制已驗證（A08）；過期加入碼尚未測"
+      }
     },
     {
       "id": "T25",
@@ -545,8 +692,13 @@
       "steps": "① 送 `--requires-label gpu=yes` 的任務給 role tester（沒有機器符合，排隊）② `aipagerctl nodes set linux-box --label gpu=yes` ③ 用舊的 meta_version 直接 PATCH 一次",
       "expected": "② 之後 15 秒內任務被 linux-box 領走；③ 回 409 `E_META_CONFLICT`",
       "observe": "`aipagerctl nodes history linux-box` 可見新版本",
-      "status": "not-run",
-      "last_run": null
+      "status": "partial",
+      "last_run": {
+        "date": "2026-11-03",
+        "env": "Ubuntu 24.04.5 LTS 容器，單機（Hub、Worker、互動端在同一台），Node 22.23.4",
+        "result": "partial",
+        "note": "If-Match 衝突、版本與還原、Dashboard 編輯已驗證（A08、A11）；「改標籤後 15 秒內被領走」尚未測"
+      }
     },
     {
       "id": "T26",
@@ -561,8 +713,13 @@
       "steps": "在 linux-box 的 profiles.json 新增 profile 存檔；再故意存一份 JSON 格式錯誤的版本",
       "expected": "新增後下一次心跳 Dashboard 出現新 profile；錯誤版本時保留原設定、Dashboard 顯示 `profiles_error`",
       "observe": "worker Log 的 `profiles.reload`",
-      "status": "not-run",
-      "last_run": null
+      "status": "partial",
+      "last_run": {
+        "date": "2026-11-03",
+        "env": "Ubuntu 24.04.5 LTS 容器，單機（Hub、Worker、互動端在同一台），Node 22.23.4",
+        "result": "partial",
+        "note": "Linux 上熱重載與錯誤時保留舊設定已驗證（A09）"
+      }
     },
     {
       "id": "T27",
@@ -577,8 +734,13 @@
       "steps": "macbook-hc 闔蓋 2 分鐘後，在 dev-pc 的 Claude 輸入「叫 macbook-hc 跑 iOS 單元測試」",
       "expected": "任務未建立；Claude 告知「已 N 分鐘沒有回應，可能睡著」並詢問排隊 / 改派 / 取消",
       "observe": "MCP Log 中 409 `E_TARGET_UNAVAILABLE`；tasks 表沒有新列",
-      "status": "not-run",
-      "last_run": null
+      "status": "partial",
+      "last_run": {
+        "date": "2026-11-03",
+        "env": "Ubuntu 24.04.5 LTS 容器，單機（Hub、Worker、互動端在同一台），Node 22.23.4",
+        "result": "partial",
+        "note": "confirm 流程以 MCP client 驗證（A09、A08）；尚未在真實 Claude 互動 session 與真實闔蓋的筆電執行"
+      }
     },
     {
       "id": "T28",
@@ -593,8 +755,13 @@
       "steps": "接 T27，回答「排隊」；10 分鐘後打開筆電",
       "expected": "任務建立時帶 `W_TARGET_ASLEEP`；開蓋後 1 分鐘內被領取；dev-pc 下次輸入時 aipager-hint 提示「macbook-hc 已回來，開始執行…」",
       "observe": "信箱 `system.notice`；events 的 `node.presence` asleep → online",
-      "status": "not-run",
-      "last_run": null
+      "status": "partial",
+      "last_run": {
+        "date": "2026-11-03",
+        "env": "Ubuntu 24.04.5 LTS 容器，單機（Hub、Worker、互動端在同一台），Node 22.23.4",
+        "result": "partial",
+        "note": "排隊與 W_TARGET_ASLEEP 警告已驗證（A08）；醒來後的「已開始執行」通知尚未測"
+      }
     },
     {
       "id": "T29",
@@ -609,8 +776,13 @@
       "steps": "① 對 macbook-hc 送一個約 5 分鐘的任務，執行中闔蓋 10 分鐘再打開 ② 重做一次，把該節點 `suspend_grace_sec` 設 120，闔蓋 5 分鐘",
       "expected": "① 任務續跑並 succeeded，發派者收到「執行中的機器睡著了」通知 ② 任務 failed，`E_LEASE_LOST`（detail: node_asleep），醒來後 Worker 終止該任務並保留本機結果",
       "observe": "tasks.node_asleep_since、asleep_ms_total；worker Log 的 `resumed_from_sleep`",
-      "status": "not-run",
-      "last_run": null
+      "status": "partial",
+      "last_run": {
+        "date": "2026-11-03",
+        "env": "Ubuntu 24.04.5 LTS 容器，單機（Hub、Worker、互動端在同一台），Node 22.23.4",
+        "result": "partial",
+        "note": "Hub 端睡眠保留、通知、超時判定以模擬時鐘驗證（A08）；真實闔蓋尚未執行"
+      }
     },
     {
       "id": "T30",
@@ -662,8 +834,13 @@
       "steps": "`aipagerctl enroll create --node-id linux-box`，在 linux-box 刪除設定後重新 join",
       "expected": "node_id 不變、metadata 保留、meta_version + 1；舊 token 呼叫 API 回 401",
       "observe": "tokens 表 revoked_at",
-      "status": "not-run",
-      "last_run": null
+      "status": "pass",
+      "last_run": {
+        "date": "2026-11-03",
+        "env": "Ubuntu 24.04.5 LTS 容器，單機（Hub、Worker、互動端在同一台），Node 22.23.4",
+        "result": "pass",
+        "note": "A08 驗證綁定 node_id 的加入碼重灌後 metadata 保留、版本 +1、舊 token 失效"
+      }
     },
     {
       "id": "T33",
@@ -678,8 +855,13 @@
       "steps": "`aipagerctl nodes retire <id>`，之後在該機觀察 Worker",
       "expected": "Worker 心跳收到 401 後停止並在 Log 說明「此節點已退役」；`aipagerctl nodes` 預設不再列出",
       "observe": "worker Log；Dashboard「已退役」篩選",
-      "status": "not-run",
-      "last_run": null
+      "status": "partial",
+      "last_run": {
+        "date": "2026-11-03",
+        "env": "Ubuntu 24.04.5 LTS 容器，單機（Hub、Worker、互動端在同一台），Node 22.23.4",
+        "result": "partial",
+        "note": "A08 驗證退役後 token 失效；Worker 收到 401 後停止領任務的行為尚未測"
+      }
     },
     {
       "id": "T34",
@@ -695,8 +877,13 @@
       "steps": "① macbook-hc 闔蓋 ② 以 `--on-unavailable queue` 派一個任務給它 ③ 另派一個約 5 分鐘的任務給 linux-box，執行中停止其 Worker ④ 開 Dashboard 首頁",
       "expected": "「睡著／離線的機器」區塊列出 macbook-hc 與 linux-box、各自沉默多久；「卡住的任務」區塊列出排隊等 macbook-hc 的任務（原因：等待機器醒來）與 linux-box 上執行中的任務（原因：執行機器沒有回應，剩餘保留時間）",
       "observe": "Dashboard 首頁；`GET /api/v1/tasks?stuck=1`",
-      "status": "not-run",
-      "last_run": null
+      "status": "partial",
+      "last_run": {
+        "date": "2026-11-03",
+        "env": "Ubuntu 24.04.5 LTS 容器，單機（Hub、Worker、互動端在同一台），Node 22.23.4",
+        "result": "partial",
+        "note": "Chromium 以模擬資料驗證首頁內容與操作（A11）；真實筆電闔蓋情境尚未執行"
+      }
     }
   ]
 }

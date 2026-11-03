@@ -5,6 +5,8 @@ param(
     [string]$AppDir = "C:\Program Files\AIPager"
 )
 $bat = Join-Path $AppDir "spec\scripts\windows\start-worker.bat"
+$logDir = "C:\ProgramData\AIPager\logs"
+New-Item -ItemType Directory -Path $logDir -Force | Out-Null  # cmd redirection fails if the folder does not exist
 $action  = New-ScheduledTaskAction -Execute "cmd.exe" -Argument "/c `"$bat`" > `"C:\ProgramData\AIPager\logs\worker-console.log`" 2>&1"
 $trigger = New-ScheduledTaskTrigger -AtStartup
 $settings = New-ScheduledTaskSettingsSet -RestartCount 999 -RestartInterval (New-TimeSpan -Minutes 1) `
