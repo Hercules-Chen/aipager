@@ -1,0 +1,9 @@
+# Default: text files use LF on every platform
+* text=auto eol=lf
+# Windows scripts must keep CRLF (cmd.exe and Windows PowerShell 5.x)
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+# Binary
+*.png binary
+*.jpg binary

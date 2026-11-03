@@ -1,0 +1,50 @@
+{
+  "v": "1.0",
+  "id": "01JBX7Q3M8ZK4N2P6R9T0V1W2Y",
+  "kind": "task.create",
+  "from": { "node": "dev-pc", "agent": "main" },
+  "to": { "node": "build-pc", "agent": "worker" },
+  "thread_id": "01JBX7Q3M8ZK4N2P6R9T0V1W2X",
+  "trace": { "trace_id": "4f1c2a9be0d34c7a8b6e5d4c3b2a1f00", "hop": 0, "path": ["main@dev-pc"] },
+  "created_at": "2026-11-03T06:15:42.118Z",
+  "idempotency_key": "dev-pc:erp:build:9f3a1c2",
+  "priority": 5,
+  "payload": {
+    "title": "編譯 ERP feature/invoice-tax 分支",
+    "profile": "build",
+    "instructions": "請在指定 commit 上執行 build.ps1 (Release)。\n若編譯失敗，列出前 20 個錯誤（檔名:行號 + 訊息），並判斷是否為本次變更造成。\n不要修改任何程式碼。",
+    "inputs": {
+      "repo": { "url": "git@gitlab.local:erp/erp.git", "ref": "feature/invoice-tax", "commit": "9f3a1c2" },
+      "vars": { "configuration": "Release" }
+    },
+    "expected_output": {
+      "format": "json",
+      "schema": {
+        "type": "object",
+        "required": ["build_ok", "errors"],
+        "properties": {
+          "build_ok": { "type": "boolean" },
+          "errors": { "type": "array", "items": { "type": "string" } }
+        }
+      },
+      "artifacts": ["artifacts/build-log.txt"]
+    },
+    "limits": { "timeout_sec": 1800, "max_turns": 30, "max_attempts": 1 },
+    "dispatch": { "on_unavailable": "confirm", "max_wait_sec": 86400 },
+    "session": { "mode": "new" },
+    "notify": { "mailbox": { "node": "dev-pc", "agent": "main" }, "on": ["approval", "result"] },
+    "then": [
+      {
+        "when": "succeeded",
+        "to": { "role": "tester", "agent": "worker" },
+        "title": "E2E 測試 ERP {{inputs.repo.commit}}",
+        "profile": "e2e",
+        "requires": { "os": ["linux"], "labels": { "browser": "chromium" } },
+        "dispatch": { "on_unavailable": "queue" },
+        "instructions": "針對 commit {{inputs.repo.commit}} 執行 E2E 測試並回報失敗案例。\n上一步（編譯）摘要：{{result.summary}}",
+        "inputs": { "repo": { "url": "git@gitlab.local:erp/erp.git", "ref": "feature/invoice-tax", "commit": "9f3a1c2" } },
+        "limits": { "timeout_sec": 3600 }
+      }
+    ]
+  }
+}

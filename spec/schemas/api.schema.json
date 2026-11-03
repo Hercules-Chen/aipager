@@ -1,0 +1,305 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aipager.local/schemas/aipager-1.0/api.schema.json",
+  "title": "AIPager REST bodies (aipager/1.0)",
+  "description": "Request and response bodies of the Hub REST API that are not envelopes: node metadata, enrollment, heartbeat, presence, dispatch results.",
+  "$defs": {
+    "nodeId": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{1,31}$" },
+    "roleName": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{1,31}$" },
+    "labels": {
+      "type": "object",
+      "propertyNames": { "pattern": "^[a-z0-9][a-z0-9_-]{0,31}$" },
+      "additionalProperties": { "type": "string", "minLength": 1, "maxLength": 64, "not": { "const": "*" } },
+      "maxProperties": 30
+    },
+    "power": { "enum": ["server", "desktop", "laptop"] },
+    "nodeState": { "enum": ["pending", "active", "draining", "disabled", "retired"] },
+    "presence": { "enum": ["online", "asleep", "offline", "never"] },
+    "presenceSettings": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "asleep_after_sec": { "type": "integer", "minimum": 30, "maximum": 3600 },
+        "offline_after_sec": { "type": "integer", "minimum": 60, "maximum": 2592000 },
+        "suspend_grace_sec": { "type": "integer", "minimum": 0, "maximum": 86400 },
+        "alert_on_offline": { "type": "boolean" }
+      }
+    },
+
+    "nodeMeta": {
+      "description": "Admin-managed metadata stored at the Hub. Editable any time without touching the machine.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "display_name": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "description": { "type": "string", "maxLength": 500 },
+        "roles": { "type": "array", "items": { "$ref": "#/$defs/roleName" }, "maxItems": 20, "uniqueItems": true },
+        "labels": { "$ref": "#/$defs/labels" },
+        "power": { "$ref": "#/$defs/power" },
+        "presence": { "$ref": "#/$defs/presenceSettings", "description": "Overrides of the hub defaults for this node's power class." },
+        "owner": { "type": "string", "maxLength": 64 },
+        "notes": { "type": "string", "maxLength": 2000 }
+      }
+    },
+
+    "nodeFacts": {
+      "description": "Reported by the worker in every heartbeat. Read-only for humans.",
+      "type": "object",
+      "required": ["os", "arch", "hostname", "worker_version"],
+      "additionalProperties": false,
+      "properties": {
+        "os": { "enum": ["windows", "macos", "linux"] },
+        "arch": { "enum": ["x64", "arm64"] },
+        "os_version": { "type": "string", "maxLength": 100 },
+        "hostname": { "type": "string", "maxLength": 255 },
+        "tailscale_ip": { "type": "string", "maxLength": 45 },
+        "timezone": { "type": "string", "maxLength": 64 },
+        "worker_version": { "type": "string", "maxLength": 32 },
+        "claude_version": { "type": "string", "maxLength": 64 },
+        "claude_auth_mode": { "enum": ["login", "oauth_token", "api_key"] },
+        "worker_enabled": { "type": "boolean" }
+      }
+    },
+
+    "profileSummary": {
+      "type": "object",
+      "required": ["name"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,31}$" },
+        "description": { "type": "string", "maxLength": 300 }
+      }
+    },
+
+    "heartbeatRequest": {
+      "type": "object",
+      "required": ["facts", "profiles", "capacity", "meta_version"],
+      "additionalProperties": false,
+      "properties": {
+        "facts": { "$ref": "#/$defs/nodeFacts" },
+        "profiles": { "type": "array", "items": { "$ref": "#/$defs/profileSummary" }, "maxItems": 50 },
+        "profiles_error": { "type": "string", "maxLength": 1000, "description": "Set when the local profiles.json failed to load; the worker keeps the last valid set." },
+        "capacity": {
+          "type": "object",
+          "required": ["max_concurrent", "running"],
+          "additionalProperties": false,
+          "properties": {
+            "max_concurrent": { "type": "integer", "minimum": 0, "maximum": 16 },
+            "running": { "type": "integer", "minimum": 0 }
+          }
+        },
+        "meta_version": { "type": "integer", "minimum": 0, "description": "The meta version the worker currently holds." },
+        "resumed_from_sleep_sec": { "type": "integer", "minimum": 1, "description": "Present on the first heartbeat after the worker detected a wall-clock jump (machine slept)." }
+      }
+    },
+
+    "heartbeatResponse": {
+      "type": "object",
+      "required": ["server_time", "state", "meta_version", "cancel_requests"],
+      "additionalProperties": false,
+      "properties": {
+        "server_time": { "type": "string", "format": "date-time" },
+        "state": { "$ref": "#/$defs/nodeState" },
+        "meta_version": { "type": "integer", "minimum": 0 },
+        "meta": { "$ref": "#/$defs/nodeMeta", "description": "Only sent when meta_version differs from the request." },
+        "presence_settings": { "$ref": "#/$defs/presenceSettings", "description": "Effective settings after applying power defaults and overrides." },
+        "cancel_requests": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+
+    "enrollmentCreate": {
+      "description": "POST /admin/enrollments. Creates a one-time join code.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "node_id": { "$ref": "#/$defs/nodeId", "description": "Optional: bind the code to one node_id." },
+        "preset": { "$ref": "#/$defs/nodeMeta" },
+        "ttl_sec": { "type": "integer", "minimum": 300, "maximum": 604800, "default": 86400 },
+        "auto_approve": { "type": "boolean", "default": false }
+      }
+    },
+
+    "enrollmentCreated": {
+      "type": "object",
+      "required": ["enrollment_id", "code", "expires_at", "join_commands"],
+      "additionalProperties": false,
+      "properties": {
+        "enrollment_id": { "type": "string" },
+        "code": { "type": "string", "pattern": "^ape_[A-Z2-7]{4}-[A-Z2-7]{4}-[A-Z2-7]{4}-[A-Z2-7]{4}$", "description": "Shown once. 80 random bits, base32, grouped for typing." },
+        "expires_at": { "type": "string", "format": "date-time" },
+        "join_commands": {
+          "type": "object",
+          "required": ["windows", "macos", "linux"],
+          "additionalProperties": false,
+          "properties": {
+            "windows": { "type": "string" },
+            "macos": { "type": "string" },
+            "linux": { "type": "string" }
+          }
+        }
+      }
+    },
+
+    "enrollRequest": {
+      "description": "POST /enroll (no token; the code is the credential). Sent by aipagerctl join.",
+      "type": "object",
+      "required": ["code", "node_id", "facts"],
+      "additionalProperties": false,
+      "properties": {
+        "code": { "type": "string" },
+        "node_id": { "$ref": "#/$defs/nodeId" },
+        "facts": { "$ref": "#/$defs/nodeFacts" },
+        "suggested": { "$ref": "#/$defs/nodeMeta", "description": "Values given on the join command line. The enrollment preset wins on conflicts; an admin can change both later." }
+      }
+    },
+
+    "enrollResponse": {
+      "type": "object",
+      "required": ["node_id", "node_token", "state", "meta", "meta_version"],
+      "additionalProperties": false,
+      "properties": {
+        "node_id": { "$ref": "#/$defs/nodeId" },
+        "node_token": { "type": "string", "pattern": "^apn_[A-Za-z0-9_-]{43}$" },
+        "state": { "enum": ["pending", "active"] },
+        "meta": { "$ref": "#/$defs/nodeMeta" },
+        "meta_version": { "type": "integer", "minimum": 1 }
+      }
+    },
+
+    "nodeMetaPatch": {
+      "description": "PATCH /nodes/{id}/meta with header If-Match: <meta_version>. JSON merge-patch semantics: null removes a field or label.",
+      "type": "object",
+      "additionalProperties": false,
+      "minProperties": 1,
+      "properties": {
+        "display_name": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "description": { "type": ["string", "null"], "maxLength": 500 },
+        "roles": { "type": "array", "items": { "$ref": "#/$defs/roleName" }, "maxItems": 20, "uniqueItems": true },
+        "labels": {
+          "type": "object",
+          "propertyNames": { "pattern": "^[a-z0-9][a-z0-9_-]{0,31}$" },
+          "additionalProperties": { "anyOf": [ { "type": "string", "minLength": 1, "maxLength": 64, "not": { "const": "*" } }, { "type": "null" } ] }
+        },
+        "power": { "$ref": "#/$defs/power" },
+        "presence": { "anyOf": [ { "$ref": "#/$defs/presenceSettings" }, { "type": "null" } ] },
+        "owner": { "type": ["string", "null"], "maxLength": 64 },
+        "notes": { "type": ["string", "null"], "maxLength": 2000 }
+      }
+    },
+
+    "nodeStateChange": {
+      "description": "POST /nodes/{id}/state. pending->active is the approval.",
+      "type": "object",
+      "required": ["state"],
+      "additionalProperties": false,
+      "properties": {
+        "state": { "enum": ["active", "draining", "disabled", "retired"] },
+        "reason": { "type": "string", "maxLength": 500 }
+      }
+    },
+
+    "nodeView": {
+      "description": "GET /nodes/{id} and items of GET /nodes.",
+      "type": "object",
+      "required": ["node_id", "state", "presence", "meta", "meta_version"],
+      "additionalProperties": false,
+      "properties": {
+        "node_id": { "$ref": "#/$defs/nodeId" },
+        "state": { "$ref": "#/$defs/nodeState" },
+        "presence": { "$ref": "#/$defs/presence" },
+        "last_seen": { "type": ["string", "null"], "format": "date-time" },
+        "silent_sec": { "type": ["integer", "null"], "minimum": 0 },
+        "last_wake_at": { "type": ["string", "null"], "format": "date-time" },
+        "presence_settings": { "$ref": "#/$defs/presenceSettings" },
+        "meta": { "$ref": "#/$defs/nodeMeta" },
+        "meta_version": { "type": "integer", "minimum": 1 },
+        "facts": { "$ref": "#/$defs/nodeFacts" },
+        "profiles": { "type": "array", "items": { "$ref": "#/$defs/profileSummary" } },
+        "profiles_error": { "type": ["string", "null"] },
+        "capacity": { "type": "object" },
+        "online_hours_7d": { "type": "number", "minimum": 0, "maximum": 168 }
+      }
+    },
+
+    "warning": {
+      "type": "object",
+      "required": ["code", "message"],
+      "additionalProperties": false,
+      "properties": {
+        "code": { "enum": ["W_TARGET_ASLEEP", "W_TARGET_OFFLINE", "W_TARGET_NEVER_SEEN", "W_TARGET_DRAINING", "W_NO_ONLINE_CANDIDATE"] },
+        "message": { "type": "string", "maxLength": 500, "description": "Localized by Accept-Language. MCP shows it verbatim to the model." },
+        "params": { "type": "object" }
+      }
+    },
+
+    "targetStatus": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "node_id": { "$ref": "#/$defs/nodeId" },
+        "display_name": { "type": "string" },
+        "power": { "$ref": "#/$defs/power" },
+        "state": { "$ref": "#/$defs/nodeState" },
+        "presence": { "$ref": "#/$defs/presence" },
+        "last_seen": { "type": ["string", "null"], "format": "date-time" },
+        "silent_sec": { "type": ["integer", "null"], "minimum": 0 },
+        "role": { "$ref": "#/$defs/roleName" },
+        "candidates_online": { "type": "integer", "minimum": 0 },
+        "candidates_total": { "type": "integer", "minimum": 0 }
+      }
+    },
+
+    "alternative": {
+      "type": "object",
+      "required": ["node_id", "presence"],
+      "additionalProperties": false,
+      "properties": {
+        "node_id": { "$ref": "#/$defs/nodeId" },
+        "display_name": { "type": "string" },
+        "presence": { "$ref": "#/$defs/presence" },
+        "running": { "type": "integer", "minimum": 0 },
+        "reason": { "type": "string", "maxLength": 200 }
+      }
+    },
+
+    "taskCreated": {
+      "description": "201 (or 200 for an idempotent replay) from POST /tasks.",
+      "type": "object",
+      "required": ["task_id", "thread_id", "trace_id", "state", "target_status", "warnings"],
+      "additionalProperties": false,
+      "properties": {
+        "task_id": { "type": "string" },
+        "thread_id": { "type": "string" },
+        "trace_id": { "type": "string", "pattern": "^[0-9a-f]{32}$" },
+        "state": { "const": "queued" },
+        "expires_at": { "type": "string", "format": "date-time" },
+        "target_status": { "$ref": "#/$defs/targetStatus" },
+        "warnings": { "type": "array", "items": { "$ref": "#/$defs/warning" } },
+        "alternatives": { "type": "array", "items": { "$ref": "#/$defs/alternative" } }
+      }
+    },
+
+    "targetUnavailable": {
+      "description": "409 from POST /tasks when on_unavailable is confirm or reject and the target is not online. Nothing was created.",
+      "type": "object",
+      "required": ["error", "target_status", "alternatives"],
+      "additionalProperties": false,
+      "properties": {
+        "error": {
+          "type": "object",
+          "required": ["code", "message", "trace_id"],
+          "additionalProperties": false,
+          "properties": {
+            "code": { "const": "E_TARGET_UNAVAILABLE" },
+            "message": { "type": "string" },
+            "trace_id": { "type": "string" }
+          }
+        },
+        "target_status": { "$ref": "#/$defs/targetStatus" },
+        "warnings": { "type": "array", "items": { "$ref": "#/$defs/warning" } },
+        "alternatives": { "type": "array", "items": { "$ref": "#/$defs/alternative" } },
+        "choices": { "type": "array", "items": { "enum": ["queue", "send_to_alternative", "cancel"] } }
+      }
+    }
+  }
+}

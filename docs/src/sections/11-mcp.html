@@ -1,0 +1,45 @@
+<section id="mcp" data-title="MCP 工具" data-group="協定">
+  <p>MCP server 名稱固定為 <code>aipager</code>，因此在 Claude Code 中的工具全名為 <code>mcp__aipager__&lt;工具名&gt;</code>。工具說明以英文撰寫（模型理解較穩定），內容可為任何語言。三個平台的工具完全相同。metadata 的修改只開放給人（Dashboard、aipagerctl），MCP 只能讀取。</p>
+  <div class="tablewrap"><table>
+    <tr><th>工具</th><th>互動</th><th>任務</th><th>用途</th></tr>
+    <tr><td><code>list_nodes</code></td><td>●</td><td>●</td><td>列出節點：顯示名稱、在線狀態與沉默多久、機器類型、os / arch、角色、標籤、可用 profile。可依 online、role、label 篩選。派工前先呼叫</td></tr>
+    <tr><td><code>describe_node</code></td><td>●</td><td>●</td><td>單一節點完整資料，含最後出現、最後醒來時間、7 天在線時數</td></tr>
+    <tr><td><code>send_task</code></td><td>●</td><td>●</td><td>派工；可帶 <code>requires_os</code> / <code>requires_arch</code> / <code>requires_labels</code>、<code>on_unavailable</code>、<code>max_wait_sec</code>。<code>wait_seconds</code>（≤ 50）可順便等短任務的結果</td></tr>
+    <tr><td><code>wait_task</code></td><td>●</td><td>●</td><td>最多等 50 秒，回狀態、最近進度、結果；排隊中會附目標目前的在線狀態</td></tr>
+    <tr><td><code>get_task</code></td><td>●</td><td>●</td><td>查單一任務詳情</td></tr>
+    <tr><td><code>cancel_task</code></td><td>●</td><td>●</td><td>取消任務</td></tr>
+    <tr><td><code>send_message</code></td><td>●</td><td>●</td><td>送訊息到某個信箱；對方沒在線時結果附警告</td></tr>
+    <tr><td><code>inbox</code></td><td>●</td><td></td><td>讀自己的信箱（訊息、任務完成通知、機器醒來通知、審核通知）</td></tr>
+    <tr><td><code>ack</code></td><td>●</td><td></td><td>標記已讀</td></tr>
+    <tr><td><code>attach_file</code></td><td>●</td><td>●</td><td>上傳 cwd 內的檔案，回 sha256</td></tr>
+    <tr><td><code>fetch_attachment</code></td><td>●</td><td>●</td><td>下載附件到 cwd 內的資料夾</td></tr>
+    <tr><td><code>report_progress</code></td><td></td><td>●</td><td>回報里程碑（不是每個工具呼叫都報）</td></tr>
+    <tr><td><code>submit_result</code></td><td></td><td>●</td><td>最後一步呼叫一次，送出結構化結果</td></tr>
+    <tr><td><code>permission_prompt</code></td><td></td><td>●</td><td>內部使用：由 Worker 以 <code>--permission-prompt-tool</code> 指定，處理權限詢問</td></tr>
+  </table></div>
+
+  <h3>派給沒在線的機器時，MCP 怎麼回</h3>
+  <p>互動 session 的 <code>send_task</code> 預設 <code>on_unavailable=confirm</code>。目標沒在線時任務不會建立，工具回傳一段讓 Claude 直接轉告使用者的文字，以及結構化資料：</p>
+  <div class="codebox"><div class="label"><span>工具結果的文字部分（模型看到的內容）</span><button type="button" data-copy>複製</button></div><pre><code>⚠ 任務尚未建立：macbook-hc（Hercules 的 MacBook，筆電）已 42 分鐘沒有回應，可能睡著了。
+可選擇：
+  1. 排隊等它回來（最久等 24 小時）→ 以 on_unavailable="queue" 重新呼叫
+  2. 改派給 mac-studio（辦公室 Mac Studio，在線，同樣有 ios profile 與 xcode=16）
+  3. 取消
+請把以上情況告訴使用者並詢問要怎麼做，不要自行決定。</code></pre></div>
+  <p>Worker 任務內部（task 模式）預設 <code>queue</code>：任務照樣建立，結果附警告，發派它的 Claude 會在 summary 中說明「已排隊等待某台機器」。</p>
+
+  <h3>permission_prompt 的判斷順序</h3>
+  <ol>
+    <li>Claude Code 先套用 <code>--allowedTools</code>（直接允許）與 <code>--disallowedTools</code>（直接拒絕）；只有兩者都沒涵蓋的呼叫才會進到這個工具</li>
+    <li>比對 profile 的 <code>approval.auto_deny</code>：符合就回 deny，不打擾人</li>
+    <li>比對 <code>approval.auto_allow</code>：符合就回 allow</li>
+    <li>其餘：建立審核請求（tool_input 截斷到 8 KB，依規則標 risk），以 long-poll 等待，最長 <code>approval.timeout_sec</code></li>
+    <li>回傳格式為一段 JSON 文字：<code>{"behavior":"allow","updatedInput":{…}}</code> 或 <code>{"behavior":"deny","message":"…"}</code>。deny 時 Claude 會收到 message 並自行調整做法</li>
+  </ol>
+  <div class="note warn"><b>注意：</b>審核等待期間 MCP 工具呼叫會一直掛著，Worker 必須把 <code>MCP_TOOL_TIMEOUT</code> 環境變數設得比審核逾時長（預設 900000 ms = 15 分鐘），否則 Claude Code 會先判定工具逾時。此行為需以實際 CLI 版本驗證，列在 <a data-ref="tests"></a> 的 T09。</div>
+
+  <details>
+    <summary>完整工具定義（aipager-tools.json）</summary>
+    <div class="inner"><div class="codebox"><div class="label"><span>spec/mcp/aipager-tools.json</span><button type="button" data-copy>複製</button></div><pre><code><!--INCLUDE:spec/mcp/aipager-tools.json--></code></pre></div></div>
+  </details>
+</section>

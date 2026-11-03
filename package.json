@@ -1,0 +1,21 @@
+{
+  "name": "aipager",
+  "version": "0.3.2",
+  "private": true,
+  "description": "AIPager design spec: lets Claude Code on multiple machines dispatch tasks to each other through a central Hub.",
+  "license": "Apache-2.0",
+  "engines": {
+    "node": ">=22.13"
+  },
+  "scripts": {
+    "validate": "node --no-warnings tools/validate-spec.js",
+    "build:doc": "node tools/build-doc.js",
+    "check": "npm run validate && npm run build:doc",
+    "test:posix": "bash tools/tests/posix-start-worker.test.sh && node tools/tests/posix-killtree.test.js && bash tools/tests/static-scripts.test.sh",
+    "test": "npm run check && npm run test:posix"
+  },
+  "dependencies": {
+    "ajv": "^8.20.0",
+    "ajv-formats": "^3.0.1"
+  }
+}

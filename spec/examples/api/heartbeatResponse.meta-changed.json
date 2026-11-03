@@ -1,0 +1,14 @@
+{
+  "server_time": "2026-11-03T09:41:12.004Z",
+  "state": "active",
+  "meta_version": 4,
+  "meta": {
+    "display_name": "Hercules 的 MacBook",
+    "roles": ["tester", "ios-builder"],
+    "labels": { "xcode": "16", "location": "office", "battery": "yes" },
+    "power": "laptop",
+    "owner": "hercules"
+  },
+  "presence_settings": { "asleep_after_sec": 60, "offline_after_sec": 604800, "suspend_grace_sec": 1800, "alert_on_offline": false },
+  "cancel_requests": []
+}

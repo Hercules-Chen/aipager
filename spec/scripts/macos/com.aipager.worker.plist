@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  AIPager Worker for macOS.
+  LaunchAgent (default): copy to ~/Library/LaunchAgents/, runs while <user> is logged in.
+    launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.aipager.worker.plist
+  LaunchDaemon (run after reboot without login): copy to /Library/LaunchDaemons/ and add
+    <key>UserName</key><string><user></string>
+  The login Keychain is not unlocked for a LaunchDaemon, so use claude_auth.mode = "oauth_token".
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.aipager.worker</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/bash</string>
+    <string>/opt/aipager/scripts/posix/start-worker.sh</string>
+  </array>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key>
+    <string>/Users/USERNAME/.volta/bin:/Users/USERNAME/.local/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
+    <key>AIPAGER_CONFIG</key>
+    <string>/Users/USERNAME/Library/Application Support/AIPager/node/node.json</string>
+  </dict>
+  <key>RunAtLoad</key>
+  <true/>
+  <key>KeepAlive</key>
+  <true/>
+  <key>ThrottleInterval</key>
+  <integer>10</integer>
+  <key>ProcessType</key>
+  <string>Standard</string>
+  <key>StandardOutPath</key>
+  <string>/Users/USERNAME/Library/Logs/AIPager/worker-console.log</string>
+  <key>StandardErrorPath</key>
+  <string>/Users/USERNAME/Library/Logs/AIPager/worker-console.log</string>
+</dict>
+</plist>

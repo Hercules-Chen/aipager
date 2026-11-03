@@ -1,0 +1,17 @@
+{
+  "code": "ape_K7QF-2XMA-PL4D-7RTE",
+  "node_id": "macbook-hc",
+  "facts": {
+    "os": "macos",
+    "arch": "arm64",
+    "os_version": "macOS 26.1",
+    "hostname": "Hercules-MacBook-Pro.local",
+    "tailscale_ip": "100.88.12.34",
+    "timezone": "Asia/Taipei",
+    "worker_version": "0.3.0",
+    "claude_version": "2.9.1 (Claude Code)",
+    "claude_auth_mode": "oauth_token",
+    "worker_enabled": true
+  },
+  "suggested": { "labels": { "battery": "yes" } }
+}

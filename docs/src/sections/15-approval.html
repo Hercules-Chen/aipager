@@ -1,0 +1,23 @@
+<section id="approval" data-title="審核與 Dashboard" data-group="執行">
+  <h3>Dashboard 頁面</h3>
+  <div class="tablewrap"><table>
+    <tr><th>頁面</th><th>內容</th></tr>
+    <tr><td>節點</td><td>在線狀態（含沉默多久）、顯示名稱、機器類型、角色、標籤、OS / 架構、執行中任務、排隊等它的任務數；可依在線狀態、角色、標籤篩選</td></tr>
+    <tr><td>新增機器</td><td>填 preset（名稱、類型、角色、標籤）與有效期 → 顯示加入碼與三個平台的 join 指令（可複製）</td></tr>
+    <tr><td>待核准</td><td>新 join 的機器與它回報的 facts；核准前可修改 metadata</td></tr>
+    <tr><td>節點詳情</td><td>metadata 編輯表單（送出時帶 If-Match）、修改歷史與還原、facts、profiles（含錯誤）、7 天在線時間軸、drain / disable / retire 按鈕</td></tr>
+    <tr><td>任務</td><td>依狀態或 OS 篩選；每列有狀態標籤、來源 → 目的、profile、耗時、花費</td></tr>
+    <tr><td>任務詳情</td><td>envelope、進度時間軸（SSE 即時）、結果、artifact 下載、原始 stream.jsonl 檢視、「複製 cmdline」</td></tr>
+    <tr><td>審核佇列</td><td>工具名、參數（可展開）、風險等級、剩餘時間；按鈕：核准、拒絕（附說明）、修改參數後核准</td></tr>
+    <tr><td>Thread / Trace</td><td>一串任務與訊息的時序圖；trace 頁合併所有事件</td></tr>
+  </table></div>
+  <ul>
+    <li>語系：<code>/ui/i18n/zh-TW.json</code>、<code>/ui/i18n/en.json</code>，依瀏覽器語言或右上角切換</li>
+    <li>網址加 <code>?debug=1</code> 顯示每個畫面背後的原始 JSON 與 trace_id</li>
+    <li>不打包、不壓縮，原生 ES modules，Chrome DevTools 可以直接下中斷點</li>
+    <li>admin token 輸入一次後存在 <code>sessionStorage</code>，關分頁即清除</li>
+    <li>任何裝了 Tailscale 的裝置（包含手機）都能開 Dashboard 審核</li>
+  </ul>
+  <h3>通知管道</h3>
+  <p>審核請求與任務失敗可透過 webhook 通知（hub.json 的 <code>webhooks</code>），格式支援 <code>ntfy</code>、<code>teams</code>、<code>slack</code>、<code>generic</code>（原始 envelope）。通知內只放標題、節點、Dashboard 連結，不放參數內容。</p>
+</section>

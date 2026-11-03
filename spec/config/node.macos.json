@@ -1,0 +1,30 @@
+{
+  "node_id": "macbook-hc",
+  "hub_url": "http://aipager-hub:7300",
+  "token_file": "/Users/<user>/Library/Application Support/AIPager/node/node.token",
+  "claude_path": "/Users/<user>/.local/bin/claude",
+  "claude_auth": {
+    "mode": "oauth_token",
+    "token_file": "/Users/<user>/Library/Application Support/AIPager/node/claude-oauth.token"
+  },
+  "worker": {
+    "enabled": true,
+    "max_concurrent": 1,
+    "heartbeat_sec": 15,
+    "claim_wait_sec": 25,
+    "lease_renew_sec": 20,
+    "progress_throttle_ms": 2000,
+    "tasks_dir": "/Users/<user>/Library/Application Support/AIPager/worker/tasks",
+    "upload_stream_log": true,
+    "mcp_tool_timeout_ms": 900000,
+    "keep_awake": true
+  },
+  "mcp": {
+    "default_agent": "main"
+  },
+  "log": {
+    "level": "info",
+    "dir": "/Users/<user>/Library/Logs/AIPager",
+    "keep_days": 30
+  }
+}

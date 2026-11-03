@@ -1,0 +1,320 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aipager.local/schemas/aipager-1.0/envelope.schema.json",
+  "title": "AIPager Envelope (aipager/1.0)",
+  "description": "All tasks, messages, approvals and results travel in this envelope. Fields marked hub-assigned are overwritten by the Hub; clients must not rely on values they send for them.",
+  "type": "object",
+  "required": ["v", "id", "kind", "from", "to", "thread_id", "trace", "created_at", "payload"],
+  "additionalProperties": false,
+  "properties": {
+    "v": { "const": "1.0", "description": "Protocol version major.minor. Hub accepts the same major only." },
+    "id": { "$ref": "#/$defs/ulid", "description": "hub-assigned. Envelope id (ULID, time sortable)." },
+    "kind": {
+      "enum": ["task.create", "task.progress", "task.result", "task.cancel", "message", "approval.request", "approval.decision", "system.notice"]
+    },
+    "from": { "$ref": "#/$defs/address", "description": "hub-assigned from the caller token. Cannot be spoofed." },
+    "to": { "$ref": "#/$defs/target" },
+    "thread_id": { "$ref": "#/$defs/ulid", "description": "Conversation / work chain id. Hub creates a new thread when the client omits it." },
+    "parent_id": { "$ref": "#/$defs/ulid", "description": "Envelope this one answers or was spawned from." },
+    "trace": { "$ref": "#/$defs/trace" },
+    "created_at": { "type": "string", "format": "date-time", "description": "hub-assigned. RFC3339 UTC with milliseconds." },
+    "expires_at": { "type": "string", "format": "date-time" },
+    "idempotency_key": { "type": "string", "minLength": 1, "maxLength": 64, "pattern": "^[A-Za-z0-9._:-]+$" },
+    "priority": { "type": "integer", "minimum": 1, "maximum": 9, "default": 5, "description": "1 = highest, 9 = lowest." },
+    "payload": { "type": "object" },
+    "meta": { "type": "object", "description": "Free-form extension data. Hub stores it and never interprets it." }
+  },
+  "allOf": [
+    { "if": { "properties": { "kind": { "const": "task.create" } } }, "then": { "properties": { "payload": { "$ref": "#/$defs/taskCreate" } } } },
+    { "if": { "properties": { "kind": { "const": "task.progress" } } }, "then": { "properties": { "payload": { "$ref": "#/$defs/taskProgress" } } } },
+    { "if": { "properties": { "kind": { "const": "task.result" } } }, "then": { "properties": { "payload": { "$ref": "#/$defs/taskResult" } } } },
+    { "if": { "properties": { "kind": { "const": "task.cancel" } } }, "then": { "properties": { "payload": { "$ref": "#/$defs/taskCancel" } } } },
+    { "if": { "properties": { "kind": { "const": "message" } } }, "then": { "properties": { "payload": { "$ref": "#/$defs/message" } } } },
+    { "if": { "properties": { "kind": { "const": "approval.request" } } }, "then": { "properties": { "payload": { "$ref": "#/$defs/approvalRequest" } } } },
+    { "if": { "properties": { "kind": { "const": "approval.decision" } } }, "then": { "properties": { "payload": { "$ref": "#/$defs/approvalDecision" } } } },
+    { "if": { "properties": { "kind": { "const": "system.notice" } } }, "then": { "properties": { "payload": { "$ref": "#/$defs/systemNotice" } } } }
+  ],
+  "$defs": {
+    "ulid": { "type": "string", "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$" },
+    "nodeId": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{1,31}$" },
+    "agentName": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,31}$", "description": "Reserved names: worker, human, hub." },
+    "address": {
+      "type": "object",
+      "required": ["node", "agent"],
+      "additionalProperties": false,
+      "properties": {
+        "node": { "$ref": "#/$defs/nodeId" },
+        "agent": { "$ref": "#/$defs/agentName" }
+      }
+    },
+    "target": {
+      "description": "Either a concrete node or a role. Role targets are resolved by the Hub to one online node at claim time.",
+      "oneOf": [
+        { "$ref": "#/$defs/address" },
+        {
+          "type": "object",
+          "required": ["role", "agent"],
+          "additionalProperties": false,
+          "properties": {
+            "role": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{1,31}$" },
+            "agent": { "const": "worker" }
+          }
+        }
+      ]
+    },
+    "trace": {
+      "type": "object",
+      "required": ["trace_id", "hop"],
+      "additionalProperties": false,
+      "properties": {
+        "trace_id": { "type": "string", "pattern": "^[0-9a-f]{32}$" },
+        "hop": { "type": "integer", "minimum": 0, "maximum": 16, "description": "hub-assigned. 0 for a human/interactive origin, +1 for every envelope created from inside a task." },
+        "path": { "type": "array", "items": { "type": "string" }, "maxItems": 17, "description": "hub-assigned. agent@node list from origin to here." }
+      }
+    },
+    "attachment": {
+      "type": "object",
+      "required": ["name", "sha256", "size"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string", "minLength": 1, "maxLength": 255 },
+        "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "size": { "type": "integer", "minimum": 0, "maximum": 52428800 },
+        "mime": { "type": "string", "maxLength": 127 },
+        "blob_url": { "type": "string", "description": "Relative URL, e.g. /api/v1/blobs/<sha256>" }
+      }
+    },
+    "repoRef": {
+      "type": "object",
+      "required": ["url", "ref"],
+      "additionalProperties": false,
+      "properties": {
+        "url": { "type": "string", "minLength": 1, "description": "Must match the target profile's allow_remote list." },
+        "ref": { "type": "string", "minLength": 1, "description": "Branch or tag to fetch." },
+        "commit": { "type": "string", "pattern": "^[0-9a-f]{7,40}$", "description": "Exact commit to check out. Recommended so build/test runs on what the sender saw." }
+      }
+    },
+    "taskLimits": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "timeout_sec": { "type": "integer", "minimum": 30, "maximum": 14400, "default": 1800 },
+        "max_turns": { "type": "integer", "minimum": 1, "maximum": 200, "default": 40 },
+        "max_attempts": { "type": "integer", "minimum": 1, "maximum": 3, "default": 1 }
+      }
+    },
+    "taskSpec": {
+      "type": "object",
+      "required": ["title", "profile", "instructions"],
+      "properties": {
+        "title": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "profile": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,31}$" },
+        "instructions": { "type": "string", "minLength": 1, "maxLength": 65536 },
+        "inputs": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "repo": { "$ref": "#/$defs/repoRef" },
+            "files": { "type": "array", "items": { "$ref": "#/$defs/attachment" }, "maxItems": 20 },
+            "vars": { "type": "object", "additionalProperties": { "type": ["string", "number", "boolean"] } }
+          }
+        },
+        "expected_output": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "format": { "enum": ["text", "json"], "default": "text" },
+            "schema": { "type": "object", "description": "JSON Schema the output must satisfy when format=json." },
+            "artifacts": { "type": "array", "items": { "type": "string", "maxLength": 200 }, "maxItems": 20, "description": "Glob patterns relative to the profile workdir. No absolute paths, no '..'." }
+          }
+        },
+        "limits": { "$ref": "#/$defs/taskLimits" },
+        "requires": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Platform constraints. Hub only lets nodes whose heartbeat os/arch match claim this task.",
+          "properties": {
+            "os": { "type": "array", "items": { "enum": ["windows", "macos", "linux"] }, "minItems": 1, "uniqueItems": true },
+            "arch": { "type": "array", "items": { "enum": ["x64", "arm64"] }, "minItems": 1, "uniqueItems": true },
+            "labels": {
+              "type": "object",
+              "description": "Every key must exist on the node with exactly this value. Value \"*\" means the key only has to exist.",
+              "propertyNames": { "pattern": "^[a-z0-9][a-z0-9_-]{0,31}$" },
+              "additionalProperties": { "type": "string", "minLength": 1, "maxLength": 64 },
+              "maxProperties": 10
+            }
+          }
+        },
+        "dispatch": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "What to do when the target node is not online at creation time.",
+          "properties": {
+            "on_unavailable": { "enum": ["confirm", "queue", "reject"], "description": "confirm: do not create, return E_TARGET_UNAVAILABLE with alternatives so the sender can ask the user. queue: create and warn. reject: do not create." },
+            "max_wait_sec": { "type": "integer", "minimum": 60, "maximum": 604800, "description": "Expire the task if no node claims it within this time. Default hub.limits.default_queue_ttl_sec." }
+          }
+        },
+        "session": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "mode": { "enum": ["new", "resume_thread"], "default": "new" }
+          }
+        },
+        "notify": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "mailbox": { "$ref": "#/$defs/address" },
+            "on": { "type": "array", "items": { "enum": ["started", "approval", "result"] }, "uniqueItems": true }
+          }
+        }
+      }
+    },
+    "taskCreate": {
+      "allOf": [
+        { "$ref": "#/$defs/taskSpec" },
+        {
+          "type": "object",
+          "properties": {
+            "title": true, "profile": true, "instructions": true, "inputs": true,
+            "expected_output": true, "limits": true, "requires": true, "dispatch": true, "session": true, "notify": true,
+            "then": {
+              "type": "array",
+              "maxItems": 5,
+              "description": "Follow-up tasks the Hub creates when this task ends with a matching status. String fields may use {{result.summary}}, {{result.output.<key>}}, {{inputs.repo.commit}}, {{task.id}}.",
+              "items": {
+                "allOf": [
+                  { "$ref": "#/$defs/taskSpec" },
+                  {
+                    "type": "object",
+                    "required": ["to"],
+                    "properties": {
+                      "title": true, "profile": true, "instructions": true, "inputs": true,
+                      "expected_output": true, "limits": true, "requires": true, "dispatch": true, "session": true, "notify": true,
+                      "to": { "$ref": "#/$defs/target" },
+                      "when": { "enum": ["succeeded", "failed", "always"], "default": "succeeded" }
+                    },
+                    "additionalProperties": false
+                  }
+                ]
+              }
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "taskProgress": {
+      "type": "object",
+      "required": ["task_id", "seq", "phase"],
+      "additionalProperties": false,
+      "properties": {
+        "task_id": { "$ref": "#/$defs/ulid" },
+        "seq": { "type": "integer", "minimum": 1, "description": "Strictly increasing per task. Hub drops seq <= last stored seq." },
+        "phase": { "enum": ["started", "tool", "text", "artifact", "waiting_approval", "note"] },
+        "message": { "type": "string", "maxLength": 500 },
+        "tool": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "name": { "type": "string", "maxLength": 100 },
+            "summary": { "type": "string", "maxLength": 300 }
+          }
+        },
+        "pct": { "type": "integer", "minimum": 0, "maximum": 100 },
+        "claude_session_id": { "type": "string" }
+      }
+    },
+    "taskResult": {
+      "type": "object",
+      "required": ["task_id", "status", "summary"],
+      "additionalProperties": false,
+      "properties": {
+        "task_id": { "$ref": "#/$defs/ulid" },
+        "status": { "enum": ["succeeded", "failed", "cancelled", "expired"] },
+        "summary": { "type": "string", "maxLength": 4000 },
+        "output": { "description": "Any JSON value. Present when expected_output.format=json." },
+        "artifacts": { "type": "array", "items": { "$ref": "#/$defs/attachment" }, "maxItems": 50 },
+        "error": { "$ref": "#/$defs/error" },
+        "metrics": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "duration_ms": { "type": "integer", "minimum": 0 },
+            "num_turns": { "type": "integer", "minimum": 0 },
+            "cost_usd": { "type": "number", "minimum": 0 },
+            "claude_session_id": { "type": "string" },
+            "exit_code": { "type": "integer" },
+            "result_source": { "enum": ["submit_tool", "final_text", "worker"], "description": "Where the result came from: submit_result call, Claude final text, or worker-generated (timeout/cancel/crash)." }
+          }
+        }
+      }
+    },
+    "taskCancel": {
+      "type": "object",
+      "required": ["task_id"],
+      "additionalProperties": false,
+      "properties": {
+        "task_id": { "$ref": "#/$defs/ulid" },
+        "reason": { "type": "string", "maxLength": 500 }
+      }
+    },
+    "message": {
+      "type": "object",
+      "required": ["text"],
+      "additionalProperties": false,
+      "properties": {
+        "text": { "type": "string", "minLength": 1, "maxLength": 32768 },
+        "attachments": { "type": "array", "items": { "$ref": "#/$defs/attachment" }, "maxItems": 20 },
+        "requires_reply": { "type": "boolean", "default": false }
+      }
+    },
+    "approvalRequest": {
+      "type": "object",
+      "required": ["approval_id", "task_id", "tool_name", "tool_input", "risk", "timeout_sec"],
+      "additionalProperties": false,
+      "properties": {
+        "approval_id": { "$ref": "#/$defs/ulid" },
+        "task_id": { "$ref": "#/$defs/ulid" },
+        "tool_name": { "type": "string", "maxLength": 100 },
+        "tool_input": { "type": "object", "description": "Truncated to 8 KB by the bridge before sending." },
+        "reason": { "type": "string", "maxLength": 1000 },
+        "risk": { "enum": ["low", "medium", "high"] },
+        "timeout_sec": { "type": "integer", "minimum": 30, "maximum": 3600 },
+        "on_timeout": { "enum": ["deny"], "default": "deny", "description": "v1 only allows deny on timeout." }
+      }
+    },
+    "approvalDecision": {
+      "type": "object",
+      "required": ["approval_id", "decision"],
+      "additionalProperties": false,
+      "properties": {
+        "approval_id": { "$ref": "#/$defs/ulid" },
+        "decision": { "enum": ["allow", "deny", "expired"] },
+        "note": { "type": "string", "maxLength": 1000 },
+        "updated_input": { "type": "object" }
+      }
+    },
+    "systemNotice": {
+      "type": "object",
+      "required": ["code", "text"],
+      "additionalProperties": false,
+      "properties": {
+        "code": { "type": "string", "pattern": "^[A-Z0-9_]+$" },
+        "text": { "type": "string", "maxLength": 2000 },
+        "ref_id": { "$ref": "#/$defs/ulid" }
+      }
+    },
+    "error": {
+      "type": "object",
+      "required": ["code", "message"],
+      "additionalProperties": false,
+      "properties": {
+        "code": { "type": "string", "pattern": "^E_[A-Z0-9_]+$" },
+        "message": { "type": "string", "maxLength": 2000 },
+        "detail": { "type": "object" }
+      }
+    }
+  }
+}

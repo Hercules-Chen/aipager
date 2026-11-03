@@ -1,0 +1,23 @@
+{
+  "error": {
+    "code": "E_TARGET_UNAVAILABLE",
+    "message": "macbook-hc（Hercules 的 MacBook，筆電）已 42 分鐘沒有回應，可能睡著了。任務尚未建立，請詢問使用者要排隊等待、改派，或取消。",
+    "trace_id": "9a8b7c6d5e4f30211203405060708091"
+  },
+  "target_status": {
+    "node_id": "macbook-hc",
+    "display_name": "Hercules 的 MacBook",
+    "power": "laptop",
+    "state": "active",
+    "presence": "asleep",
+    "last_seen": "2026-11-03T08:58:40.120Z",
+    "silent_sec": 2552
+  },
+  "warnings": [
+    { "code": "W_TARGET_ASLEEP", "message": "macbook-hc 已 42 分鐘沒有回應，可能睡著了。", "params": { "silent_sec": 2552 } }
+  ],
+  "alternatives": [
+    { "node_id": "mac-studio", "display_name": "辦公室 Mac Studio", "presence": "online", "running": 0, "reason": "同樣有 ios profile 與 xcode=16" }
+  ],
+  "choices": ["queue", "send_to_alternative", "cancel"]
+}

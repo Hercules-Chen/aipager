@@ -1,0 +1,48 @@
+<section id="states" data-title="任務狀態機" data-group="協定">
+  <figure>
+    <div class="svgwrap">
+    <svg viewBox="0 0 900 290" role="img" aria-label="任務狀態機：queued 到 claimed 到 running，結束於 succeeded、failed、cancelled 或 expired；running 與 waiting_approval 互轉">
+      <defs>
+        <marker id="sh" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="head-a"/></marker>
+        <marker id="shm" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="head-m"/></marker>
+      </defs>
+      <rect x="30" y="80" width="150" height="40" rx="20" class="s-state"/><text x="105" y="105" text-anchor="middle" class="t-box">queued</text>
+      <rect x="240" y="80" width="150" height="40" rx="20" class="s-state"/><text x="315" y="105" text-anchor="middle" class="t-box">claimed</text>
+      <rect x="450" y="80" width="150" height="40" rx="20" class="s-run"/><text x="525" y="105" text-anchor="middle" class="t-box">running</text>
+      <rect x="440" y="210" width="170" height="40" rx="20" class="s-wait"/><text x="525" y="235" text-anchor="middle" class="t-box">waiting_approval</text>
+      <rect x="720" y="30" width="150" height="40" rx="20" class="s-terminal"/><text x="795" y="55" text-anchor="middle" class="t-box">succeeded</text>
+      <rect x="720" y="110" width="150" height="40" rx="20" class="s-terminal"/><text x="795" y="135" text-anchor="middle" class="t-box">failed</text>
+      <rect x="720" y="210" width="150" height="40" rx="20" class="s-terminal"/><text x="795" y="235" text-anchor="middle" class="t-box">cancelled</text>
+      <rect x="30" y="210" width="150" height="40" rx="20" class="s-terminal"/><text x="105" y="235" text-anchor="middle" class="t-box">expired</text>
+      <path d="M180 100 H238" class="g-edge" marker-end="url(#sh)"/><text x="190" y="92" class="t-edge">claim</text>
+      <path d="M390 100 H448" class="g-edge" marker-end="url(#sh)"/><text x="396" y="92" class="t-edge">started</text>
+      <path d="M600 92 L718 54" class="g-edge" marker-end="url(#sh)"/><text x="628" y="62" class="t-edge">result</text>
+      <path d="M600 108 L718 128" class="g-edge" marker-end="url(#sh)"/><text x="616" y="134" class="t-edge">result / 逾時</text>
+      <path d="M505 120 V208" class="g-edge" marker-end="url(#sh)"/><text x="498" y="170" text-anchor="end" class="t-edge">approval.request</text>
+      <path d="M545 210 V122" class="g-edge" marker-end="url(#sh)"/><text x="552" y="170" class="t-edge">decision</text>
+      <path d="M105 120 V208" class="g-edge" marker-end="url(#sh)"/><text x="112" y="170" class="t-edge">TTL 到期</text>
+      <path d="M300 80 C 280 30, 140 30, 120 78" class="g-edge-dash" marker-end="url(#shm)"/><text x="150" y="30" class="t-edge">租約過期且可重試</text>
+      <path d="M610 230 H718" class="g-edge-dash" marker-end="url(#shm)"/><text x="630" y="222" class="t-edge">cancel</text>
+      <text x="795" y="272" text-anchor="middle" class="t-sub">任何非終態都可被取消</text>
+    </svg>
+    </div>
+    <figcaption>粗框為終態。終態不可再變更，之後的更新請求回 409 <code>E_CONFLICT</code>。</figcaption>
+  </figure>
+
+  <div class="tablewrap"><table>
+    <tr><th>從</th><th>到</th><th>觸發</th><th>Hub 動作</th></tr>
+    <tr><td><span class="pill">建立</span></td><td><span class="pill">queued</span></td><td><code>POST /tasks</code></td><td>驗證 schema、hop、thread 限額、目標 profile、平台需求；寫入 events</td></tr>
+    <tr><td><span class="pill">queued</span></td><td><span class="pill">claimed</span></td><td>Worker <code>POST /tasks/claim</code></td><td>只接受 active 節點；比對角色、profile、os / arch、標籤；發 lease（60 秒）與 task token，attempt + 1</td></tr>
+    <tr><td><span class="pill">claimed</span></td><td><span class="pill run">running</span></td><td>progress phase=started</td><td>記錄 started_at、claude_session_id</td></tr>
+    <tr><td><span class="pill run">running</span></td><td><span class="pill wait">waiting_approval</span></td><td><code>POST /approvals</code></td><td>通知 Dashboard、webhook、發送者信箱（若 notify 含 approval）</td></tr>
+    <tr><td><span class="pill wait">waiting_approval</span></td><td><span class="pill run">running</span></td><td>人工決定或逾時（deny）</td><td>記錄決定者與時間</td></tr>
+    <tr><td><span class="pill run">running</span></td><td><span class="pill ok">succeeded</span> / <span class="pill bad">failed</span></td><td>Worker <code>POST /tasks/{id}/result</code></td><td>寫入結果、通知信箱、依 <code>then</code> 建立後續任務、累計 thread 花費</td></tr>
+    <tr><td><span class="pill run">running</span>（執行機器睡著）</td><td><span class="pill run">running</span></td><td>執行機器在線狀態轉為 asleep</td><td>記錄 <code>node_asleep_since</code>、通知發送者；<code>suspend_grace_sec</code> 內不讓租約過期；醒來後累加 <code>asleep_ms_total</code></td></tr>
+    <tr><td><span class="pill">claimed</span> / <span class="pill run">running</span></td><td><span class="pill">queued</span></td><td>租約過期且 attempt &lt; max_attempts</td><td>清除 lease，task token 作廢</td></tr>
+    <tr><td><span class="pill">claimed</span> / <span class="pill run">running</span></td><td><span class="pill bad">failed</span></td><td>租約過期且已無重試次數</td><td><code>E_LEASE_LOST</code></td></tr>
+    <tr><td><span class="pill run">running</span></td><td><span class="pill bad">failed</span></td><td>超過 <code>timeout_sec</code> + 120 秒寬限仍無結果</td><td><code>E_TIMEOUT</code>（Worker 正常情況下會自己先處理逾時）</td></tr>
+    <tr><td><span class="pill">queued</span></td><td><span class="pill">expired</span></td><td>超過 <code>expires_at</code>（含 <code>max_wait_sec</code>：等待的機器一直沒回來）</td><td>通知發送者</td></tr>
+    <tr><td><span class="pill">queued</span></td><td><span class="pill">cancelled</span></td><td>cancel 請求</td><td>立即生效</td></tr>
+    <tr><td>其他非終態</td><td><span class="pill">cancelled</span></td><td>cancel 請求</td><td>設 <code>cancel_requested=1</code>，Worker 在下次續約 / 心跳時得知並終止；60 秒內未回報則 Hub 強制改為 cancelled</td></tr>
+  </table></div>
+</section>

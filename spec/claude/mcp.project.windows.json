@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "aipager": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["C:\\Program Files\\AIPager\\bin\\aipager-mcp.js", "--mode", "interactive"],
+      "env": { "AIPAGER_AGENT": "erp", "AIPAGER_CONFIG": "C:\\ProgramData\\AIPager\\node\\node.json" }
+    }
+  }
+}

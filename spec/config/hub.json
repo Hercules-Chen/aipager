@@ -1,0 +1,87 @@
+{
+  "listen": {
+    "host": "100.101.102.103",
+    "port": 7300,
+    "bind_retry_sec": 5
+  },
+  "data_dir": "/var/lib/aipager",
+  "public_base_url": "http://aipager-hub:7300",
+  "limits": {
+    "max_hops": 4,
+    "max_tasks_per_thread": 20,
+    "max_messages_per_thread": 200,
+    "max_instructions_bytes": 65536,
+    "max_message_bytes": 32768,
+    "max_blob_mb": 50,
+    "thread_budget_usd": 20,
+    "rate_per_sender_per_min": 10,
+    "default_queue_ttl_sec": 86400
+  },
+  "lease": {
+    "duration_sec": 60,
+    "startup_grace_sec": 120,
+    "cancel_force_after_sec": 60,
+    "run_timeout_grace_sec": 120
+  },
+  "presence_defaults": {
+    "server": {
+      "asleep_after_sec": 45,
+      "offline_after_sec": 600,
+      "suspend_grace_sec": 0,
+      "alert_on_offline": true
+    },
+    "desktop": {
+      "asleep_after_sec": 45,
+      "offline_after_sec": 7200,
+      "suspend_grace_sec": 300,
+      "alert_on_offline": false
+    },
+    "laptop": {
+      "asleep_after_sec": 60,
+      "offline_after_sec": 604800,
+      "suspend_grace_sec": 1800,
+      "alert_on_offline": false
+    }
+  },
+  "enrollment": {
+    "default_ttl_sec": 86400,
+    "max_ttl_sec": 604800,
+    "require_approval": true,
+    "rate_per_ip_per_min": 5,
+    "default_power": "desktop"
+  },
+  "approval_default_timeout_sec": 600,
+  "retention": {
+    "events_days": 30,
+    "tasks_days": 90,
+    "blobs_days": 14
+  },
+  "backup": {
+    "dir": "/var/lib/aipager/backup",
+    "daily_at_utc": "19:00",
+    "keep": 14
+  },
+  "webhooks": [
+    {
+      "on": [
+        "approval.request",
+        "task.failed"
+      ],
+      "url": "https://ntfy.example.local/aipager",
+      "format": "ntfy"
+    }
+  ],
+  "log": {
+    "level": "info",
+    "dir": "/var/log/aipager",
+    "max_file_mb": 50,
+    "keep_days": 30
+  },
+  "ui": {
+    "enabled": true,
+    "default_locale": "zh-TW"
+  },
+  "debug": {
+    "enable_debug_routes": false
+  }
+}

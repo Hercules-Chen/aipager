@@ -1,0 +1,31 @@
+# /etc/systemd/system/aipager-hub.service
+# AIPager Hub (Linux, systemd system service). The Hub never runs Claude, so it uses a locked-down system user.
+[Unit]
+Description=AIPager Hub
+Wants=network-online.target
+After=network-online.target tailscaled.service
+
+[Service]
+Type=simple
+User=aipager
+Group=aipager
+Environment=NODE_ENV=production
+Environment=AIPAGER_LOG_LEVEL=info
+ExecStart=/opt/node-v22/bin/node /opt/aipager/bin/hub.js --config /etc/aipager/hub.json
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=30
+# Hardening: read-only system, writable data/log dirs only
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+ReadWritePaths=/var/lib/aipager /var/log/aipager
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target

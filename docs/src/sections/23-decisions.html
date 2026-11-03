@@ -1,0 +1,26 @@
+<section id="decisions" data-title="設計決策紀錄" data-group="交付">
+  <p>每項決策寫明「為什麼」，接手的人要推翻時知道原本考量了什麼。</p>
+  <div class="tablewrap"><table>
+    <tr><th>#</th><th>決策</th><th>理由</th><th>放棄的方案</th></tr>
+    <tr><td class="num">D1</td><td>中央 Hub（HTTP + SQLite）</td><td>領任務需要原子操作與租約；需要即時狀態查詢與通知</td><td>共享資料夾：跨 OS 的 SMB / 同步工具有鎖定與衝突問題，沒有原子領取</td></tr>
+    <tr><td class="num">D2</td><td>Worker 用 long-poll 主動拉取</td><td>Worker 不需開 port、可穿 NAT；延遲在 1 秒內</td><td>Hub 推送到 Worker：每台都要開入站 port</td></tr>
+    <tr><td class="num">D3</td><td>Worker 呼叫 <code>claude -p</code> CLI</td><td>沿用既有登入；命令列可手動重跑，除錯直觀；三平台參數相同</td><td>Agent SDK：需另處理驗證，問題不易手動重現</td></tr>
+    <tr><td class="num">D4</td><td>MCP 為本機 stdio 程式，不放在 Hub</td><td>可讀寫本機檔案做附件；token 留在本機設定目錄；可注入 task token</td><td>Hub 內建 HTTP MCP：無法存取本機檔案，token 需寫進 Claude 設定</td></tr>
+    <tr><td class="num">D5</td><td>SQLite 用 <code>node:sqlite</code></td><td>無原生模組，Node 版本變動不需 rebuild</td><td>better-sqlite3：需要 native build，ABI 問題</td></tr>
+    <tr><td class="num">D6</td><td>任務只能指定 profile</td><td>接收端掌握權限邊界，避免跨機注入</td><td>任務自帶 cwd / allowedTools：等於讓別台決定本機權限</td></tr>
+    <tr><td class="num">D7</td><td>預設 <code>max_attempts=1</code></td><td>編譯、改檔、推送都有副作用，自動重跑可能造成重複</td><td>預設重試 3 次</td></tr>
+    <tr><td class="num">D8</td><td>Worker 用專屬 clone，不用 git worktree</td><td>與開發者工作副本隔離；目錄結構單純，不易誤會</td><td>git worktree</td></tr>
+    <tr><td class="num">D9</td><td>Worker 不在任務中等待人回覆</td><td>避免佔住租約與逾時；以 resume 接續 session</td><td>任務內 long-poll 等回覆</td></tr>
+    <tr><td class="num">D10</td><td>各平台用原生服務管理員（工作排程器 / launchd / systemd）</td><td>不需第三方套件；重啟、Log、開機啟動都用作業系統內建機制</td><td>pm2、NSSM 等跨平台包裝程式</td></tr>
+    <tr><td class="num">D11</td><td>Hub 放 Linux，用 systemd 強化設定與官方 Node tarball</td><td>常駐穩定；系統服務不依賴某個使用者的 Volta 安裝</td><td>Hub 放 Windows 開發機</td></tr>
+    <tr><td class="num">D12</td><td>以 Tailscale 作為網路層</td><td>三平台都有官方用戶端；WireGuard 加密；固定 100.x 位址；手機也能開 Dashboard</td><td>直接開區網 port + 自管 TLS 憑證</td></tr>
+    <tr><td class="num">D13</td><td>Claude 登入模式在每台 node.json 明確設定</td><td>macOS Keychain 在未登入時不可用；明確設定才不會靠運氣</td><td>一律沿用互動登入</td></tr>
+    <tr><td class="num">D14</td><td>Windows 放 ProgramData，Mac / Linux 放使用者目錄</td><td>Windows 依團隊規則避免權限問題；Mac / Linux Worker 以使用者執行，不需 sudo；可用 <code>AIPAGER_HOME</code> 統一</td><td>三平台都放系統目錄</td></tr>
+    <tr><td class="num">D15</td><td>os / arch 由 Worker 自動偵測，不可設定</td><td>避免手動填錯造成任務被送到錯的平台</td><td>寫在 node.json</td></tr>
+    <tr><td class="num">D16</td><td>機器以一次性加入碼動態加入</td><td>機器會持續增加；加入碼可預設 metadata、可撤銷、預設需核准；join 一次寫好設定，避免手抄 token 出錯</td><td>預先列清單、手動發 token 並手寫 node.json</td></tr>
+    <tr><td class="num">D17</td><td>metadata 放 Hub，profiles 留本機</td><td>調整名稱、角色、標籤不用登入機器；權限邊界不受 Hub 影響</td><td>全部放 Hub（Hub 可遠端放寬權限）或全部放本機（每次調整都要登入）</td></tr>
+    <tr><td class="num">D18</td><td>在線判斷只看心跳，門檻依機器類型</td><td>三平台一致，不依賴作業系統的睡眠通知；筆電可以睡很久而不被當成故障</td><td>使用 OS 睡眠事件 API、單一門檻</td></tr>
+    <tr><td class="num">D19</td><td>互動派工預設 confirm，自動流程預設 queue</td><td>人在場時由人決定等不等；自動流程不中斷，但一定附警告並通知</td><td>一律排隊（使用者不知道要等多久）、一律拒絕</td></tr>
+    <tr><td class="num">D20</td><td>睡眠中保留租約，逾時只算醒著時間</td><td>筆電闔蓋不該讓任務失敗；三平台的單調時鐘在睡眠期間行為不同，改用偵測到的睡眠區間扣除</td><td>以牆上時間或系統單調時鐘計算</td></tr>
+  </table></div>
+</section>

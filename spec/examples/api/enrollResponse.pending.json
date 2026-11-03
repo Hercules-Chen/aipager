@@ -1,0 +1,20 @@
+{
+  "node_id": "macbook-hc",
+  "node_token": "apn_Q2hhbmdlTWVQbGVhc2VUaGlzSXNOb3RBUmVhbFRva2V",
+  "state": "pending",
+  "meta": {
+    "display_name": "Hercules 的 MacBook",
+    "roles": [
+      "tester",
+      "ios-builder"
+    ],
+    "labels": {
+      "xcode": "16",
+      "location": "mobile",
+      "battery": "yes"
+    },
+    "power": "laptop",
+    "owner": "hercules"
+  },
+  "meta_version": 1
+}
