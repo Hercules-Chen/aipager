@@ -4,7 +4,7 @@
     <tr><th>#</th><th>問題</th><th>決定</th><th>落實在哪裡</th></tr>
     <tr><td class="num">Q4</td><td>build-pc 存取 Git server 的方式</td><td>SSH，並為 Worker 帳號設定唯讀 deploy key</td><td><a data-ref="r3-dev"></a> 步驟 3</td></tr>
     <tr><td class="num">Q7</td><td>審核與失敗通知</td><td>不推播，只用 Hub 查詢：Dashboard（瀏覽器，含手機）、<code>aipagerctl</code>、MCP 工具、Claude 對話中的提示</td><td><a data-ref="r1-hub"></a> 的 <code>webhooks: []</code>；<a data-ref="operations"></a> 的每日檢查；待辦 B07 延後</td></tr>
-    <tr><td class="num">N1</td><td>GitHub Actions CI</td><td>啟用；Ubuntu 與 Windows 每次 push 都跑，macOS 只在合併到 main 時跑</td><td>待辦 B01，R2 之前完成</td></tr>
+    <tr><td class="num">N1</td><td>GitHub Actions CI</td><td>不做。Windows 與 macOS 的問題在 R2、R4 實機驗證時處理（2026-11-03 改變先前的建議）</td><td>待辦 B01 標為不做；<a data-ref="risks"></a> K4</td></tr>
     <tr><td class="num">N2</td><td>Hub 放哪一台</td><td>一台不睡眠的 Ubuntu 機器，在 Tailscale 改名為 <code>aipager-hub</code></td><td><a data-ref="r1-hub"></a> 步驟 1</td></tr>
     <tr><td class="num">N3</td><td>Windows 安裝位置</td><td><code>C:\Program Files\AIPager</code>（升級需要系統管理員權限）</td><td><a data-ref="r2-windows"></a></td></tr>
     <tr><td class="num">N4</td><td>Claude Code 升級方式</td><td>關閉自動更新，統一手動升級；升級後先跑 <code>npm run test:real-claude</code></td><td><a data-ref="operations"></a> 的「Claude Code 升級」；各 Worker 安裝時設定</td></tr>

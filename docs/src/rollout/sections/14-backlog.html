@@ -2,7 +2,7 @@
   <p>以下是規格中寫了、但目前實作不完整或尚未驗證的項目，照實列出，避免接手的人以為已經完成。優先順序依「會不會擋住上線」排列。</p>
   <div class="tablewrap"><table>
     <tr><th>#</th><th>項目</th><th>優先</th><th>建議時機</th><th>說明</th></tr>
-    <tr><td class="num">B01</td><td>GitHub Actions CI（Ubuntu、Windows、macOS）</td><td>高</td><td>R2 之前</td><td>在三個作業系統跑 <code>npm run test:node</code>，Windows 另以 pwsh 解析 <code>.ps1</code>。可在動用 build-pc 之前先抓到 Windows 程式路徑的錯誤。N1 已決定：Ubuntu 與 Windows 每次 push 都跑，macOS 只在合併到 main 時跑</td></tr>
+    <tr><td class="num">B01</td><td>GitHub Actions CI（Ubuntu、Windows、macOS）</td><td>不做</td><td>—</td><td>依 N1 決定不做：Windows 與 macOS 的問題在 R2、R4 實機驗證時處理。保留此列，避免之後的人以為漏做；若日後改變決定，做法是在三個作業系統跑 <code>npm run test:node</code>，Windows 另以 pwsh 解析 <code>.ps1</code></td></tr>
     <tr><td class="num">B02</td><td>aipagerctl 與 MCP 送出含 <code>then</code> 的任務</td><td>高</td><td>R5 之前</td><td>目前 <code>send_task</code> 與 <code>aipagerctl send</code> 都不支援 <code>then</code>，T20 無法從工具執行。建議加 <code>aipagerctl send --payload-file</code> 與 MCP 參數</td></tr>
     <tr><td class="num">B03</td><td>Log 依大小輪替</td><td>中</td><td>R7</td><td>規格寫單檔 50 MB；目前只按日分檔、保留 30 天</td></tr>
     <tr><td class="num">B04</td><td>保存期限與備份排程</td><td>中</td><td>R7</td><td>目前只清理 events 與 task_events；tasks、messages、blobs 未依 retention 清理；備份是 Hub 啟動後每 24 小時一次，未依 <code>daily_at_utc</code></td></tr>
@@ -16,5 +16,5 @@
     <tr><td class="num">B12</td><td>E_BUDGET、建立任務速率限制的自動化測試</td><td>低</td><td>隨時</td><td>程式已有，尚無測試</td></tr>
     <tr><td class="num">B13</td><td>節點層級的 claude 環境變數</td><td>低</td><td>R7</td><td>目前只能在每個 profile 的 <code>env</code> 設定（例如 N4 的 <code>DISABLE_AUTOUPDATER</code>）；建議在 node.json 加一個所有 profile 共用的設定</td></tr>
   </table></div>
-  <p>B01、B02 由 Claude 在對應階段前完成並開 PR；其餘在 R7 依實際使用的痛點排序。每完成一項就從本表移除，並在設計規格的變更紀錄記一筆。</p>
+  <p>B02 由 Claude 在 R5 之前完成並開 PR；其餘在 R7 依實際使用的痛點排序。每完成一項就從本表移除，並在設計規格的變更紀錄記一筆。</p>
 </section>

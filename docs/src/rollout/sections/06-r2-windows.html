@@ -75,7 +75,7 @@ node bin/aipagerctl.js send --to worker@build-pc --profile longrun --title 逾�
     <tr><th>風險</th><th>徵兆</th><th>處理</th></tr>
     <tr><td>排程工作找不到 node（Volta 的 PATH 沒載入）</td><td>worker-console.log 出現「node 不是內部或外部命令」</td><td>回報後改成在 start-worker.ps1 使用 node 的絕對路徑，或改用 Node 官方 MSI 安裝到全機</td></tr>
     <tr><td>未登入時讀不到 Claude 憑證</td><td>T16 失敗，錯誤碼 <code>E_CLAUDE_AUTH</code></td><td>改用 <code>claude setup-token</code> 與 <code>claude_auth.mode = "oauth_token"</code>，或排程改為「登入時」觸發</td></tr>
-    <tr><td><code>.ps1</code> 在 Windows PowerShell 5.x 解析失敗</td><td>console log 有 ParserError</td><td>貼回錯誤，修正腳本並補 CI 的 pwsh 解析檢查</td></tr>
+    <tr><td><code>.ps1</code> 在 Windows PowerShell 5.x 解析失敗</td><td>console log 有 ParserError</td><td>貼回錯誤，修正腳本；之後改 <code>.ps1</code> 時在 build-pc 用 Windows PowerShell 5.x 實際執行一次</td></tr>
     <tr><td>taskkill 沒有終止整個程序樹</td><td>T11 後仍有 claude.exe</td><td>貼回 worker Log 的 <code>task.killed</code> 紀錄與工作管理員截圖</td></tr>
   </table></div>
   <p><b>退回：</b>系統管理員 PowerShell 執行 <code>node bin\aipagerctl.js service uninstall</code>，Dashboard 上把 build-pc 設為 disabled。</p>
