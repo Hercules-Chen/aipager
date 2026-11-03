@@ -5,7 +5,7 @@
     <tr><td><b>R0</b> 合併</td><td>main 上有完整規格與實作</td><td>—</td><td>PR #1、#2 合併；main 上 <code>npm test</code> 通過</td><td>10 分鐘</td></tr>
     <tr><td><b>R1</b> Hub</td><td>Ubuntu 上 Hub 常駐、可從其他機器連線</td><td>R0、Tailscale</td><td>T01、T22 通過；Dashboard 可登入</td><td>30–60 分鐘</td></tr>
     <tr><td><b>R2</b> Windows build-pc</td><td>Windows Worker 常駐並能執行任務</td><td>R1</td><td>T02、T03、T11、T13、T16 通過</td><td>60–90 分鐘</td></tr>
-    <tr><td><b>R3</b> 開發機互動</td><td>在 Claude 對話中用自然語言派工給 build-pc，完成 Q8 的實際編譯流程</td><td>R2、Q4（Git server）</td><td>T06–T09 通過；實際編譯任務成功</td><td>30–60 分鐘</td></tr>
+    <tr><td><b>R3</b> 開發機互動</td><td>在 Claude 對話中用自然語言派工給 build-pc，完成 Q8 的實際編譯流程</td><td>R2；Git server 種類與 repo 網址（Q4）</td><td>T06–T09 通過；實際編譯任務成功</td><td>30–60 分鐘</td></tr>
     <tr><td><b>R4</b> Mac 筆電</td><td>筆電加入並驗證睡眠相關行為</td><td>R3</td><td>T04、T12、T27–T30、T34 通過</td><td>60 分鐘（含等待闔蓋時間）</td></tr>
     <tr><td><b>R5</b> Linux 與跨平台</td><td>Linux Worker 加入；跨平台流水線</td><td>R3</td><td>T05、T19、T20、T26 通過</td><td>30–60 分鐘</td></tr>
     <tr><td><b>R6</b> 強化與演練</td><td>Hub 重啟、備份還原、退役重灌、Ubuntu 26.04</td><td>R2 以後隨時</td><td>T17、T18、T22、T31–T33 通過</td><td>60 分鐘</td></tr>

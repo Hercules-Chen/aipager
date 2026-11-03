@@ -168,7 +168,7 @@ details > .inner .codebox { margin-top: 10px; }
     <svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><circle cx="4" cy="11" r="3" fill="var(--accent)"/><circle cx="18" cy="5" r="3" fill="var(--accent)"/><circle cx="18" cy="17" r="3" fill="var(--accent)"/><path d="M6.5 10 L15.5 6 M6.5 12 L15.5 16" stroke="var(--accent)" stroke-width="1.6"/></svg>
     AIPager
   </div>
-  <div class="ver">aipager/1.0 · 設計 v0.5</div>
+  <div class="ver">aipager/1.0 · 設計 v0.5.1</div>
   <ol>
     <li class="group">總覽</li>
     <li><a href="#overview">目標與範圍</a></li>
@@ -211,7 +211,7 @@ details > .inner .codebox { margin-top: 10px; }
   <p class="lede">在任何一台機器下指令，其他機器上的 Claude 會收到任務、執行、把結果送回來。Hub 跑在 Linux 上，Windows、macOS、Linux 都可以隨時加入當執行節點，機器資料在 Hub 上隨時調整。中間不需要人轉貼 prompt，機器睡著時會主動提醒，只有需要授權的危險動作才請人按核准。</p>
   <div class="meta-row">
     <span>協定 <b>aipager/1.0</b></span>
-    <span>文件 <b>v0.5</b></span>
+    <span>文件 <b>v0.5.1</b></span>
     <span>日期 <b>2026-11-03</b></span>
     <span>Hub <b>Ubuntu 24.04 / 26.04（systemd）</b></span>
     <span>節點 <b>Windows · macOS · Linux，動態加入</b></span>
@@ -2983,7 +2983,7 @@ artifacts (collected by the worker after you finish): {{expected_output.artifact
     <li>任何裝了 Tailscale 的裝置（包含手機）都能開 Dashboard 審核</li>
   </ul>
   <h3>通知管道</h3>
-  <p>審核請求與任務失敗可透過 webhook 通知（hub.json 的 <code>webhooks</code>），格式支援 <code>ntfy</code>、<code>teams</code>、<code>slack</code>、<code>generic</code>（原始 envelope）。通知內只放標題、節點、Dashboard 連結，不放參數內容。</p>
+  <p>審核請求與任務失敗可透過 webhook 通知（hub.json 的 <code>webhooks</code>），格式支援 <code>ntfy</code>、<code>teams</code>、<code>slack</code>、<code>generic</code>（原始 envelope）。通知內只放標題、節點、Dashboard 連結，不放參數內容。依 Q7，目前部署不設定 webhook（<code>webhooks: []</code>），以 Dashboard 等查詢方式為準。</p>
 </section>
 
 <!-- design/16-flows.html -->
@@ -4963,6 +4963,7 @@ INSERT OR IGNORE INTO schema_version(version, applied_at) VALUES (1, strftime('%
     <tr><td class="num">D26</td><td>Worker 預設 <code>--setting-sources ''</code></td><td>使用者或 repo 的 Claude 設定可能允許更多工具，會繞過 profile 這個權限邊界；repo 內容來自其他機器，不能信任</td><td>沿用預設設定來源</td></tr>
     <tr><td class="num">D27</td><td>發行檔就是 repo 本身；執行時直接讀 spec/ 下的 schema、參考實作、prompt、MCP 工具定義</td><td>規格與實作只有一份，不會各自演進；驗證腳本檢查的就是正式執行時用的檔案</td><td>建置時複製到 templates/ 等另一份</td></tr>
     <tr><td class="num">D28</td><td>progress 的 seq 可由 Hub 指定；結果的 lease 放在 header</td><td>Worker 與 Claude 端的 MCP 都會回報進度，各自編號會撞號；result payload 維持與 schema 一致</td><td>只讓 Worker 回報進度</td></tr>
+    <tr><td class="num">D29</td><td>通知只用 Hub 查詢，不主動推播（使用者決定，Q7）</td><td>主要使用情境是人在電腦前；Dashboard 可從任何 Tailscale 裝置（含手機）開啟，Claude 對話中也會提示未讀與待審核；不需要額外申請與維護外部通知服務</td><td>ntfy、Teams、Slack webhook；Dashboard 瀏覽器通知（保留為待辦，需要時再做）</td></tr>
   </table></div>
 </section>
 
@@ -4975,20 +4976,16 @@ INSERT OR IGNORE INTO schema_version(version, applied_at) VALUES (1, strftime('%
     <tr><td class="num">Q1</td><td>機器清單</td><td>不預先列出；改為動態加入、metadata 可隨時調整（<a href="#nodes">06 節點加入與 metadata</a>）</td></tr>
     <tr><td class="num">Q2</td><td>網路</td><td>使用 Tailscale</td></tr>
     <tr><td class="num">Q3</td><td>Hub 作業系統</td><td>Ubuntu 24.04 LTS / 26.04 LTS</td></tr>
+    <tr><td class="num">Q4</td><td>Worker 存取 Git server 的方式</td><td>SSH，並為 Worker 帳號設定唯讀 deploy key。Git server 的種類與 repo 網址屬於環境資訊，在上線計畫 R3 開始前提供</td></tr>
     <tr><td class="num">Q5</td><td>Claude 登入方式</td><td>Claude Max 訂閱。Worker 預設 <code>claude_auth.mode = "login"</code>；需要免登入的機器（例如 Mac LaunchDaemon）才用 <code>claude setup-token</code> 的 <code>oauth_token</code>；不使用 API key</td></tr>
     <tr><td class="num">Q6</td><td>Mac 是否會睡眠</td><td>一開始是筆電；以心跳判斷，派工時提醒（<a href="#presence">07 在線狀態與睡眠</a>）</td></tr>
+    <tr><td class="num">Q7</td><td>審核與失敗通知</td><td>不主動推播，只用 Hub 查詢：Dashboard（瀏覽器，含手機）、<code>aipagerctl</code>、MCP 工具，以及 Claude 對話中的未讀與待審核提示。部署時 <code>webhooks</code> 設為 <code>[]</code>；webhook 功能保留，之後需要推播時再啟用（D29）</td></tr>
     <tr><td class="num">Q8</td><td>第一個實際流程</td><td>開發機派編譯給 Windows build-pc；P0 以此為驗收情境</td></tr>
     <tr><td class="num">Q9</td><td>新機器加入是否需核准</td><td>需要人工核准；P0 就提供 <code>aipagerctl nodes approve</code> 與 Dashboard 核准按鈕</td></tr>
     <tr><td class="num">Q10</td><td>睡眠保留時間</td><td>依機器不同：用每台 metadata 的 <code>presence.suspend_grace_sec</code> 覆寫預設；Dashboard 首頁要能看到誰睡著、睡多久、哪些任務因此卡住（P0）</td></tr>
     <tr><td class="num">Q11</td><td>MCP 放哪個階段</td><td>放 P0，與 Hub、Worker 一起完成</td></tr>
   </table></div>
-
-  <h3>仍待確認</h3>
-  <div class="tablewrap"><table>
-    <tr><th>#</th><th>問題</th><th>預設（若不回覆）</th></tr>
-    <tr><td class="num">Q4</td><td>Git server 是哪一套？Worker 用 SSH key 還是 HTTPS 憑證存取？</td><td>SSH key</td></tr>
-    <tr><td class="num">Q7</td><td>審核通知要送到哪裡（Teams、Slack、ntfy、只看 Dashboard）？</td><td>只看 Dashboard</td></tr>
-  </table></div>
+  <p>設計上的問題目前都已確認。上線過程的決定（CI、Hub 主機、安裝位置、Claude Code 升級方式、admin token 保管）記錄在 <a href="aipager-rollout.html#decisions">上線計畫的決定事項</a>。</p>
 </section>
 
 <!-- design/25-files.html -->
@@ -5065,6 +5062,7 @@ INSERT OR IGNORE INTO schema_version(version, applied_at) VALUES (1, strftime('%
     <tr><td class="num">v0.4</td><td class="num">2026-11-03</td><td>依使用者決定：MCP 與 Dashboard（睡著的機器、卡住的任務、待核准）移到 P0；Claude Max 訂閱、預設 login 模式；新機器人工核准；保留時間依機器設定。新增 <code>GET /tasks?stuck=1</code> 與 T34；開發階段重整為 P0–P3。以實際 Claude Code 2.1.317 驗證 stream-json 欄位、<code>--max-turns</code> 可用、出現未列出的事件類型（D24）。開始實作</td></tr>
     <tr><td class="num">v0.3.2</td><td class="num">2026-11-03</td><td>專案名稱統一為 AIPager（repo aipager）：程式與路徑 <code>aipager</code>（如 <code>/opt/aipager</code>、<code>aipager-hub.service</code>、<code>aipagerctl</code>）、環境變數 <code>AIPAGER_*</code>、header <code>X-AIPager-Agent</code>、協定 <code>aipager/1.0</code>、MCP server <code>aipager</code>（工具名稱去掉 relay_ 前綴）、token 前綴 <code>apa_ / apn_ / apt_ / ape_</code>、Hub 主機名稱 <code>aipager-hub</code>；改名後重跑全部自動化測試</td></tr>
     <tr><td class="num">v0.5</td><td class="num">2026-11-03</td><td>完成實作：Hub、Worker、MCP、aipager-hint、aipagerctl、Dashboard 與測試（A08–A12）。以真實 Claude Code 2.1.317 驗證 permission-prompt-tool、setting-sources 與 MCP 回報，並因實測新增 D25（自動允許自家 MCP 工具）；D26–D28；progress seq 可由 Hub 指定、結果 lease 改放 header；發行檔即 repo；Windows 排程註冊前建立 Log 資料夾；測試清單記錄 3 項通過、20 項部分完成</td></tr>
+    <tr><td class="num">v0.5.1</td><td class="num">2026-11-03</td><td>新增《AIPager 上線計畫》（<code>docs/aipager-rollout.html</code>），文件原始檔改為 <code>docs/src/design/</code> 與 <code>docs/src/rollout/</code>；Q4 決定以 SSH 唯讀 deploy key 存取 Git server；Q7 決定只用 Hub 查詢、不推播（D29）；設計上的待確認事項全部確認，上線過程的決定（N1–N5）記錄在上線計畫</td></tr>
   </table></div>
 </section>
 

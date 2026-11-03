@@ -188,7 +188,7 @@ details > .inner .codebox { margin-top: 10px; }
     <li class="group">規劃</li>
     <li><a href="#risks">風險與對策</a></li>
     <li><a href="#backlog">待辦與技術債</a></li>
-    <li><a href="#decisions">待決定事項</a></li>
+    <li><a href="#decisions">決定事項</a></li>
   </ol>
 </nav>
 
@@ -245,7 +245,7 @@ details > .inner .codebox { margin-top: 10px; }
     <tr><th>工作</th><th>你</th><th>Claude</th></tr>
     <tr><td>在實機安裝、執行指令、闔蓋筆電、重開機</td><td>●</td><td>只能在你接上機器（見下方）後代為執行</td></tr>
     <tr><td>核准新機器、審核工具呼叫、保管 admin token</td><td>●</td><td></td></tr>
-    <tr><td>提供 Git server、帳號、網路等環境資訊（Q4、Q7）</td><td>●</td><td></td></tr>
+    <tr><td>提供環境資訊：Hub 用哪台機器、Git server 與 repo 網址（見 <a href="#decisions">15 決定事項</a>）</td><td>●</td><td></td></tr>
     <tr><td>讀你貼回的輸出與診斷檔，找出原因</td><td></td><td>●</td></tr>
     <tr><td>修程式、補自動化測試、在 Linux 重跑全部測試</td><td></td><td>●</td></tr>
     <tr><td>更新 test-plan.json、規格與本文件，開分支與 PR</td><td></td><td>●</td></tr>
@@ -289,7 +289,7 @@ details > .inner .codebox { margin-top: 10px; }
     <tr><td><b>R0</b> 合併</td><td>main 上有完整規格與實作</td><td>—</td><td>PR #1、#2 合併；main 上 <code>npm test</code> 通過</td><td>10 分鐘</td></tr>
     <tr><td><b>R1</b> Hub</td><td>Ubuntu 上 Hub 常駐、可從其他機器連線</td><td>R0、Tailscale</td><td>T01、T22 通過；Dashboard 可登入</td><td>30–60 分鐘</td></tr>
     <tr><td><b>R2</b> Windows build-pc</td><td>Windows Worker 常駐並能執行任務</td><td>R1</td><td>T02、T03、T11、T13、T16 通過</td><td>60–90 分鐘</td></tr>
-    <tr><td><b>R3</b> 開發機互動</td><td>在 Claude 對話中用自然語言派工給 build-pc，完成 Q8 的實際編譯流程</td><td>R2、Q4（Git server）</td><td>T06–T09 通過；實際編譯任務成功</td><td>30–60 分鐘</td></tr>
+    <tr><td><b>R3</b> 開發機互動</td><td>在 Claude 對話中用自然語言派工給 build-pc，完成 Q8 的實際編譯流程</td><td>R2；Git server 種類與 repo 網址（Q4）</td><td>T06–T09 通過；實際編譯任務成功</td><td>30–60 分鐘</td></tr>
     <tr><td><b>R4</b> Mac 筆電</td><td>筆電加入並驗證睡眠相關行為</td><td>R3</td><td>T04、T12、T27–T30、T34 通過</td><td>60 分鐘（含等待闔蓋時間）</td></tr>
     <tr><td><b>R5</b> Linux 與跨平台</td><td>Linux Worker 加入；跨平台流水線</td><td>R3</td><td>T05、T19、T20、T26 通過</td><td>30–60 分鐘</td></tr>
     <tr><td><b>R6</b> 強化與演練</td><td>Hub 重啟、備份還原、退役重灌、Ubuntu 26.04</td><td>R2 以後隨時</td><td>T17、T18、T22、T31–T33 通過</td><td>60 分鐘</td></tr>
@@ -345,7 +345,7 @@ sudo /opt/aipager/spec/scripts/linux/install-hub.sh --allow-cidr 100.64.0.0/10</
   <ul>
     <li><code>listen.host</code>：改成步驟 1 的 <code>tailscale ip -4</code> 結果</li>
     <li><code>public_base_url</code>：<code>http://aipager-hub:7300</code>（加入碼畫面產生的指令會用它）</li>
-    <li><code>webhooks</code>：Q7 還沒決定前改成 <code>[]</code>，範本裡的 ntfy 位址是範例，留著只會產生連線失敗的 Log</li>
+    <li><code>webhooks</code>：改成 <code>[]</code>。依 Q7 決定不推播，只用 Hub 查詢；範本裡的 ntfy 位址只是範例，留著只會產生連線失敗的 Log</li>
   </ul>
   <div class="codebox"><div class="label"><span>Hub 機：建立 admin token 並啟動</span><button type="button" data-copy>複製</button></div><pre><code>sudo -u aipager /opt/node-v22/bin/node /opt/aipager/bin/aipagerctl.js admin init --config /etc/aipager/hub.json
 sudo systemctl enable --now aipager-hub
@@ -358,6 +358,7 @@ journalctl -u aipager-hub -n 20 --no-pager</code></pre></div>
 node bin/aipagerctl.js admin save-token apa_貼上剛才的token --hub http://aipager-hub:7300
 node bin/aipagerctl.js admin backup --hub http://aipager-hub:7300</code></pre></div>
   <p>瀏覽器開 <code>http://aipager-hub:7300/ui/</code>，貼上 admin token 登入，首頁四個區塊都應該是空的。</p>
+  <p>其他管理者（N5）：每人各自建立一把 token，不要共用。以已登入的管理工具執行 <code>node bin/aipagerctl.js admin token --label 管理者名稱</code>，把印出的 token 交給對方，對方再於自己的電腦執行 <code>admin save-token</code>。</p>
 
   <h3>驗收</h3>
   <div class="tablewrap"><table>
@@ -407,6 +408,7 @@ claude --version</code></pre></div>
     <li>執行一次 <code>claude</code>，用 Max 帳號登入後 <code>/exit</code>（Q5）</li>
     <li>Git for Windows 是 Claude 的 Bash 工具所需，不能省略</li>
     <li><code>node -e</code> 若回傳 <code>-1073741819</code>，是 Node 原生崩潰，先處理 Node 安裝本身</li>
+    <li>依 N4 關閉 Claude Code 自動更新，做法見 <a href="#operations">11 R7 日常運作與升級</a> 的「Claude Code 升級」；步驟 3 建立 profile 時記得加上 <code>env</code></li>
   </ul>
 
   <h3>2. 安裝 AIPager 並加入</h3>
@@ -475,7 +477,7 @@ node bin/aipagerctl.js send --to worker@build-pc --profile longrun --title 逾�
 <!-- rollout/07-r3-dev.html -->
 <section id="r3-dev">
   <h2><span class="no">07</span>R3 開發機互動與第一個實際流程</h2>
-  <p>目標：在你的 Claude Code 對話中直接說「叫 build-pc 編譯」，完成 Q8 的實際流程。需要先回答 Q4（Git server 與存取方式）。</p>
+  <p>目標：在你的 Claude Code 對話中直接說「叫 build-pc 編譯」，完成 Q8 的實際流程。依 Q4，build-pc 以 SSH 唯讀 deploy key 存取 Git server；開始前請提供 Git server 的種類與 repo 網址。</p>
 
   <h3>1. 註冊 MCP 與未讀提示</h3>
   <div class="codebox"><div class="label"><span>你的電腦：Windows</span><button type="button" data-copy>複製</button></div><pre><code>claude mcp add --scope user --env AIPAGER_AGENT=main aipager -- node "C:\你的repo路徑\bin\aipager-mcp.js" --mode interactive</code></pre></div>
@@ -547,7 +549,7 @@ node bin/aipagerctl.js join --hub http://aipager-hub:7300 --code ape_加入碼 -
 node bin/aipagerctl.js doctor
 node bin/aipagerctl.js service install</code></pre></div>
   <p>到 Dashboard 核准 macbook-hc。<code>service install</code> 預設使用 LaunchAgent（你登入時才執行），筆電平常都在登入狀態，先用這個就好。需要登出也能執行時，再改 LaunchDaemon 並搭配 <code>claude setup-token</code>（T16）。</p>
-  <p>在 <code>~/Library/Application Support/AIPager/node/profiles.json</code> 加入與 Windows 相同用途的 <code>longrun</code>，<code>allowed_tools</code> 改為 <code>["Bash(sleep:*)"]</code>，<code>workdir</code> 改為 <code>/Users/你的帳號/Library/Application Support/AIPager/worker/sandbox</code>。</p>
+  <p>在 <code>~/Library/Application Support/AIPager/node/profiles.json</code> 加入與 Windows 相同用途的 <code>longrun</code>，<code>allowed_tools</code> 改為 <code>["Bash(sleep:*)"]</code>，<code>workdir</code> 改為 <code>/Users/你的帳號/Library/Application Support/AIPager/worker/sandbox</code>。並依 N4 關閉 Claude Code 自動更新（見 <a href="#operations">11 R7 日常運作與升級</a>）。</p>
 
   <h3>2. 驗收</h3>
   <div class="tablewrap"><table>
@@ -590,7 +592,7 @@ node bin/aipagerctl.js doctor
 sudo loginctl enable-linger "$USER"
 node bin/aipagerctl.js service install
 journalctl --user -u aipager-worker -n 20 --no-pager</code></pre></div>
-  <p>加入碼請以 <code>--role tester</code> 建立。<code>service install</code> 會把 unit 寫到 <code>~/.config/systemd/user/</code>，產生的 unit 已在自動化測試中通過 <code>systemd-analyze verify</code>。</p>
+  <p>加入碼請以 <code>--role tester</code> 建立。依 N4 關閉 Claude Code 自動更新（見 <a href="#operations">11 R7 日常運作與升級</a>）。<code>service install</code> 會把 unit 寫到 <code>~/.config/systemd/user/</code>，產生的 unit 已在自動化測試中通過 <code>systemd-analyze verify</code>。</p>
 
   <h3>2. 驗收</h3>
   <div class="tablewrap"><table>
@@ -674,7 +676,14 @@ systemctl --user restart aipager-worker</code></pre></div>
   <ul>
     <li>本設計依賴兩個不在 <code>claude --help</code> 清單上的選項（<code>--permission-prompt-tool</code>、<code>--max-turns</code>），新版本有可能改變行為</li>
     <li>每次 Claude Code 升級後，先在一台 Linux 或 Mac 執行 <code>npm run test:real-claude</code>（約 0.01 USD），通過後再讓其他 Worker 接正式任務</li>
-    <li>是否關閉各 Worker 的 Claude Code 自動更新、改為手動升級，見待決定事項 N4</li>
+    <li>依 N4 決定：各 Worker 關閉自動更新，統一手動升級。設定兩處：
+      <ul>
+        <li>互動使用：在該機 <code>~/.claude/settings.json</code>（Windows 為 <code>%USERPROFILE%\.claude\settings.json</code>）加入 <code>"env": { "DISABLE_AUTOUPDATER": "1" }</code>；已有 <code>env</code> 時只加這一項</li>
+        <li>Worker 執行：Worker 以 <code>--setting-sources ''</code> 啟動 claude，不讀上述設定，所以在該機 profiles.json 的每個 profile 的 <code>env</code> 加入 <code>"DISABLE_AUTOUPDATER": "1"</code>（每個 profile 都要加，見待辦 B13）</li>
+      </ul>
+    </li>
+    <li><code>DISABLE_AUTOUPDATER</code> 是 Claude Code 讀取的環境變數（已確認 2.1.317 程式中有此設定）；實際是否生效，在 R2 以「一段時間後 <code>claude --version</code> 未改變」確認，結果記錄在本章</li>
+    <li>手動升級：在該機執行 <code>claude update</code>，再執行 <code>claude --version</code> 記錄版本</li>
   </ul>
 
   <h3>機器異動</h3>
@@ -748,36 +757,45 @@ sudo tar -czf ~/aipager-hub-diag.tgz /var/log/aipager ~/hub-journal.txt</code></
   <p>以下是規格中寫了、但目前實作不完整或尚未驗證的項目，照實列出，避免接手的人以為已經完成。優先順序依「會不會擋住上線」排列。</p>
   <div class="tablewrap"><table>
     <tr><th>#</th><th>項目</th><th>優先</th><th>建議時機</th><th>說明</th></tr>
-    <tr><td class="num">B01</td><td>GitHub Actions CI（Ubuntu、Windows、macOS）</td><td>高</td><td>R2 之前</td><td>在三個作業系統跑 <code>npm run test:node</code>，Windows 另以 pwsh 解析 <code>.ps1</code>。可在動用 build-pc 之前先抓到 Windows 程式路徑的錯誤。需要決定 N1</td></tr>
+    <tr><td class="num">B01</td><td>GitHub Actions CI（Ubuntu、Windows、macOS）</td><td>高</td><td>R2 之前</td><td>在三個作業系統跑 <code>npm run test:node</code>，Windows 另以 pwsh 解析 <code>.ps1</code>。可在動用 build-pc 之前先抓到 Windows 程式路徑的錯誤。N1 已決定：Ubuntu 與 Windows 每次 push 都跑，macOS 只在合併到 main 時跑</td></tr>
     <tr><td class="num">B02</td><td>aipagerctl 與 MCP 送出含 <code>then</code> 的任務</td><td>高</td><td>R5 之前</td><td>目前 <code>send_task</code> 與 <code>aipagerctl send</code> 都不支援 <code>then</code>，T20 無法從工具執行。建議加 <code>aipagerctl send --payload-file</code> 與 MCP 參數</td></tr>
     <tr><td class="num">B03</td><td>Log 依大小輪替</td><td>中</td><td>R7</td><td>規格寫單檔 50 MB；目前只按日分檔、保留 30 天</td></tr>
     <tr><td class="num">B04</td><td>保存期限與備份排程</td><td>中</td><td>R7</td><td>目前只清理 events 與 task_events；tasks、messages、blobs 未依 retention 清理；備份是 Hub 啟動後每 24 小時一次，未依 <code>daily_at_utc</code></td></tr>
     <tr><td class="num">B05</td><td>Dashboard 的 Thread 與 Trace 頁</td><td>中</td><td>R7</td><td>API 與 <code>aipagerctl trace</code> 已有，畫面未做</td></tr>
     <tr><td class="num">B06</td><td>Dashboard「修改參數後核准」</td><td>中</td><td>R7</td><td>API 已支援 <code>updated_input</code>，畫面只有允許與拒絕</td></tr>
-    <tr><td class="num">B07</td><td>Teams、Slack 通知格式</td><td>低</td><td>Q7 決定後</td><td>目前只有 ntfy 與 generic，且尚未實測</td></tr>
+    <tr><td class="num">B07</td><td>主動推播（ntfy 實測、Teams 與 Slack 格式，或 Dashboard 瀏覽器通知）</td><td>延後</td><td>需要時再排</td><td>依 Q7 先只用 Hub 查詢。若常發生「任務卡在等審核卻沒人知道」，再從這裡挑一種做。目前程式只有 ntfy 與 generic，且尚未實測</td></tr>
     <tr><td class="num">B08</td><td>MCP <code>send_message</code> 附件大小</td><td>低</td><td>隨時</td><td>目前填 0；<code>send_task</code> 已正確查詢大小</td></tr>
     <tr><td class="num">B09</td><td>aipagerctl 撤銷 token 指令</td><td>中</td><td>R7</td><td>目前只能用 API <code>DELETE /admin/tokens/{id}</code></td></tr>
     <tr><td class="num">B10</td><td>呈現 Claude 用量上限</td><td>中</td><td>R7</td><td>Worker 目前略過 <code>rate_limit_event</code>；用量達上限時只看得到任務失敗</td></tr>
     <tr><td class="num">B11</td><td>resume_thread 以真實 Claude 驗證</td><td>低</td><td>R3 之後</td><td>接續同一個 Claude session 的流程只有 Hub 端測試</td></tr>
     <tr><td class="num">B12</td><td>E_BUDGET、建立任務速率限制的自動化測試</td><td>低</td><td>隨時</td><td>程式已有，尚無測試</td></tr>
+    <tr><td class="num">B13</td><td>節點層級的 claude 環境變數</td><td>低</td><td>R7</td><td>目前只能在每個 profile 的 <code>env</code> 設定（例如 N4 的 <code>DISABLE_AUTOUPDATER</code>）；建議在 node.json 加一個所有 profile 共用的設定</td></tr>
   </table></div>
   <p>B01、B02 由 Claude 在對應階段前完成並開 PR；其餘在 R7 依實際使用的痛點排序。每完成一項就從本表移除，並在設計規格的變更紀錄記一筆。</p>
 </section>
 
 <!-- rollout/15-decisions.html -->
 <section id="decisions">
-  <h2><span class="no">15</span>待決定事項</h2>
+  <h2><span class="no">15</span>決定事項</h2>
+  <h3>已決定（2026-11-03）</h3>
   <div class="tablewrap"><table>
-    <tr><th>#</th><th>問題</th><th>影響哪個階段</th><th>建議</th></tr>
-    <tr><td class="num">Q4</td><td>Git server 是哪一套？build-pc 用 SSH key 還是 HTTPS 憑證？</td><td>R3（第一個實際編譯流程）</td><td>SSH，並為 Worker 帳號設定唯讀 deploy key</td></tr>
-    <tr><td class="num">Q7</td><td>審核與失敗通知要送到哪裡？</td><td>R7</td><td>先只看 Dashboard；常用手機的話，ntfy 最簡單</td></tr>
-    <tr><td class="num">N1</td><td>是否啟用 GitHub Actions CI（B01）？私人 repo 會用到 Actions 分鐘數，macOS 環境計費較高</td><td>R2 之前</td><td>啟用；macOS 只在 PR 合併到 main 時跑</td></tr>
-    <tr><td class="num">N2</td><td>Hub 放哪一台？能否在 Tailscale 改名為 aipager-hub？</td><td>R1</td><td>選一台不睡眠的 Ubuntu 機器，改名為 aipager-hub</td></tr>
-    <tr><td class="num">N3</td><td>Windows 安裝位置：<code>C:\Program Files\AIPager</code>（升級要系統管理員）或使用者目錄</td><td>R2</td><td>維持 Program Files（與規格一致，避免一般程序改動程式檔）</td></tr>
-    <tr><td class="num">N4</td><td>Worker 上的 Claude Code 要自動更新，還是統一手動升級？</td><td>R2 起</td><td>手動升級，升級前先跑 <code>npm run test:real-claude</code>。關閉自動更新的實際設定方式要在 R2 實機確認</td></tr>
-    <tr><td class="num">N5</td><td>admin token 由誰保管？是否需要多把（例如每個管理者一把）？</td><td>R1</td><td>每位管理者一把，各自用 <code>admin token</code> 建立，方便個別撤銷</td></tr>
+    <tr><th>#</th><th>問題</th><th>決定</th><th>落實在哪裡</th></tr>
+    <tr><td class="num">Q4</td><td>build-pc 存取 Git server 的方式</td><td>SSH，並為 Worker 帳號設定唯讀 deploy key</td><td><a href="#r3-dev">07 R3 開發機互動與第一個實際流程</a> 步驟 3</td></tr>
+    <tr><td class="num">Q7</td><td>審核與失敗通知</td><td>不推播，只用 Hub 查詢：Dashboard（瀏覽器，含手機）、<code>aipagerctl</code>、MCP 工具、Claude 對話中的提示</td><td><a href="#r1-hub">05 R1 Ubuntu Hub</a> 的 <code>webhooks: []</code>；<a href="#operations">11 R7 日常運作與升級</a> 的每日檢查；待辦 B07 延後</td></tr>
+    <tr><td class="num">N1</td><td>GitHub Actions CI</td><td>啟用；Ubuntu 與 Windows 每次 push 都跑，macOS 只在合併到 main 時跑</td><td>待辦 B01，R2 之前完成</td></tr>
+    <tr><td class="num">N2</td><td>Hub 放哪一台</td><td>一台不睡眠的 Ubuntu 機器，在 Tailscale 改名為 <code>aipager-hub</code></td><td><a href="#r1-hub">05 R1 Ubuntu Hub</a> 步驟 1</td></tr>
+    <tr><td class="num">N3</td><td>Windows 安裝位置</td><td><code>C:\Program Files\AIPager</code>（升級需要系統管理員權限）</td><td><a href="#r2-windows">06 R2 Windows build-pc</a></td></tr>
+    <tr><td class="num">N4</td><td>Claude Code 升級方式</td><td>關閉自動更新，統一手動升級；升級後先跑 <code>npm run test:real-claude</code></td><td><a href="#operations">11 R7 日常運作與升級</a> 的「Claude Code 升級」；各 Worker 安裝時設定</td></tr>
+    <tr><td class="num">N5</td><td>admin token 保管</td><td>每位管理者一把，各自以 <code>aipagerctl admin token</code> 建立，方便個別撤銷</td><td><a href="#r1-hub">05 R1 Ubuntu Hub</a>、<a href="#operations">11 R7 日常運作與升級</a></td></tr>
   </table></div>
-  <p>回覆這些問題後，Claude 會更新本文件與設計規格的待確認事項，並依決定調整後續步驟。</p>
+
+  <h3>開始各階段前要提供的資訊</h3>
+  <div class="tablewrap"><table>
+    <tr><th>什麼時候</th><th>需要提供</th></tr>
+    <tr><td>R1 開始前</td><td>要當 Hub 的是哪一台 Ubuntu 機器（N2）</td></tr>
+    <tr><td>R3 開始前</td><td>Git server 的種類與要編譯的 repo 網址（Q4）；build-pc 上的編譯指令</td></tr>
+  </table></div>
+  <p>有新的待決定事項時，加在本章並標上影響的階段；決定後移到「已決定」，同時更新設計規格的待確認事項與相關步驟。</p>
 </section>
 
 </main>

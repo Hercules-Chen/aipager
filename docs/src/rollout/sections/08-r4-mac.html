@@ -23,7 +23,7 @@ node bin/aipagerctl.js join --hub http://aipager-hub:7300 --code ape_加入碼 -
 node bin/aipagerctl.js doctor
 node bin/aipagerctl.js service install</code></pre></div>
   <p>到 Dashboard 核准 macbook-hc。<code>service install</code> 預設使用 LaunchAgent（你登入時才執行），筆電平常都在登入狀態，先用這個就好。需要登出也能執行時，再改 LaunchDaemon 並搭配 <code>claude setup-token</code>（T16）。</p>
-  <p>在 <code>~/Library/Application Support/AIPager/node/profiles.json</code> 加入與 Windows 相同用途的 <code>longrun</code>，<code>allowed_tools</code> 改為 <code>["Bash(sleep:*)"]</code>，<code>workdir</code> 改為 <code>/Users/你的帳號/Library/Application Support/AIPager/worker/sandbox</code>。</p>
+  <p>在 <code>~/Library/Application Support/AIPager/node/profiles.json</code> 加入與 Windows 相同用途的 <code>longrun</code>，<code>allowed_tools</code> 改為 <code>["Bash(sleep:*)"]</code>，<code>workdir</code> 改為 <code>/Users/你的帳號/Library/Application Support/AIPager/worker/sandbox</code>。並依 N4 關閉 Claude Code 自動更新（見 <a data-ref="operations"></a>）。</p>
 
   <h3>2. 驗收</h3>
   <!--TESTPLAN:list:T04,T12,T27,T28,T29,T30,T34-->

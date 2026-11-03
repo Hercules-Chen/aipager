@@ -24,7 +24,7 @@ sudo /opt/aipager/spec/scripts/linux/install-hub.sh --allow-cidr 100.64.0.0/10</
   <ul>
     <li><code>listen.host</code>：改成步驟 1 的 <code>tailscale ip -4</code> 結果</li>
     <li><code>public_base_url</code>：<code>http://aipager-hub:7300</code>（加入碼畫面產生的指令會用它）</li>
-    <li><code>webhooks</code>：Q7 還沒決定前改成 <code>[]</code>，範本裡的 ntfy 位址是範例，留著只會產生連線失敗的 Log</li>
+    <li><code>webhooks</code>：改成 <code>[]</code>。依 Q7 決定不推播，只用 Hub 查詢；範本裡的 ntfy 位址只是範例，留著只會產生連線失敗的 Log</li>
   </ul>
   <div class="codebox"><div class="label"><span>Hub 機：建立 admin token 並啟動</span><button type="button" data-copy>複製</button></div><pre><code>sudo -u aipager /opt/node-v22/bin/node /opt/aipager/bin/aipagerctl.js admin init --config /etc/aipager/hub.json
 sudo systemctl enable --now aipager-hub
@@ -37,6 +37,7 @@ journalctl -u aipager-hub -n 20 --no-pager</code></pre></div>
 node bin/aipagerctl.js admin save-token apa_貼上剛才的token --hub http://aipager-hub:7300
 node bin/aipagerctl.js admin backup --hub http://aipager-hub:7300</code></pre></div>
   <p>瀏覽器開 <code>http://aipager-hub:7300/ui/</code>，貼上 admin token 登入，首頁四個區塊都應該是空的。</p>
+  <p>其他管理者（N5）：每人各自建立一把 token，不要共用。以已登入的管理工具執行 <code>node bin/aipagerctl.js admin token --label 管理者名稱</code>，把印出的 token 交給對方，對方再於自己的電腦執行 <code>admin save-token</code>。</p>
 
   <h3>驗收</h3>
   <!--TESTPLAN:list:T01,T22,A06-->

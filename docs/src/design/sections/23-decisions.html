@@ -30,5 +30,6 @@
     <tr><td class="num">D26</td><td>Worker 預設 <code>--setting-sources ''</code></td><td>使用者或 repo 的 Claude 設定可能允許更多工具，會繞過 profile 這個權限邊界；repo 內容來自其他機器，不能信任</td><td>沿用預設設定來源</td></tr>
     <tr><td class="num">D27</td><td>發行檔就是 repo 本身；執行時直接讀 spec/ 下的 schema、參考實作、prompt、MCP 工具定義</td><td>規格與實作只有一份，不會各自演進；驗證腳本檢查的就是正式執行時用的檔案</td><td>建置時複製到 templates/ 等另一份</td></tr>
     <tr><td class="num">D28</td><td>progress 的 seq 可由 Hub 指定；結果的 lease 放在 header</td><td>Worker 與 Claude 端的 MCP 都會回報進度，各自編號會撞號；result payload 維持與 schema 一致</td><td>只讓 Worker 回報進度</td></tr>
+    <tr><td class="num">D29</td><td>通知只用 Hub 查詢，不主動推播（使用者決定，Q7）</td><td>主要使用情境是人在電腦前；Dashboard 可從任何 Tailscale 裝置（含手機）開啟，Claude 對話中也會提示未讀與待審核；不需要額外申請與維護外部通知服務</td><td>ntfy、Teams、Slack webhook；Dashboard 瀏覽器通知（保留為待辦，需要時再做）</td></tr>
   </table></div>
 </section>

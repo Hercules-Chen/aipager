@@ -14,7 +14,7 @@ node bin/aipagerctl.js doctor
 sudo loginctl enable-linger "$USER"
 node bin/aipagerctl.js service install
 journalctl --user -u aipager-worker -n 20 --no-pager</code></pre></div>
-  <p>加入碼請以 <code>--role tester</code> 建立。<code>service install</code> 會把 unit 寫到 <code>~/.config/systemd/user/</code>，產生的 unit 已在自動化測試中通過 <code>systemd-analyze verify</code>。</p>
+  <p>加入碼請以 <code>--role tester</code> 建立。依 N4 關閉 Claude Code 自動更新（見 <a data-ref="operations"></a>）。<code>service install</code> 會把 unit 寫到 <code>~/.config/systemd/user/</code>，產生的 unit 已在自動化測試中通過 <code>systemd-analyze verify</code>。</p>
 
   <h3>2. 驗收</h3>
   <!--TESTPLAN:list:T05,T19,T20,T26-->

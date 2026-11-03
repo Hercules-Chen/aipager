@@ -1,5 +1,5 @@
 <section id="r3-dev" data-title="R3 開發機互動與第一個實際流程" data-group="上線步驟">
-  <p>目標：在你的 Claude Code 對話中直接說「叫 build-pc 編譯」，完成 Q8 的實際流程。需要先回答 Q4（Git server 與存取方式）。</p>
+  <p>目標：在你的 Claude Code 對話中直接說「叫 build-pc 編譯」，完成 Q8 的實際流程。依 Q4，build-pc 以 SSH 唯讀 deploy key 存取 Git server；開始前請提供 Git server 的種類與 repo 網址。</p>
 
   <h3>1. 註冊 MCP 與未讀提示</h3>
   <div class="codebox"><div class="label"><span>你的電腦：Windows</span><button type="button" data-copy>複製</button></div><pre><code>claude mcp add --scope user --env AIPAGER_AGENT=main aipager -- node "C:\你的repo路徑\bin\aipager-mcp.js" --mode interactive</code></pre></div>

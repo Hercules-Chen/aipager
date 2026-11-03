@@ -15,7 +15,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const DOCS = [
-  { dir: 'design', out: 'aipager-design', title: 'AIPager 設計規格', version: 'v0.5', subtitle: (v) => `aipager/1.0 · 設計 ${v}` },
+  { dir: 'design', out: 'aipager-design', title: 'AIPager 設計規格', version: 'v0.5.1', subtitle: (v) => `aipager/1.0 · 設計 ${v}` },
   { dir: 'rollout', out: 'aipager-rollout', title: 'AIPager 上線計畫', version: 'v1.0', subtitle: (v) => `上線計畫 ${v} · 對應實作 v0.5` },
 ];
 const root = path.resolve(__dirname, '..');
