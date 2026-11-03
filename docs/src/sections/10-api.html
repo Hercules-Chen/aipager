@@ -1,0 +1,94 @@
+<section id="api" data-title="Hub REST API" data-group="協定">
+  <ul>
+    <li>Base URL：<code>http://relay-hub:7300/api/v1</code>（Tailscale MagicDNS）。請求與回應皆為 <code>application/json; charset=utf-8</code></li>
+    <li>每個回應帶 <code>X-Trace-Id</code>；呼叫端可送 <code>X-Request-Id</code>，Hub 原樣回傳並寫入 Log</li>
+    <li>錯誤一律回 <code>{"error":{"code":"E_…","message":"…","detail":{},"trace_id":"…"}}</code>；<code>message</code> 依 <code>Accept-Language</code> 回 zh-TW 或 en</li>
+    <li>Long-poll 端點的 <code>wait</code> / <code>timeout</code> 上限 50 秒；沒有結果時回 204 或目前狀態</li>
+    <li>非 envelope 的請求與回應格式定義在 <code>spec/schemas/api.schema.json</code>，下表以 <code>$defs</code> 名稱標示</li>
+  </ul>
+
+  <h3>節點與加入</h3>
+  <div class="tablewrap"><table>
+    <tr><th>方法</th><th>路徑</th><th>Token</th><th>說明</th></tr>
+    <tr><td><span class="method">GET</span></td><td><code>/health</code></td><td>無</td><td><code>{"ok":true,"version":"0.3.0","protocol":"1.0","time":"…"}</code></td></tr>
+    <tr><td><span class="method post">POST</span></td><td><code>/enroll</code></td><td>無（加入碼即憑證）</td><td><code>enrollRequest</code> → <code>enrollResponse</code>。加入碼無效、過期、已用過回 422 <code>E_ENROLL_INVALID</code>；node_id 已存在且加入碼未綁定該 id 回 409 <code>E_NODE_EXISTS</code>；每 IP 每分鐘 5 次</td></tr>
+    <tr><td><span class="method post">POST</span></td><td><code>/nodes/heartbeat</code></td><td>node</td><td><code>heartbeatRequest</code> → <code>heartbeatResponse</code>。metadata 有新版時回應附上新 meta；retired 節點回 401</td></tr>
+    <tr><td><span class="method">GET</span></td><td><code>/nodes</code></td><td>node / admin</td><td><code>nodeView[]</code>。篩選：<code>presence</code>、<code>state</code>、<code>role</code>、<code>label=k</code> 或 <code>label=k=v</code>、<code>os</code>。node token 看不到 retired 節點</td></tr>
+    <tr><td><span class="method">GET</span></td><td><code>/nodes/self</code></td><td>node</td><td>自己的 <code>nodeView</code></td></tr>
+    <tr><td><span class="method">GET</span></td><td><code>/nodes/{id}</code></td><td>node / admin</td><td><code>nodeView</code>（含 <code>online_hours_7d</code>）</td></tr>
+    <tr><td><span class="method">PATCH</span></td><td><code>/nodes/{id}/meta</code></td><td>admin</td><td><code>nodeMetaPatch</code>，header <code>If-Match: &lt;meta_version&gt;</code> 必填。回新的 <code>nodeView</code>；版本不符回 409 <code>E_META_CONFLICT</code></td></tr>
+    <tr><td><span class="method post">POST</span></td><td><code>/nodes/{id}/state</code></td><td>admin</td><td><code>nodeStateChange</code>。pending → active 即核准；retired 會撤銷該節點所有 token</td></tr>
+    <tr><td><span class="method">GET</span></td><td><code>/nodes/{id}/history</code></td><td>admin</td><td>metadata 各版本快照與在線狀態變化</td></tr>
+    <tr><td><span class="method post">POST</span></td><td><code>/nodes/{id}/meta/rollback</code></td><td>admin</td><td><code>{to_version}</code>，以舊版內容建立新的一版</td></tr>
+    <tr><td><span class="method post">POST</span></td><td><code>/admin/enrollments</code></td><td>admin</td><td><code>enrollmentCreate</code> → <code>enrollmentCreated</code>（加入碼只顯示這一次）</td></tr>
+    <tr><td><span class="method">GET</span></td><td><code>/admin/enrollments</code></td><td>admin</td><td>未使用、已使用、已過期的加入碼（不含代碼本身）</td></tr>
+    <tr><td><span class="method">DELETE</span></td><td><code>/admin/enrollments/{id}</code></td><td>admin</td><td>撤銷未使用的加入碼</td></tr>
+  </table></div>
+
+  <h3>任務</h3>
+  <div class="tablewrap"><table>
+    <tr><th>方法</th><th>路徑</th><th>Token</th><th>說明</th></tr>
+    <tr><td><span class="method post">POST</span></td><td><code>/tasks</code></td><td>node / task / admin</td><td>建立任務。成功回 201 <code>taskCreated</code>（含 <code>target_status</code>、<code>warnings</code>、<code>alternatives</code>）；冪等重送回 200；目標沒在線且 <code>on_unavailable</code> 為 confirm / reject 時回 409 <code>targetUnavailable</code>，<b>不建立任務</b>。發送者為 pending / disabled 節點回 403 <code>E_NODE_NOT_ACTIVE</code></td></tr>
+    <tr><td><span class="method post">POST</span></td><td><code>/tasks/claim?wait=25</code></td><td>node</td><td>Worker 領任務。body <code>{profiles:[…], max:1}</code>。角色、標籤、os、arch 一律以 Hub 紀錄為準。只有 active 節點能領。回 200 <code>{task, lease:{lease_id, expires_at}, task_token, resume_session_id?}</code>；無任務回 204</td></tr>
+    <tr><td><span class="method post">POST</span></td><td><code>/tasks/{id}/lease</code></td><td>node</td><td>續約，body <code>{lease_id}</code>。回 <code>{expires_at, cancel_requested}</code>；lease 不符回 409 <code>E_LEASE_LOST</code></td></tr>
+    <tr><td><span class="method post">POST</span></td><td><code>/tasks/{id}/progress</code></td><td>node / task</td><td>task.progress payload，回 202</td></tr>
+    <tr><td><span class="method post">POST</span></td><td><code>/tasks/{id}/result</code></td><td>node（需 lease_id）</td><td>task.result payload，回 200 <code>{state}</code></td></tr>
+    <tr><td><span class="method post">POST</span></td><td><code>/tasks/{id}/cancel</code></td><td>發送者 node / admin</td><td><code>{reason}</code>，回 202</td></tr>
+    <tr><td><span class="method">GET</span></td><td><code>/tasks</code></td><td>node / admin</td><td>查詢：<code>state</code>、<code>to_node</code>、<code>thread_id</code>、<code>waiting_for_node</code>（排隊等某台醒來的任務）、<code>limit</code>、<code>cursor</code></td></tr>
+    <tr><td><span class="method">GET</span></td><td><code>/tasks/{id}</code></td><td>node / task / admin</td><td>完整內容：envelope、狀態、attempt、結果、目標目前的在線狀態</td></tr>
+    <tr><td><span class="method">GET</span></td><td><code>/tasks/{id}/wait?timeout=45</code></td><td>node / admin</td><td>等到終態或逾時，回目前狀態 + 最近 5 筆進度 + 結果</td></tr>
+    <tr><td><span class="method">GET</span></td><td><code>/tasks/{id}/events?after_seq=0</code></td><td>node / admin</td><td>進度事件清單</td></tr>
+  </table></div>
+
+  <h3>訊息與信箱</h3>
+  <div class="tablewrap"><table>
+    <tr><th>方法</th><th>路徑</th><th>Token</th><th>說明</th></tr>
+    <tr><td><span class="method post">POST</span></td><td><code>/messages</code></td><td>node / task</td><td>送訊息，回 201 <code>{message_id, thread_id, warnings}</code>；收件機器沒在線時附 <code>W_TARGET_ASLEEP</code> 等警告（訊息仍會保留，等對方回來讀）</td></tr>
+    <tr><td><span class="method">GET</span></td><td><code>/mailboxes/{agent}/inbox</code></td><td>node</td><td><code>unread_only</code>、<code>limit</code>、<code>wait</code>。只能讀自己 node 的信箱</td></tr>
+    <tr><td><span class="method post">POST</span></td><td><code>/mailboxes/{agent}/ack</code></td><td>node</td><td><code>{ids:[…]}</code>，回 <code>{acked}</code></td></tr>
+    <tr><td><span class="method">GET</span></td><td><code>/mailboxes/{agent}/summary</code></td><td>node</td><td><code>{unread, tasks_done, approvals_pending, waiting_tasks, top:[…3 筆標題]}</code>，給 relay-hint 用，需在 200 ms 內回應</td></tr>
+  </table></div>
+
+  <h3>審核、附件、追蹤、管理</h3>
+  <div class="tablewrap"><table>
+    <tr><th>方法</th><th>路徑</th><th>Token</th><th>說明</th></tr>
+    <tr><td><span class="method post">POST</span></td><td><code>/approvals</code></td><td>task</td><td>建立審核請求，回 201 <code>{approval_id}</code>；任務轉為 waiting_approval</td></tr>
+    <tr><td><span class="method">GET</span></td><td><code>/approvals/{id}/wait?timeout=50</code></td><td>task</td><td><code>{state, decision?, note?, updated_input?}</code></td></tr>
+    <tr><td><span class="method">GET</span></td><td><code>/approvals?state=pending</code></td><td>admin</td><td>審核佇列</td></tr>
+    <tr><td><span class="method post">POST</span></td><td><code>/approvals/{id}/decision</code></td><td>admin</td><td><code>{decision, note?, updated_input?}</code></td></tr>
+    <tr><td><span class="method post">PUT</span></td><td><code>/blobs/{sha256}</code></td><td>node / task</td><td>上傳原始位元組（≤ 50 MB），Hub 驗證雜湊；已存在回 200</td></tr>
+    <tr><td><span class="method">GET</span></td><td><code>/blobs/{sha256}</code></td><td>node / task / admin</td><td>下載；<code>HEAD</code> 可查是否存在</td></tr>
+    <tr><td><span class="method">GET</span></td><td><code>/threads/{thread_id}</code></td><td>node / admin</td><td>該 thread 全部封包，依時間排序</td></tr>
+    <tr><td><span class="method">GET</span></td><td><code>/trace/{trace_id}</code></td><td>admin</td><td>Hub 端所有相關事件</td></tr>
+    <tr><td><span class="method">GET</span></td><td><code>/events/stream</code></td><td>admin</td><td>SSE。<code>id</code> 為 <code>event_seq</code>，支援 <code>Last-Event-ID</code> 續傳；包含 <code>node.presence</code>、<code>node.meta</code>、<code>node.enrolled</code> 事件</td></tr>
+    <tr><td><span class="method post">POST</span></td><td><code>/admin/tokens</code></td><td>admin</td><td>手動建立 admin token（node token 一律透過加入碼取得）</td></tr>
+    <tr><td><span class="method">DELETE</span></td><td><code>/admin/tokens/{token_id}</code></td><td>admin</td><td>撤銷</td></tr>
+    <tr><td><span class="method post">POST</span></td><td><code>/admin/backup</code></td><td>admin</td><td>立即以 <code>VACUUM INTO</code> 產生一份一致性備份，回備份檔名</td></tr>
+    <tr><td><span class="method">GET</span></td><td><code>/debug/stats</code></td><td>admin</td><td>僅在 <code>debug.enable_debug_routes=true</code> 時存在：佇列長度、連線數、DB 大小</td></tr>
+  </table></div>
+
+  <h3>領任務的 SQL（原子操作，含狀態、角色、平台、標籤）</h3>
+  <p>領任務用單一 <code>UPDATE … FROM … RETURNING</code> 完成。SQLite 會把寫入排成一個一個執行，所以同一任務不會被兩台領走。<code>tools/validate-spec.js</code> 實測了 6 種情況：高優先序先領；Windows 節點不會領到需要 Xcode 標籤的任務；pending 節點不能領；Mac 符合 os 與標籤時能領；萬用標籤 <code>*</code> 生效；標籤值不符的任務永遠不會被領。</p>
+  <div class="note warn"><b>實測抓到的錯誤：</b>第一版的標籤條件寫成 <code>json_extract(...) = r.value</code>。節點沒有該標籤時 <code>json_extract</code> 回 NULL，SQL 的三值邏輯讓整個條件變成「不確定」，<code>NOT EXISTS</code> 因此放行，造成 Windows 節點可以領走要求 <code>xcode=15</code> 的任務。已改用 <code>IS</code> 比較（NULL 安全），並保留這個測試案例防止退回。</div>
+  <div class="codebox"><div class="label"><span>claim query</span><button type="button" data-copy>複製</button></div><pre><code>UPDATE tasks
+   SET state='claimed', assigned_node=n.node_id, lease_id=:lease, lease_expires_at=:exp,
+       attempt=attempt+1, claimed_at=:now, updated_at=:now
+  FROM (SELECT node_id, roles, labels, os, arch FROM nodes
+         WHERE node_id=:node AND state='active') AS n
+ WHERE tasks.task_id = (
+   SELECT t.task_id FROM tasks t
+    WHERE t.state='queued'
+      AND (t.to_node=n.node_id OR t.to_role IN (SELECT value FROM json_each(n.roles)))
+      AND t.profile IN (SELECT value FROM json_each(:free_profiles))
+      AND (t.require_os   IS NULL OR n.os   IN (SELECT value FROM json_each(t.require_os)))
+      AND (t.require_arch IS NULL OR n.arch IN (SELECT value FROM json_each(t.require_arch)))
+      AND (t.require_labels IS NULL OR NOT EXISTS (
+            SELECT 1 FROM json_each(t.require_labels) r
+             WHERE NOT (CASE WHEN r.value = '*'
+                             THEN json_extract(n.labels, '$."' || r.key || '"') IS NOT NULL
+                             ELSE json_extract(n.labels, '$."' || r.key || '"') IS r.value END)))
+    ORDER BY t.priority ASC, t.created_at ASC, t.task_id ASC
+    LIMIT 1)
+RETURNING tasks.task_id;</code></pre></div>
+  <p><code>:free_profiles</code> 由 Worker 提供，已排除目前被 <code>concurrency_key</code> 鎖住的 profile。標籤 key 的格式限制（小寫英數、底線、連字號）保證它能安全放進 JSON path。</p>
+</section>

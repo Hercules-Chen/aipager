@@ -1,0 +1,15 @@
+{
+  "v": "1.0",
+  "id": "01JBX80000AAAABBBBCCCCDDDD",
+  "kind": "message",
+  "from": { "node": "build-pc", "agent": "worker" },
+  "to": { "node": "dev-pc", "agent": "main" },
+  "thread_id": "01JBX7Q3M8ZK4N2P6R9T0V1W2X",
+  "parent_id": "01JBX7Q3M8ZK4N2P6R9T0V1W2Y",
+  "trace": { "trace_id": "4f1c2a9be0d34c7a8b6e5d4c3b2a1f00", "hop": 1, "path": ["main@dev-pc", "worker@build-pc"] },
+  "created_at": "2026-11-03T06:18:12.004Z",
+  "payload": {
+    "text": "build.ps1 需要 NuGet 來源 http://nuget.local，但 build-pc 連不到。要改用離線套件快取嗎？",
+    "requires_reply": true
+  }
+}

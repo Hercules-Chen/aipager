@@ -1,0 +1,76 @@
+<section id="flows" data-title="流程範例" data-group="執行">
+  <h3>F1 互動派工並等待結果（Mac 開發機 → Windows 編譯機）</h3>
+  <ol class="steps">
+    <li><div><span class="who">使用者 → Claude@dev-mac</span><br>「叫 build-pc 編譯目前的 commit」</div></li>
+    <li><div><span class="who">Claude@dev-mac → relay-mcp → Hub</span><br><code>relay_list_nodes</code> → <code>GET /nodes</code>，確認 build-pc 在線、os=windows、有 build profile</div></li>
+    <li><div><span class="who">Claude@dev-mac</span><br><code>git rev-parse HEAD</code>、確認已推到遠端</div></li>
+    <li><div><span class="who">Claude@dev-mac → Hub</span><br><code>relay_send_task(to=worker@build-pc, profile=build, repo={…commit}, wait_seconds=50)</code> → <code>POST /tasks</code> → 201 queued</div></li>
+    <li><div><span class="who">relay-worker@build-pc → Hub</span><br>正在等待的 <code>POST /tasks/claim</code> 立即拿到任務、lease、task token</div></li>
+    <li><div><span class="who">relay-worker@build-pc</span><br>fetch、checkout commit、建任務目錄、spawn <code>claude.exe -p</code> → progress started（狀態 running）</div></li>
+    <li><div><span class="who">claude@build-pc → relay-mcp(task) → Hub</span><br>執行中呼叫 <code>relay_report_progress</code>；Worker 每 20 秒續約</div></li>
+    <li><div><span class="who">claude@build-pc</span><br><code>relay_submit_result(status=succeeded, output={build_ok:true,…})</code>，程序結束</div></li>
+    <li><div><span class="who">relay-worker@build-pc → Hub</span><br>上傳 artifacts 與 stream log → <code>POST /tasks/{id}/result</code></div></li>
+    <li><div><span class="who">Hub</span><br>狀態 succeeded → 寫入 main@dev-mac 信箱 → SSE 推給 Dashboard → 依 <code>then</code> 建立後續任務</div></li>
+    <li><div><span class="who">relay-mcp@dev-mac → Claude@dev-mac → 使用者</span><br>若在 50 秒內完成，<code>relay_send_task</code> 直接帶回結果；否則 Claude 再呼叫 <code>relay_wait_task</code>，或之後由 relay-hint 提示</div></li>
+  </ol>
+
+  <h3>F2 需要人工審核</h3>
+  <ol class="steps">
+    <li><div><span class="who">claude@build-pc</span><br>想執行 <code>git push origin relay/…</code>，不在 allowedTools 也不在 disallowedTools</div></li>
+    <li><div><span class="who">Claude Code → relay-mcp(task)</span><br>呼叫 <code>relay_permission_prompt</code>；auto_deny / auto_allow 皆未命中</div></li>
+    <li><div><span class="who">relay-mcp(task) → Hub</span><br><code>POST /approvals</code> → 任務轉 waiting_approval → Dashboard、webhook、發送者信箱收到通知</div></li>
+    <li><div><span class="who">人 → Dashboard（電腦或手機）</span><br>按「拒絕」並填「這個任務只做編譯」</div></li>
+    <li><div><span class="who">relay-mcp(task)</span><br><code>GET /approvals/{id}/wait</code> 拿到 deny → 回傳 <code>{"behavior":"deny","message":"這個任務只做編譯"}</code></div></li>
+    <li><div><span class="who">claude@build-pc</span><br>收到拒絕訊息，改為不推送並在結果中說明；任務回到 running</div></li>
+  </ol>
+
+  <h3>F3 跨平台流水線：Windows 編譯 → Linux E2E</h3>
+  <p>在 task.create 的 <code>then</code> 中定義後續任務（見 <a data-ref="protocol"></a> 的範例：E2E 任務帶 <code>requires.os=["linux"]</code>，送給 tester 角色）。Hub 在父任務結束且狀態符合 <code>when</code> 時，代父任務的發送者建立子任務：</p>
+  <ul>
+    <li>子任務繼承 thread_id 與 trace_id，hop 為父任務 hop + 1，<code>parent_id</code> 指向父任務</li>
+    <li>tester 角色同時有 macbook-hc 與 linux-box 時，因 <code>requires.os</code> 只有 linux-box 能領</li>
+    <li>範本變數只允許白名單（<code>result.summary</code>、<code>result.output.*</code>、<code>inputs.*</code>、<code>task.id</code>），值會先跳脫再代入，避免結果內容注入成新指令結構</li>
+    <li>任一步失敗而後續 <code>when=succeeded</code> 時，鏈結停止並通知發送者</li>
+  </ul>
+
+  <h3>F4 Worker 反問發送者</h3>
+  <ol class="steps">
+    <li><div><span class="who">claude@build-pc</span><br>遇到需決策的問題 → <code>relay_send_message(to=main@dev-mac, requires_reply=true)</code>，然後依 instructions 判斷：若可先做其他部分就繼續，否則以 failed 結束並在 summary 說明需要的資訊</div></li>
+    <li><div><span class="who">使用者在 dev-mac 下次輸入時</span><br>relay-hint 提示有 1 則需要回覆的訊息</div></li>
+    <li><div><span class="who">Claude@dev-mac</span><br>回覆後以 <code>relay_send_task(thread_id=同一串, resume_session=true)</code> 讓 build-pc 接續原本的 Claude session</div></li>
+  </ol>
+  <div class="note"><b>為什麼 Worker 不在任務中等待回覆：</b>任務 session 等人會佔住 Worker 與租約、也可能撞到逾時。v1 的做法是「結束並說明 → 帶著答案再派一次 → resume 原 session」，狀態清楚、可追蹤。</div>
+
+  <h3>F5 Hub 重開機</h3>
+  <ol class="steps">
+    <li><div>Hub 停止期間，Worker 續約與回報失敗，任務照常執行，結果先存在本機 result.json</div></li>
+    <li><div>Hub 啟動時（若 Tailscale 尚未就緒則重試綁定）把所有 claimed / running 任務的租約延長 120 秒</div></li>
+    <li><div>Worker 重新連上後續約成功、補送 pending 結果；超過寬限仍未續約的任務才依規則轉 queued 或 failed</div></li>
+  </ol>
+
+  <h3>F6 新機器加入</h3>
+  <ol class="steps">
+    <li><div><span class="who">管理者 → Dashboard</span><br>「新增機器」→ 名稱「辦公室 Mac Studio」、類型 desktop、角色 tester / ios-builder、標籤 <code>xcode=16</code> → 取得加入碼</div></li>
+    <li><div><span class="who">新機器</span><br><code>relayctl join --hub http://relay-hub:7300 --code rle_…</code> → <code>relayctl service install</code></div></li>
+    <li><div><span class="who">Hub</span><br>建立 pending 節點，Dashboard 跳出「待核准」；SSE 推送 <code>node.enrolled</code></div></li>
+    <li><div><span class="who">管理者</span><br>核准 → active；之後送給 <code>worker@role:tester</code> 且要求 <code>xcode=16</code> 的任務就可能由它領取</div></li>
+  </ol>
+
+  <h3>F7 派給睡著的筆電</h3>
+  <ol class="steps">
+    <li><div><span class="who">使用者 → Claude@dev-pc</span><br>「叫 macbook-hc 跑 iOS 單元測試」</div></li>
+    <li><div><span class="who">relay-mcp → Hub</span><br><code>POST /tasks</code>（<code>on_unavailable=confirm</code>）→ 409 <code>E_TARGET_UNAVAILABLE</code>，附「已 42 分鐘沒有回應」與 alternatives（mac-studio 在線）</div></li>
+    <li><div><span class="who">Claude@dev-pc → 使用者</span><br>說明情況，詢問：排隊等它 / 改派 mac-studio / 取消</div></li>
+    <li><div><span class="who">使用者</span><br>「排隊」→ Claude 以 <code>on_unavailable=queue</code> 重送 → 201，帶 <code>W_TARGET_ASLEEP</code></div></li>
+    <li><div><span class="who">macbook-hc 開蓋</span><br>Worker 偵測到醒來 → 心跳 → 領取任務；Hub 寫入 main@dev-pc 信箱「macbook-hc 已回來，開始執行（等待 2 小時 13 分）」</div></li>
+    <li><div><span class="who">使用者在 dev-pc 下次輸入</span><br>relay-hint 提示；任務完成後再提示結果</div></li>
+  </ol>
+
+  <h3>F8 執行中闔蓋</h3>
+  <ol class="steps">
+    <li><div>macbook-hc 正在跑任務時闔蓋，Worker 與 <code>claude</code> 被凍結，心跳停止</div></li>
+    <li><div>60 秒後 Hub 判定 asleep，標記 <code>node_asleep_since</code>，通知發送者「執行中的機器睡著了，最多保留 30 分鐘」</div></li>
+    <li><div>30 分鐘內開蓋：Worker 偵測醒來、續約成功，任務從原地繼續；逾時計算扣掉睡眠時間</div></li>
+    <li><div>超過 30 分鐘：Hub 依規則重新排隊或判 failed（<code>E_LEASE_LOST</code>，detail <code>node_asleep</code>）；之後開蓋的 Worker 續約收到 409，終止任務並保留本機結果</div></li>
+  </ol>
+</section>

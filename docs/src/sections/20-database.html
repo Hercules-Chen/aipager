@@ -1,0 +1,22 @@
+<section id="database" data-title="資料庫" data-group="維運">
+  <p>SQLite，WAL 模式，使用 Node 內建 <code>node:sqlite</code>，不需要編譯原生模組，Node 版本變動也不會有 ABI 不相容的問題。DDL 可重複執行，已在 Node 22.23 實測建立成功。資料檔在 <code>/var/lib/claude-relay/relay.db</code>，每日以 <code>VACUUM INTO</code> 備份到 <code>backup/</code>，保留 14 份。</p>
+  <div class="tablewrap"><table>
+    <tr><th>資料表</th><th>用途</th><th>保留</th></tr>
+    <tr><td><code>nodes</code></td><td>節點 metadata、facts、生命週期狀態、在線狀態、最後心跳與醒來時間</td><td>永久</td></tr>
+    <tr><td><code>node_meta_history</code></td><td>metadata 每一版完整快照與修改者</td><td>永久</td></tr>
+    <tr><td><code>enrollments</code></td><td>加入碼（只存雜湊）、preset、使用紀錄</td><td>使用或過期後 90 天</td></tr>
+    <tr><td><code>tokens</code></td><td>token 雜湊與範圍</td><td>撤銷後 90 天</td></tr>
+    <tr><td><code>threads</code></td><td>thread 計數與累計花費</td><td>90 天</td></tr>
+    <tr><td><code>tasks</code></td><td>任務本體、狀態、租約、平台需求、結果</td><td>90 天</td></tr>
+    <tr><td><code>task_events</code></td><td>進度事件</td><td>30 天</td></tr>
+    <tr><td><code>messages</code></td><td>信箱（含任務完成通知）</td><td>90 天</td></tr>
+    <tr><td><code>approvals</code></td><td>審核紀錄</td><td>90 天</td></tr>
+    <tr><td><code>claude_sessions</code></td><td>(thread, node, profile) → Claude session id，供 resume</td><td>30 天</td></tr>
+    <tr><td><code>blobs</code></td><td>附件索引（實體檔在 <code>/var/lib/claude-relay/blobs/ab/cd/&lt;sha256&gt;</code>）</td><td>14 天未引用即刪</td></tr>
+    <tr><td><code>events</code></td><td>稽核與 SSE 來源，只增不改</td><td>30 天</td></tr>
+  </table></div>
+  <details>
+    <summary>完整 DDL（hub-schema.sql）</summary>
+    <div class="inner"><div class="codebox"><div class="label"><span>spec/sql/hub-schema.sql</span><button type="button" data-copy>複製</button></div><pre><code><!--INCLUDE:spec/sql/hub-schema.sql--></code></pre></div></div>
+  </details>
+</section>

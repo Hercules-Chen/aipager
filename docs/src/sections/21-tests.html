@@ -1,0 +1,46 @@
+<section id="tests" data-title="驗證計畫" data-group="交付">
+  <p>每一項都是可以照著做的步驟。測試環境：Hub 為 relay-hub（Ubuntu，MagicDNS <code>relay-hub</code>）；Worker 為 build-pc（Windows）、macbook-hc（macOS 筆電）、linux-box（Linux）；互動機 dev-pc 或 dev-mac。<b>P0 階段要先做 T03–T05、T09、T16、T29、T31</b>，因為它們確認了本設計依賴的 Claude Code CLI 行為、各平台登入方式、筆電睡眠行為與 Ubuntu 26.04 相容性。</p>
+
+  <h3>基本功能（T01–T22）</h3>
+  <div class="tablewrap"><table>
+    <tr><th>#</th><th>項目</th><th>步驟</th><th>預期結果</th><th>觀察點</th></tr>
+    <tr><td class="num">T01</td><td>Hub 健康檢查</td><td class="wrap">分別在 Windows、Mac、Linux 執行 <code>curl http://relay-hub:7300/api/v1/health</code></td><td>三台都回 <code>{"ok":true,…,"protocol":"1.0"}</code></td><td>hub Log 有三筆 <code>http.request</code></td></tr>
+    <tr><td class="num">T02</td><td>Worker 上線</td><td class="wrap">三台以 T23 的流程加入並核准後執行 <code>relayctl nodes</code></td><td>三台 active / online，facts 中 os / arch 正確</td><td>各平台服務主控台輸出印出 config、node_id、claude 版本</td></tr>
+    <tr><td class="num">T03</td><td>Windows 冒煙任務</td><td class="wrap"><code>relayctl send --to worker@build-pc --profile echo --title "冒煙" --text "執行 hostname 與 whoami 並回報" --wait 120</code></td><td>succeeded；summary 含 build-pc 主機名；<code>result_source=submit_tool</code></td><td>任務目錄檔案齊全；stream.jsonl 第一筆 <code>type=system</code>、最後一筆 <code>type=result</code></td></tr>
+    <tr><td class="num">T04</td><td>macOS 冒煙任務</td><td class="wrap">同 T03，改 <code>--to worker@macbook-hc</code>，內容加「執行 sw_vers」</td><td>succeeded；回報 macOS 版本</td><td>同 T03</td></tr>
+    <tr><td class="num">T05</td><td>Linux 冒煙任務</td><td class="wrap">同 T03，改 <code>--to worker@linux-box</code>，內容加「讀取 /etc/os-release」</td><td>succeeded；回報發行版</td><td>同 T03</td></tr>
+    <tr><td class="num">T06</td><td>互動 MCP</td><td class="wrap">在 dev 機開 Claude Code，輸入 <code>/mcp</code>；再輸入「列出 relay 節點」</td><td>relay 為 connected；列出各機器、顯示名稱與在線狀態</td><td>mcp Log</td></tr>
+    <tr><td class="num">T07</td><td>跨 OS 互動派工</td><td class="wrap">在 dev-mac 的 Claude 輸入「叫 build-pc 用 echo profile 回報 dotnet --info 的 SDK 版本」</td><td>Claude 自動派工、等待、回報版本</td><td>Dashboard 任務詳情的時間軸</td></tr>
+    <tr><td class="num">T08</td><td>訊息與未讀提示</td><td class="wrap">在 linux-box：<code>relayctl msg --to main@dev-pc --text "測試訊息 中文 ✓"</code>；在 dev-pc 的 Claude 隨便輸入一句</td><td>回應前出現 <code>[Relay] 1 則未讀…</code>；請 Claude 讀信箱，中文正確</td><td>hint Log</td></tr>
+    <tr><td class="num">T09</td><td>人工審核（確認 permission-prompt-tool 與 MCP_TOOL_TIMEOUT）</td><td class="wrap">對 build profile 送「在工作目錄建立 relay-test.txt 後執行 git push」，在 Dashboard 按拒絕</td><td>任務出現 waiting_approval；拒絕後 Claude 改為不推送，結果說明原因</td><td>approvals 表；stream.jsonl 中的 permission 往返</td></tr>
+    <tr><td class="num">T10</td><td>審核逾時</td><td class="wrap">同 T09，但 <code>approval.timeout_sec</code> 設 60，不處理</td><td>60 秒後自動 deny，任務繼續並完成</td><td>approvals.state = expired</td></tr>
+    <tr><td class="num">T11</td><td>取消（Windows）</td><td class="wrap">對 build-pc 送「執行 <code>ping -n 300 127.0.0.1</code>」，10 秒後 <code>relayctl cancel</code></td><td>60 秒內 cancelled；工作管理員中沒有殘留 claude.exe / ping.exe</td><td>worker Log 的 <code>taskkill</code> 紀錄</td></tr>
+    <tr><td class="num">T12</td><td>取消（macOS / Linux）</td><td class="wrap">對 macbook-hc 與 linux-box 送「執行 <code>sleep 300</code>」，10 秒後取消；再執行 <code>ps -o pid,stat,comm -g &lt;pgid&gt;</code></td><td>cancelled；群組內沒有非 Z 狀態的程序</td><td>worker Log 的 pgid 與信號紀錄</td></tr>
+    <tr><td class="num">T13</td><td>逾時</td><td class="wrap">同 T11 / T12 但 <code>timeout_sec=60</code>，不取消</td><td>failed，<code>E_TIMEOUT</code></td><td>result.json</td></tr>
+    <tr><td class="num">T14</td><td>防迴圈</td><td class="wrap">送任務要求「把這個任務原封不動轉給 worker@build-pc」</td><td>第 5 層建立時被拒，<code>E_HOP_LIMIT</code></td><td>trace 頁可見 4 層</td></tr>
+    <tr><td class="num">T15</td><td>冪等</td><td class="wrap">用相同 <code>idempotency_key</code> 呼叫兩次 <code>POST /tasks</code></td><td>第二次回 200 與相同 task_id</td><td>tasks 表只有一筆</td></tr>
+    <tr><td class="num">T16</td><td>重開機免登入（確認各平台的 Claude 登入方式）</td><td class="wrap">三台 Worker 重開機、不登入，再跑 T03–T05。macOS 使用 LaunchDaemon + oauth_token</td><td>三台結果與 T03–T05 相同</td><td>Windows 排程上次結果；<code>launchctl print system/com.claude-relay.worker</code>；<code>systemctl --user status</code></td></tr>
+    <tr><td class="num">T17</td><td>Hub 重啟</td><td class="wrap">送 3 分鐘的任務，執行中 <code>sudo systemctl stop claude-relay-hub</code>，1 分鐘後再 start</td><td>任務最終 succeeded，結果有送達</td><td>worker Log 的 pending result 重送紀錄</td></tr>
+    <tr><td class="num">T18</td><td>Worker 離線</td><td class="wrap">停止 linux-box Worker，用 <code>--on-unavailable queue</code> 送任務，2 分鐘後再啟動</td><td>45 秒內轉 asleep；任務維持 queued；啟動後被領走完成</td><td>nodes 表 last_seen、presence</td></tr>
+    <tr><td class="num">T19</td><td>平台路由</td><td class="wrap">macbook-hc 與 linux-box 都是 tester；送 <code>--to worker@role:tester --requires-os macos</code>，再對 build-pc 送 <code>--requires-os linux</code></td><td>第一筆只由 macbook-hc 領取；第二筆建立時回 <code>E_REQUIREMENT_UNMET</code></td><td>tasks.assigned_node</td></tr>
+    <tr><td class="num">T20</td><td>跨平台流水線</td><td class="wrap">送 <a data-ref="protocol"></a> 的 task-create 範例（linux-box 需有標籤 <code>browser=chromium</code>）</td><td>build-pc 編譯成功後自動建立 E2E 任務，由 linux-box 執行，兩者同一 thread</td><td>Thread 頁</td></tr>
+    <tr><td class="num">T21</td><td>編碼與換行稽核</td><td class="wrap">從 dev-mac 送含繁體中文的任務給 build-pc，完成後在三台執行 <code>relayctl doctor --encoding</code></td><td>中文正確；所有 .json / .jsonl / .txt 為 UTF-8 無 BOM、LF；.bat 純 ASCII；.ps1 有 BOM</td><td>doctor 輸出</td></tr>
+    <tr><td class="num">T22</td><td>Hub 備份與還原</td><td class="wrap"><code>relayctl admin backup</code>；停止 Hub；<code>relayctl admin restore &lt;file&gt;</code>；啟動</td><td>任務與節點資料完整</td><td><code>/var/lib/claude-relay/backup/</code></td></tr>
+  </table></div>
+
+  <h3>節點管理與在線狀態（T23–T33）</h3>
+  <div class="tablewrap"><table>
+    <tr><th>#</th><th>項目</th><th>步驟</th><th>預期結果</th><th>觀察點</th></tr>
+    <tr><td class="num">T23</td><td>加入新機器</td><td class="wrap">① <code>relayctl enroll create --name "測試機" --power desktop --role tester</code> ② 新機器 <code>relayctl join --hub http://relay-hub:7300 --code &lt;code&gt;</code> ③ <code>relayctl service install</code> ④ Dashboard 按核准</td><td>join 後為 pending 且 Dashboard 顯示 online；核准後 active，可領任務</td><td>join 印出寫入的 node.json 路徑；events 中 <code>node.enrolled</code>、<code>node.state</code></td></tr>
+    <tr><td class="num">T24</td><td>加入碼防護</td><td class="wrap">同一加入碼再 join 一次；使用過期加入碼；連續送 6 次錯誤加入碼</td><td>前兩者 422 <code>E_ENROLL_INVALID</code>；第 6 次 429 <code>E_RATE_LIMIT</code></td><td>enrollments 表 used_at；hub Log</td></tr>
+    <tr><td class="num">T25</td><td>metadata 即時生效與衝突</td><td class="wrap">① 送 <code>--requires-label gpu=yes</code> 的任務給 role tester（沒有機器符合，排隊）② <code>relayctl nodes set linux-box --label gpu=yes</code> ③ 用舊的 meta_version 直接 PATCH 一次</td><td>② 之後 15 秒內任務被 linux-box 領走；③ 回 409 <code>E_META_CONFLICT</code></td><td><code>relayctl nodes history linux-box</code> 可見新版本</td></tr>
+    <tr><td class="num">T26</td><td>profiles 熱重載</td><td class="wrap">在 linux-box 的 profiles.json 新增 profile 存檔；再故意存一份 JSON 格式錯誤的版本</td><td>新增後下一次心跳 Dashboard 出現新 profile；錯誤版本時保留原設定、Dashboard 顯示 <code>profiles_error</code></td><td>worker Log 的 <code>profiles.reload</code></td></tr>
+    <tr><td class="num">T27</td><td>派給睡著的筆電（confirm）</td><td class="wrap">macbook-hc 闔蓋 2 分鐘後，在 dev-pc 的 Claude 輸入「叫 macbook-hc 跑 iOS 單元測試」</td><td>任務未建立；Claude 告知「已 N 分鐘沒有回應，可能睡著」並詢問排隊 / 改派 / 取消</td><td>MCP Log 中 409 <code>E_TARGET_UNAVAILABLE</code>；tasks 表沒有新列</td></tr>
+    <tr><td class="num">T28</td><td>排隊等待與醒來通知</td><td class="wrap">接 T27，回答「排隊」；10 分鐘後打開筆電</td><td>任務建立時帶 <code>W_TARGET_ASLEEP</code>；開蓋後 1 分鐘內被領取；dev-pc 下次輸入時 relay-hint 提示「macbook-hc 已回來，開始執行…」</td><td>信箱 <code>system.notice</code>；events 的 <code>node.presence</code> asleep → online</td></tr>
+    <tr><td class="num">T29</td><td>執行中闔蓋</td><td class="wrap">① 對 macbook-hc 送一個約 5 分鐘的任務，執行中闔蓋 10 分鐘再打開 ② 重做一次，把該節點 <code>suspend_grace_sec</code> 設 120，闔蓋 5 分鐘</td><td>① 任務續跑並 succeeded，發派者收到「執行中的機器睡著了」通知 ② 任務 failed，<code>E_LEASE_LOST</code>（detail: node_asleep），醒來後 Worker 終止該任務並保留本機結果</td><td>tasks.node_asleep_since、asleep_ms_total；worker Log 的 <code>resumed_from_sleep</code></td></tr>
+    <tr><td class="num">T30</td><td>逾時只算醒著時間</td><td class="wrap">對 macbook-hc 送 <code>timeout_sec=300</code> 的任務（約 4 分鐘），執行 1 分鐘後闔蓋 10 分鐘再打開（suspend_grace 30 分鐘）</td><td>任務 succeeded，不會因牆上時間超過 300 秒而 <code>E_TIMEOUT</code></td><td>result.json 的 duration_ms 與 Worker Log 的 sleep gap</td></tr>
+    <tr><td class="num">T31</td><td>Ubuntu 26.04 安裝</td><td class="wrap">在全新的 Ubuntu 26.04 LTS 執行 Hub 安裝步驟（<a data-ref="deploy"></a>）與 T01、T22</td><td>install-hub.sh 全部步驟成功；服務正常</td><td>install-hub.sh 輸出；<code>systemctl status claude-relay-hub</code></td></tr>
+    <tr><td class="num">T32</td><td>重灌同一台</td><td class="wrap"><code>relayctl enroll create --node-id linux-box</code>，在 linux-box 刪除設定後重新 join</td><td>node_id 不變、metadata 保留、meta_version + 1；舊 token 呼叫 API 回 401</td><td>tokens 表 revoked_at</td></tr>
+    <tr><td class="num">T33</td><td>退役</td><td class="wrap"><code>relayctl nodes retire &lt;id&gt;</code>，之後在該機觀察 Worker</td><td>Worker 心跳收到 401 後停止並在 Log 說明「此節點已退役」；<code>relayctl nodes</code> 預設不再列出</td><td>worker Log；Dashboard「已退役」篩選</td></tr>
+  </table></div>
+</section>

@@ -1,0 +1,16 @@
+<relay_task id="{{task_id}}" thread="{{thread_id}}" from="{{from}}" hop="{{hop}}" attempt="{{attempt}}">
+<title>{{title}}</title>
+<instructions>
+{{instructions}}
+</instructions>
+<inputs>
+repo: {{inputs.repo.url}} ref={{inputs.repo.ref}} commit={{inputs.repo.commit}} (already checked out in {{workdir}})
+files: {{inputs.files_local_paths}}
+vars: {{inputs.vars_json}}
+</inputs>
+<expected_output format="{{expected_output.format}}">
+schema: {{expected_output.schema_json}}
+artifacts (collected by the worker after you finish): {{expected_output.artifacts}}
+</expected_output>
+<limits timeout_sec="{{limits.timeout_sec}}" max_turns="{{limits.max_turns}}" />
+</relay_task>

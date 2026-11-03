@@ -1,0 +1,10 @@
+{
+  "enrollment_id": "enr_01JBY2K7M3N4P5Q6R7S8T9V0W1",
+  "code": "rle_K7QF-2XMA-PL4D-7RTE",
+  "expires_at": "2026-11-04T08:00:00.000Z",
+  "join_commands": {
+    "windows": "relayctl join --hub http://relay-hub:7300 --code rle_K7QF-2XMA-PL4D-7RTE",
+    "macos": "relayctl join --hub http://relay-hub:7300 --code rle_K7QF-2XMA-PL4D-7RTE",
+    "linux": "relayctl join --hub http://relay-hub:7300 --code rle_K7QF-2XMA-PL4D-7RTE"
+  }
+}

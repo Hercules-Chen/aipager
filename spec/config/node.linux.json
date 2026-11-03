@@ -1,0 +1,29 @@
+{
+  "node_id": "linux-box",
+  "hub_url": "http://relay-hub:7300",
+  "token_file": "/home/<user>/.config/claude-relay/node.token",
+  "claude_path": "/home/<user>/.local/bin/claude",
+  "claude_auth": {
+    "mode": "login"
+  },
+  "worker": {
+    "enabled": true,
+    "max_concurrent": 2,
+    "heartbeat_sec": 15,
+    "claim_wait_sec": 25,
+    "lease_renew_sec": 20,
+    "progress_throttle_ms": 2000,
+    "tasks_dir": "/home/<user>/.local/state/claude-relay/worker/tasks",
+    "upload_stream_log": true,
+    "mcp_tool_timeout_ms": 900000,
+    "keep_awake": false
+  },
+  "mcp": {
+    "default_agent": "main"
+  },
+  "log": {
+    "level": "info",
+    "dir": "/home/<user>/.local/state/claude-relay/logs",
+    "keep_days": 30
+  }
+}

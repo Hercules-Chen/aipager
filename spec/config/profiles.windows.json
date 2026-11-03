@@ -1,0 +1,41 @@
+{
+  "profiles": {
+    "echo": {
+      "description": "Smoke test: read-only commands, reports machine info. 驗證用。",
+      "workdir": "C:\\ProgramData\\ClaudeRelay\\worker\\sandbox",
+      "model": "haiku",
+      "permission_mode": "default",
+      "allowed_tools": ["Bash(hostname)", "Bash(whoami)", "Bash(dotnet --info)", "Read"],
+      "disallowed_tools": ["Edit", "Write", "WebFetch", "WebSearch"],
+      "approval": { "auto_allow": [], "auto_deny": ["*"], "timeout_sec": 120 },
+      "max_turns": 5,
+      "timeout_sec": 120,
+      "concurrency_key": "echo"
+    },
+    "build": {
+      "description": "Compile the ERP solution on a given commit and report errors. Does not modify code.",
+      "workdir": "D:\\RelayWork\\erp",
+      "repo": { "allow_remote": ["git@gitlab.local:erp/erp.git"], "require_clean": true, "checkout": "detached_commit" },
+      "model": "sonnet",
+      "permission_mode": "acceptEdits",
+      "allowed_tools": [
+        "Read", "Grep", "Glob",
+        "Bash(git status:*)", "Bash(git log:*)", "Bash(git diff:*)",
+        "Bash(dotnet build:*)", "Bash(dotnet test:*)",
+        "Bash(powershell -NoProfile -File .\\build.ps1:*)"
+      ],
+      "disallowed_tools": ["Bash(git push:*)", "Bash(git reset --hard:*)", "Bash(rm:*)", "Bash(del:*)", "WebFetch", "WebSearch"],
+      "approval": {
+        "auto_allow": [],
+        "auto_deny": ["Bash(git push --force*)", "Bash(format*)"],
+        "timeout_sec": 600
+      },
+      "max_turns": 40,
+      "timeout_sec": 3600,
+      "env": { "DOTNET_CLI_TELEMETRY_OPTOUT": "1", "DOTNET_NOLOGO": "1" },
+      "pre_commands": ["git fetch origin --prune"],
+      "artifacts_max_mb": 50,
+      "concurrency_key": "erp-workdir"
+    }
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "task_id": "01JBY3A0B1C2D3E4F5G6H7J8K9",
+  "thread_id": "01JBY3A0B1C2D3E4F5G6H7J8K8",
+  "trace_id": "9a8b7c6d5e4f30211203405060708090",
+  "state": "queued",
+  "expires_at": "2026-11-04T09:41:12.004Z",
+  "target_status": {
+    "node_id": "macbook-hc",
+    "display_name": "Hercules 的 MacBook",
+    "power": "laptop",
+    "state": "active",
+    "presence": "asleep",
+    "last_seen": "2026-11-03T08:58:40.120Z",
+    "silent_sec": 2552
+  },
+  "warnings": [
+    {
+      "code": "W_TARGET_ASLEEP",
+      "message": "macbook-hc（Hercules 的 MacBook，筆電）已 42 分鐘沒有回應，可能睡著了。任務已排隊，最晚等到 2026-11-04 17:41（台北時間）。",
+      "params": {
+        "node_id": "macbook-hc",
+        "silent_sec": 2552
+      }
+    }
+  ],
+  "alternatives": []
+}

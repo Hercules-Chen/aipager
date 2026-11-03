@@ -1,0 +1,21 @@
+{
+  "v": "1.0",
+  "id": "01JBX7SPQ1R2S3T4V5W6X7Y8Z9",
+  "kind": "approval.request",
+  "from": { "node": "build-pc", "agent": "worker" },
+  "to": { "node": "hub", "agent": "human" },
+  "thread_id": "01JBX7Q3M8ZK4N2P6R9T0V1W2X",
+  "parent_id": "01JBX7Q3M8ZK4N2P6R9T0V1W2Y",
+  "trace": { "trace_id": "4f1c2a9be0d34c7a8b6e5d4c3b2a1f00", "hop": 1, "path": ["main@dev-pc", "worker@build-pc"] },
+  "created_at": "2026-11-03T06:19:40.551Z",
+  "payload": {
+    "approval_id": "01JBX7SPQ1R2S3T4V5W6X7Y8ZA",
+    "task_id": "01JBX7Q3M8ZK4N2P6R9T0V1W2Y",
+    "tool_name": "Bash",
+    "tool_input": { "command": "git push origin relay/01JBX7Q3M8ZK4N2P6R9T0V1W2Y", "description": "推送修正分支" },
+    "reason": "profile build 未自動允許 git push",
+    "risk": "high",
+    "timeout_sec": 600,
+    "on_timeout": "deny"
+  }
+}

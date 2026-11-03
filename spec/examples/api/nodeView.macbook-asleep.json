@@ -1,0 +1,32 @@
+{
+  "node_id": "macbook-hc",
+  "state": "active",
+  "presence": "asleep",
+  "last_seen": "2026-11-03T08:58:40.120Z",
+  "silent_sec": 2552,
+  "last_wake_at": "2026-11-03T01:12:03.000Z",
+  "presence_settings": { "asleep_after_sec": 60, "offline_after_sec": 604800, "suspend_grace_sec": 1800, "alert_on_offline": false },
+  "meta": {
+    "display_name": "Hercules 的 MacBook",
+    "roles": ["tester", "ios-builder"],
+    "labels": { "xcode": "16", "location": "office" },
+    "power": "laptop",
+    "owner": "hercules",
+    "notes": "週一到週五在辦公室，晚上帶回家。"
+  },
+  "meta_version": 4,
+  "facts": {
+    "os": "macos",
+    "arch": "arm64",
+    "os_version": "macOS 26.1",
+    "hostname": "Hercules-MacBook-Pro.local",
+    "worker_version": "0.3.0",
+    "claude_version": "2.9.1 (Claude Code)",
+    "claude_auth_mode": "oauth_token",
+    "worker_enabled": true
+  },
+  "profiles": [ { "name": "echo" }, { "name": "ios" } ],
+  "profiles_error": null,
+  "capacity": { "max_concurrent": 1, "running": 0 },
+  "online_hours_7d": 41.5
+}

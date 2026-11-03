@@ -1,0 +1,132 @@
+<section id="deploy" data-title="部署" data-group="維運">
+  <h3>發行檔結構</h3>
+  <div class="codebox"><div class="label"><span>同一份發行檔用於三個平台；Windows 放 C:\Program Files\ClaudeRelay，其他放 /opt/claude-relay</span><button type="button" data-copy>複製</button></div><pre><code>claude-relay/
+  bin/        hub.js  worker.js  relay-mcp.js  relay-hint.js  relayctl.js
+  lib/        relay-client/ …（含 platform/windows.js、platform/posix.js）
+  ui/         index.html  app.js  i18n/zh-TW.json  i18n/en.json
+  templates/  hub.json  node.*.json  profiles.*.json
+  scripts/
+    windows/  start-worker.bat  start-worker.ps1  register-worker-task.ps1
+    posix/    start-worker.sh
+    linux/    claude-relay-hub.service  claude-relay-worker.service  install-hub.sh
+    macos/    com.claude-relay.worker.plist
+  node_modules/
+  package.json   ← "volta": { "node": "22.x.x" }</code></pre></div>
+
+  <h3>Hub（Ubuntu 24.04 / 26.04）</h3>
+  <div class="note"><b>Ubuntu 26.04 注意：</b>Ubuntu 從 25.10 開始預設改用 Rust 版 coreutils（uutils）與 sudo-rs，26.04 LTS 預期沿用。install-hub.sh 只用 <code>install</code>、<code>useradd</code>、<code>date</code> 等常見參數，理論上相容，但仍列為實機驗證項目 T31。若遇到不相容，可先安裝 GNU 版 coreutils 再執行。</div>
+  <ol class="steps">
+    <li><div>安裝並登入 Tailscale，記下 <code>tailscale ip -4</code>（例：100.101.102.103）</div></li>
+    <li><div>下載 Node 22 官方 tarball 解壓到 <code>/opt/node-v22</code>；確認 <code>/opt/node-v22/bin/node -e "require('node:sqlite'); console.log('sqlite ok')"</code></div></li>
+    <li><div>發行檔放到 <code>/opt/claude-relay</code>，執行 <code>/opt/node-v22/bin/npm ci --omit=dev</code></div></li>
+    <li><div><code>sudo /opt/claude-relay/scripts/linux/install-hub.sh --allow-cidr 100.64.0.0/10</code>：建立系統帳號、目錄與權限、systemd unit、防火牆規則</div></li>
+    <li><div>編輯 <code>/etc/claude-relay/hub.json</code> 的 <code>listen.host</code> 為步驟 1 的 IP</div></li>
+    <li><div><code>sudo -u claude-relay /opt/node-v22/bin/node /opt/claude-relay/bin/relayctl.js admin init --config /etc/claude-relay/hub.json</code>：初始化 DB、印出 admin token（只顯示一次，請存進你自己的 relayctl 設定）</div></li>
+    <li><div><code>sudo systemctl enable --now claude-relay-hub</code>，用 <code>journalctl -u claude-relay-hub -f</code> 觀察</div></li>
+    <li><div>驗證 T01、T22；Ubuntu 26.04 另做 T31</div></li>
+  </ol>
+  <details>
+    <summary>install-hub.sh / claude-relay-hub.service</summary>
+    <div class="inner">
+      <div class="codebox"><div class="label"><span>spec/scripts/linux/install-hub.sh</span><button type="button" data-copy>複製</button></div><pre><code><!--INCLUDE:spec/scripts/linux/install-hub.sh--></code></pre></div>
+      <div class="codebox"><div class="label"><span>spec/scripts/linux/claude-relay-hub.service</span><button type="button" data-copy>複製</button></div><pre><code><!--INCLUDE:spec/scripts/linux/claude-relay-hub.service--></code></pre></div>
+    </div>
+  </details>
+  <details>
+    <summary>hub.json</summary>
+    <div class="inner"><div class="codebox"><div class="label"><span>spec/config/hub.json</span><button type="button" data-copy>複製</button></div><pre><code><!--INCLUDE:spec/config/hub.json--></code></pre></div></div>
+  </details>
+
+  <h3>每台新機器的共同步驟（Worker 或互動機都一樣）</h3>
+  <ol class="steps">
+    <li><div>安裝 Tailscale 並加入同一個 tailnet；<code>curl http://relay-hub:7300/api/v1/health</code> 有回應</div></li>
+    <li><div>安裝 Git 與 Claude Code（原生安裝版），以要跑 Worker 的帳號執行一次 <code>claude</code> 完成登入</div></li>
+    <li><div>安裝 Volta，<code>volta install node@22</code>，確認 <code>node -e "console.log('node-ok')"</code></div></li>
+    <li><div>放置發行檔並 <code>npm ci --omit=dev</code></div></li>
+    <li><div>向管理者取得加入碼（Dashboard「新增機器」或 <code>relayctl enroll create</code>）</div></li>
+    <li><div><code>relayctl join --hub http://relay-hub:7300 --code &lt;加入碼&gt;</code>：自動檢查環境、取得 token、依平台寫好 node.json / token 檔（含權限）/ 只含 echo 的 profiles.json。只當互動機時加 <code>--no-worker</code></div></li>
+    <li><div>要接任務的機器：<code>relayctl service install</code>（細節見下方各平台）</div></li>
+    <li><div>管理者在 Dashboard 核准；之後依需要編輯 profiles.json、為每個 profile 準備專屬 clone</div></li>
+  </ol>
+
+  <h3>Windows Worker</h3>
+  <ol class="steps">
+    <li><div>額外安裝 Git for Windows（Claude 的 Bash 工具需要）</div></li>
+    <li><div><code>relayctl join</code> 已把設定寫到 <code>C:\ProgramData\ClaudeRelay\node\</code> 並以 <code>icacls</code> 限制 node.token</div></li>
+    <li><div>以系統管理員執行 <code>relayctl service install</code>：內部執行 <code>register-worker-task.ps1</code>（會詢問該帳號密碼，讓排程在未登入時也能執行）；也可手動執行該腳本</div></li>
+    <li><div>電源計畫：插電時睡眠設為「永不」</div></li>
+    <li><div>驗證 T03</div></li>
+  </ol>
+  <details>
+    <summary>node.windows.json / start-worker.bat / start-worker.ps1 / register-worker-task.ps1</summary>
+    <div class="inner">
+      <div class="codebox"><div class="label"><span>spec/config/node.windows.json</span><button type="button" data-copy>複製</button></div><pre><code><!--INCLUDE:spec/config/node.windows.json--></code></pre></div>
+      <div class="codebox"><div class="label"><span>spec/scripts/windows/start-worker.bat（ASCII、CRLF）</span><button type="button" data-copy>複製</button></div><pre><code><!--INCLUDE:spec/scripts/windows/start-worker.bat--></code></pre></div>
+      <div class="codebox"><div class="label"><span>spec/scripts/windows/start-worker.ps1（UTF-8 BOM、CRLF）</span><button type="button" data-copy>複製</button></div><pre><code><!--INCLUDE:spec/scripts/windows/start-worker.ps1--></code></pre></div>
+      <div class="codebox"><div class="label"><span>spec/scripts/windows/register-worker-task.ps1</span><button type="button" data-copy>複製</button></div><pre><code><!--INCLUDE:spec/scripts/windows/register-worker-task.ps1--></code></pre></div>
+    </div>
+  </details>
+
+  <h3>macOS Worker</h3>
+  <ol class="steps">
+    <li><div>需要建置 iOS 的機器先裝 Xcode 與 Command Line Tools</div></li>
+    <li><div><code>relayctl join</code> 已把設定寫到 <code>~/Library/Application Support/ClaudeRelay/node/</code> 並 <code>chmod 600</code>；join 時建議加 <code>--power laptop</code></div></li>
+    <li><div>若要重開機免登入：執行 <code>claude setup-token</code>，把 token 存成 <code>claude-oauth.token</code>（<code>chmod 600</code>），node.json 設 <code>claude_auth.mode = "oauth_token"</code></div></li>
+    <li><div><code>relayctl service install --mode agent</code>（需登入）或 <code>sudo relayctl service install --mode daemon --user &lt;帳號&gt;</code>（免登入）會自動完成下列兩步。手動做法：把 plist 中的 <code>USERNAME</code> 換成實際帳號名稱。需要登入才執行時：放到 <code>~/Library/LaunchAgents/</code>，執行 <code>launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.claude-relay.worker.plist</code></div></li>
+    <li><div>免登入時：改放 <code>/Library/LaunchDaemons/</code>，加上 <code>UserName</code>，執行 <code>sudo launchctl bootstrap system /Library/LaunchDaemons/com.claude-relay.worker.plist</code></div></li>
+    <li><div>要隨時能接任務：<code>sudo pmset -c sleep 0</code>（插電時不睡眠）</div></li>
+    <li><div>驗證 T04</div></li>
+  </ol>
+  <details>
+    <summary>node.macos.json / com.claude-relay.worker.plist</summary>
+    <div class="inner">
+      <div class="codebox"><div class="label"><span>spec/config/node.macos.json</span><button type="button" data-copy>複製</button></div><pre><code><!--INCLUDE:spec/config/node.macos.json--></code></pre></div>
+      <div class="codebox"><div class="label"><span>spec/scripts/macos/com.claude-relay.worker.plist</span><button type="button" data-copy>複製</button></div><pre><code><!--INCLUDE:spec/scripts/macos/com.claude-relay.worker.plist--></code></pre></div>
+    </div>
+  </details>
+
+  <h3>Linux Worker</h3>
+  <ol class="steps">
+    <li><div><code>relayctl join</code> 已把設定寫到 <code>~/.config/claude-relay/</code> 並 <code>chmod 600</code></div></li>
+    <li><div><code>relayctl service install</code> 會把 unit 複製到 <code>~/.config/systemd/user/claude-relay-worker.service</code> 並執行下面兩步（linger 需要 sudo，會印出指令請你執行）</div></li>
+    <li><div><code>sudo loginctl enable-linger $USER</code>（登出與重開機後仍執行）</div></li>
+    <li><div><code>systemctl --user daemon-reload &amp;&amp; systemctl --user enable --now claude-relay-worker</code></div></li>
+    <li><div>用 <code>journalctl --user -u claude-relay-worker -f</code> 觀察，驗證 T05</div></li>
+  </ol>
+  <details>
+    <summary>node.linux.json / claude-relay-worker.service / start-worker.sh</summary>
+    <div class="inner">
+      <div class="codebox"><div class="label"><span>spec/config/node.linux.json</span><button type="button" data-copy>複製</button></div><pre><code><!--INCLUDE:spec/config/node.linux.json--></code></pre></div>
+      <div class="codebox"><div class="label"><span>spec/scripts/linux/claude-relay-worker.service</span><button type="button" data-copy>複製</button></div><pre><code><!--INCLUDE:spec/scripts/linux/claude-relay-worker.service--></code></pre></div>
+      <div class="codebox"><div class="label"><span>spec/scripts/posix/start-worker.sh（macOS 與 Linux 共用，LF）</span><button type="button" data-copy>複製</button></div><pre><code><!--INCLUDE:spec/scripts/posix/start-worker.sh--></code></pre></div>
+    </div>
+  </details>
+
+  <h3>互動機（任一 OS）</h3>
+  <ol class="steps">
+    <li><div>做共同步驟 1–6，join 時加 <code>--no-worker</code>（若這台也要接任務就不加，並做該平台的 Worker 步驟）</div></li>
+    <li><div>依 <a data-ref="interactive"></a> 註冊 MCP 並合併 hooks 設定</div></li>
+    <li><div>驗證 T06–T08</div></li>
+  </ol>
+
+  <h3>relayctl 指令</h3>
+  <div class="tablewrap"><table>
+    <tr><th>指令</th><th>用途</th></tr>
+    <tr><td><code>relayctl doctor</code></td><td>印出 OS / 架構、設定檔路徑、node_id、hub_url、Node 與 claude 版本、登入模式、token 是否有效、時鐘差、資料目錄是否可寫；任一項失敗 exit code 非 0</td></tr>
+    <tr><td><code>relayctl doctor --encoding</code></td><td>檢查設定與 Log 檔的編碼與換行</td></tr>
+    <tr><td><code>relayctl nodes</code></td><td>節點清單（含 os / arch）</td></tr>
+    <tr><td><code>relayctl send --to worker@build-pc --profile echo --title "冒煙測試" --text "執行 hostname 與 whoami 並回報" --wait 120</code></td><td>送任務並等待；可加 <code>--requires-os linux</code></td></tr>
+    <tr><td><code>relayctl tasks --state running</code></td><td>任務清單</td></tr>
+    <tr><td><code>relayctl show &lt;task_id&gt; --events</code></td><td>任務詳情與進度</td></tr>
+    <tr><td><code>relayctl cancel &lt;task_id&gt;</code></td><td>取消</td></tr>
+    <tr><td><code>relayctl msg --to main@dev-pc --text "…"</code></td><td>送訊息</td></tr>
+    <tr><td><code>relayctl inbox --agent main</code></td><td>讀信箱（不 ack）</td></tr>
+    <tr><td><code>relayctl approvals</code> / <code>approve &lt;id&gt;</code> / <code>deny &lt;id&gt; --note "…"</code></td><td>審核（admin）</td></tr>
+    <tr><td><code>relayctl tail</code></td><td>即時顯示 SSE 事件（admin）</td></tr>
+    <tr><td><code>relayctl trace &lt;trace_id&gt;</code></td><td>合併追蹤</td></tr>
+    <tr><td><code>relayctl enroll create --name … --power laptop --role … --label k=v --ttl 24h</code></td><td>建立加入碼（admin）</td></tr>
+    <tr><td><code>relayctl join --hub … --code …</code> / <code>relayctl service install|uninstall|status</code></td><td>本機加入與服務管理</td></tr>
+    <tr><td><code>relayctl nodes show|set|history|rollback|approve|drain|disable|enable|retire</code></td><td>節點管理（見 <a data-ref="nodes"></a>）</td></tr>
+    <tr><td><code>relayctl admin backup</code> / <code>admin restore &lt;file&gt;</code></td><td>備份與還原（還原需先停止 Hub）</td></tr>
+  </table></div>
+</section>

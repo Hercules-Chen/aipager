@@ -1,0 +1,106 @@
+<section id="protocol" data-title="訊息封包（Envelope）" data-group="協定">
+  <p>任務、進度、結果、訊息、審核全部使用同一個封包格式，只有 <code>kind</code> 與 <code>payload</code> 不同。完整 JSON Schema（draft 2020-12）見本節最後；所有範例都已用 Ajv 驗證通過。</p>
+
+  <h3>共同欄位</h3>
+  <div class="tablewrap"><table>
+    <tr><th>欄位</th><th>型別</th><th>誰填</th><th>說明</th></tr>
+    <tr><td><code>v</code></td><td>"1.0"</td><td>呼叫端</td><td>協定版本。Hub 只接受相同主版號</td></tr>
+    <tr><td><code>id</code></td><td>ULID</td><td>Hub</td><td>26 字元、可依時間排序</td></tr>
+    <tr><td><code>kind</code></td><td>enum</td><td>呼叫端</td><td><code>task.create</code> / <code>task.progress</code> / <code>task.result</code> / <code>task.cancel</code> / <code>message</code> / <code>approval.request</code> / <code>approval.decision</code> / <code>system.notice</code></td></tr>
+    <tr><td><code>from</code></td><td>address</td><td>Hub</td><td>依 token 填入</td></tr>
+    <tr><td><code>to</code></td><td>address 或 role</td><td>呼叫端</td><td>見 <a data-ref="identity"></a></td></tr>
+    <tr><td><code>thread_id</code></td><td>ULID</td><td>呼叫端或 Hub</td><td>省略時 Hub 建新 thread</td></tr>
+    <tr><td><code>parent_id</code></td><td>ULID</td><td>呼叫端</td><td>回應或衍生自哪個封包</td></tr>
+    <tr><td><code>trace</code></td><td>object</td><td>Hub</td><td><code>trace_id</code>（32 hex）、<code>hop</code>（從任務內部再送出時 +1）、<code>path</code>（經過的位址）</td></tr>
+    <tr><td><code>created_at</code></td><td>RFC3339 UTC</td><td>Hub</td><td>以 Hub 時間為準，避免各機時鐘不同步</td></tr>
+    <tr><td><code>expires_at</code></td><td>RFC3339 UTC</td><td>呼叫端</td><td>任務在此之前沒被領走就變 <code>expired</code></td></tr>
+    <tr><td><code>idempotency_key</code></td><td>≤ 64 字元</td><td>呼叫端</td><td>同一 node 24 小時內相同 key 回傳原本那筆，不重建</td></tr>
+    <tr><td><code>priority</code></td><td>1–9</td><td>呼叫端</td><td>1 最優先，預設 5</td></tr>
+    <tr><td><code>payload</code></td><td>object</td><td>呼叫端</td><td>依 <code>kind</code> 而定，見下</td></tr>
+    <tr><td><code>meta</code></td><td>object</td><td>呼叫端</td><td>擴充用，Hub 只保存不解讀</td></tr>
+  </table></div>
+
+  <h3>task.create payload</h3>
+  <div class="tablewrap"><table>
+    <tr><th>欄位</th><th>必填</th><th>說明</th></tr>
+    <tr><td><code>title</code></td><td>是</td><td>≤ 120 字，顯示在 Dashboard 與提示中</td></tr>
+    <tr><td><code>profile</code></td><td>是</td><td>目標 Worker 已宣告的 profile 名稱；不存在時 Hub 回 <code>E_PROFILE_UNKNOWN</code></td></tr>
+    <tr><td><code>instructions</code></td><td>是</td><td>工作內容（Markdown），≤ 64 KB</td></tr>
+    <tr><td><code>inputs.repo</code></td><td></td><td><code>url</code> / <code>ref</code> / <code>commit</code>。<code>url</code> 必須在 profile 的 <code>allow_remote</code> 清單內。建議一定帶 <code>commit</code></td></tr>
+    <tr><td><code>inputs.files</code></td><td></td><td>附件（先上傳到 Hub，以 sha256 參照）</td></tr>
+    <tr><td><code>inputs.vars</code></td><td></td><td>簡單鍵值，會原樣放進 prompt</td></tr>
+    <tr><td><code>expected_output</code></td><td></td><td><code>format</code>：text / json；<code>schema</code>：json 時的 JSON Schema（Worker 會驗證）；<code>artifacts</code>：完成後要收集的檔案 glob（相對於工作目錄、以 <code>/</code> 分隔）</td></tr>
+    <tr><td><code>limits</code></td><td></td><td><code>timeout_sec</code>（預設 1800，上限 14400）、<code>max_turns</code>（預設 40）、<code>max_attempts</code>（預設 1，上限 3）。實際值取「任務值」與「profile 上限」的較小者</td></tr>
+    <tr><td><code>requires</code></td><td></td><td><code>os</code>：windows / macos / linux；<code>arch</code>：x64 / arm64；<code>labels</code>：節點標籤必須相符，值 <code>*</code> 代表只要有該 key。見 <a data-ref="platforms"></a>、<a data-ref="nodes"></a></td></tr>
+    <tr><td><code>dispatch</code></td><td></td><td><code>on_unavailable</code>：confirm / queue / reject，目標沒在線時怎麼辦；<code>max_wait_sec</code>：排隊最久等多久（預設 24 小時）。見 <a data-ref="presence"></a></td></tr>
+    <tr><td><code>session.mode</code></td><td></td><td><code>new</code>（預設）或 <code>resume_thread</code>：沿用同 thread 在同一台、同 profile 上次的 Claude session</td></tr>
+    <tr><td><code>notify</code></td><td></td><td>結果通知哪個信箱、哪些事件。預設為發送者信箱、<code>["approval","result"]</code></td></tr>
+    <tr><td><code>then</code></td><td></td><td>後續任務（最多 5 個），見 <a data-ref="flows"></a>。可用變數：<code>{{result.summary}}</code>、<code>{{result.output.&lt;key&gt;}}</code>、<code>{{inputs.repo.commit}}</code>、<code>{{task.id}}</code></td></tr>
+  </table></div>
+
+  <h3>其他 payload 摘要</h3>
+  <div class="tablewrap"><table>
+    <tr><th>kind</th><th>必填欄位</th><th>重點</th></tr>
+    <tr><td><code>task.progress</code></td><td>task_id, seq, phase</td><td><code>seq</code> 每任務嚴格遞增，Hub 丟棄重複。phase：started / tool / text / artifact / waiting_approval / note。Worker 節流為每 2 秒最多一筆</td></tr>
+    <tr><td><code>task.result</code></td><td>task_id, status, summary</td><td>status：succeeded / failed / cancelled / expired。<code>metrics.result_source</code> 標示結果來源：<code>submit_tool</code> / <code>final_text</code> / <code>worker</code></td></tr>
+    <tr><td><code>task.cancel</code></td><td>task_id</td><td>可附 reason</td></tr>
+    <tr><td><code>message</code></td><td>text</td><td>≤ 32 KB，可附件，<code>requires_reply</code> 表示希望對方回覆</td></tr>
+    <tr><td><code>approval.request</code></td><td>approval_id, task_id, tool_name, tool_input, risk, timeout_sec</td><td>v1 逾時一律 deny</td></tr>
+    <tr><td><code>approval.decision</code></td><td>approval_id, decision</td><td>allow / deny / expired，可附 note、<code>updated_input</code>（核准時修改參數）</td></tr>
+    <tr><td><code>system.notice</code></td><td>code, text</td><td>Hub 發出的系統通知，例如節點離線、任務被強制取消</td></tr>
+  </table></div>
+
+  <h3>傳遞保證</h3>
+  <ul>
+    <li><b>信箱：至少送達一次。</b>讀取後需 ack（MCP 工具預設讀取即 ack），沒 ack 的下次還會出現</li>
+    <li><b>任務執行：預設最多一次。</b><code>max_attempts=1</code>，因為編譯、推送、改檔都有副作用。需要重試的唯讀任務才調高</li>
+    <li><b>順序：</b>同一信箱依 <code>created_at</code>、<code>id</code> 排序；不保證跨信箱的全域順序</li>
+    <li><b>冪等：</b><code>(from.node, idempotency_key)</code> 唯一，24 小時內重送回傳原結果（HTTP 200 而非 201）</li>
+  </ul>
+
+  <h3>防迴圈與預算</h3>
+  <div class="tablewrap"><table>
+    <tr><th>限制</th><th>預設</th><th>超過時</th></tr>
+    <tr><td>trace.hop 上限（任務內部再派工的層數）</td><td class="num">4</td><td><code>E_HOP_LIMIT</code></td></tr>
+    <tr><td>每個 thread 的任務數</td><td class="num">20</td><td><code>E_THREAD_LIMIT</code></td></tr>
+    <tr><td>每個 thread 的訊息數</td><td class="num">200</td><td><code>E_THREAD_LIMIT</code></td></tr>
+    <tr><td>每個 thread 的累計花費（<code>total_cost_usd</code> 加總）</td><td class="num">20 USD</td><td><code>E_BUDGET</code>（訂閱制下此數字為估算值，仍可當作失控指標）</td></tr>
+    <tr><td>同一發送者每分鐘建立任務數</td><td class="num">10</td><td>HTTP 429 <code>E_RATE_LIMIT</code>，附 <code>Retry-After</code></td></tr>
+    <tr><td>寄給自己（to 等於 from）</td><td>禁止</td><td><code>E_SELF_TARGET</code></td></tr>
+  </table></div>
+
+  <h3>版本規則</h3>
+  <ul>
+    <li><code>v</code> 為 主版.次版。新增選填欄位只升次版。頂層未知欄位會被拒絕（避免打錯字靜默失效），擴充資料請放 <code>meta</code></li>
+    <li>破壞性變更升主版，並同時提供 <code>/api/v2</code>，舊版至少並存一個開發階段</li>
+  </ul>
+
+  <h3>範例與 Schema</h3>
+  <details open>
+    <summary>task.create：dev-pc 請 Windows 的 build-pc 編譯，成功後自動交給 Linux 上的 tester 做 E2E</summary>
+    <div class="inner"><div class="codebox"><div class="label"><span>spec/examples/task-create.json</span><button type="button" data-copy>複製</button></div><pre><code><!--INCLUDE:spec/examples/task-create.json--></code></pre></div></div>
+  </details>
+  <details>
+    <summary>task.progress</summary>
+    <div class="inner"><div class="codebox"><div class="label"><span>spec/examples/task-progress.json</span><button type="button" data-copy>複製</button></div><pre><code><!--INCLUDE:spec/examples/task-progress.json--></code></pre></div></div>
+  </details>
+  <details>
+    <summary>task.result</summary>
+    <div class="inner"><div class="codebox"><div class="label"><span>spec/examples/task-result.json</span><button type="button" data-copy>複製</button></div><pre><code><!--INCLUDE:spec/examples/task-result.json--></code></pre></div></div>
+  </details>
+  <details>
+    <summary>message：build-pc 回頭問 dev-pc</summary>
+    <div class="inner"><div class="codebox"><div class="label"><span>spec/examples/message.json</span><button type="button" data-copy>複製</button></div><pre><code><!--INCLUDE:spec/examples/message.json--></code></pre></div></div>
+  </details>
+  <details>
+    <summary>approval.request / approval.decision</summary>
+    <div class="inner">
+      <div class="codebox"><div class="label"><span>spec/examples/approval-request.json</span><button type="button" data-copy>複製</button></div><pre><code><!--INCLUDE:spec/examples/approval-request.json--></code></pre></div>
+      <div class="codebox"><div class="label"><span>spec/examples/approval-decision.json</span><button type="button" data-copy>複製</button></div><pre><code><!--INCLUDE:spec/examples/approval-decision.json--></code></pre></div>
+    </div>
+  </details>
+  <details>
+    <summary>完整 JSON Schema（envelope.schema.json）</summary>
+    <div class="inner"><div class="codebox"><div class="label"><span>spec/schemas/envelope.schema.json</span><button type="button" data-copy>複製</button></div><pre><code><!--INCLUDE:spec/schemas/envelope.schema.json--></code></pre></div></div>
+  </details>
+</section>

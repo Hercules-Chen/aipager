@@ -1,0 +1,22 @@
+# ~/.config/systemd/user/claude-relay-worker.service
+# Claude Relay Worker (Linux, systemd USER service). Runs as the user who logged in to Claude Code.
+# Enable start-at-boot without login:  sudo loginctl enable-linger <user>
+# Then:  systemctl --user daemon-reload && systemctl --user enable --now claude-relay-worker
+[Unit]
+Description=Claude Relay Worker
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+Environment=RELAY_CONFIG=%h/.config/claude-relay/node.json
+Environment=PATH=%h/.volta/bin:%h/.local/bin:/usr/local/bin:/usr/bin:/bin
+ExecStart=/bin/bash /opt/claude-relay/scripts/posix/start-worker.sh
+Restart=always
+RestartSec=5
+# mixed: SIGTERM to the worker first (it stops claude process groups cleanly), then SIGKILL leftovers
+KillMode=mixed
+TimeoutStopSec=30
+
+[Install]
+WantedBy=default.target

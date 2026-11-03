@@ -1,0 +1,48 @@
+<section id="platforms" data-title="跨平台差異" data-group="總覽">
+  <p>協定、Hub API、MCP 工具在三個平台完全相同。差異只在「怎麼啟動、檔案放哪、怎麼登入 Claude、怎麼終止程序」，全部集中在下表，實作時由 <code>relay-client</code> 的平台模組處理。</p>
+
+  <div class="tablewrap"><table class="matrix">
+    <tr><th>項目</th><th>Linux Hub</th><th>Windows Worker</th><th>macOS Worker</th><th>Linux Worker</th></tr>
+    <tr><td>作業系統</td><td>Ubuntu 24.04 LTS / 26.04 LTS</td><td>Windows 10 / 11</td><td>macOS 最近兩個主要版本</td><td>有 systemd 的發行版</td></tr>
+    <tr><td>服務管理</td><td>systemd 系統服務</td><td>工作排程器：開機時、不論是否登入（儲存密碼）</td><td>launchd：LaunchAgent（需登入）或 LaunchDaemon + <code>UserName</code>（免登入）</td><td>systemd --user + <code>loginctl enable-linger</code></td></tr>
+    <tr><td>執行身分</td><td>系統帳號 <code>claude-relay</code></td><td>登入 Claude 的 Windows 帳號</td><td>登入 Claude 的 macOS 帳號</td><td>登入 Claude 的 Linux 帳號</td></tr>
+    <tr><td>重開機後免登入</td><td>是</td><td>是（T16 驗證）</td><td>僅 LaunchDaemon + <code>oauth_token</code></td><td>是（linger）</td></tr>
+    <tr><td>Claude 登入（建議）</td><td>不需要</td><td><code>login</code>（憑證在使用者設定檔）</td><td><code>oauth_token</code>（Keychain 在未登入時不會解鎖）</td><td><code>login</code>（<code>~/.claude/.credentials.json</code>）</td></tr>
+    <tr><td>程式位置</td><td><code>/opt/claude-relay</code></td><td><code>C:\Program Files\ClaudeRelay</code></td><td><code>/opt/claude-relay</code></td><td><code>/opt/claude-relay</code></td></tr>
+    <tr><td>設定位置（由 <code>relayctl join</code> 寫入）</td><td><code>/etc/claude-relay</code></td><td><code>C:\ProgramData\ClaudeRelay\node</code></td><td><code>~/Library/Application Support/ClaudeRelay/node</code></td><td><code>~/.config/claude-relay</code></td></tr>
+    <tr><td>資料位置</td><td><code>/var/lib/claude-relay</code></td><td><code>C:\ProgramData\ClaudeRelay\worker</code></td><td><code>~/Library/Application Support/ClaudeRelay/worker</code></td><td><code>~/.local/state/claude-relay/worker</code></td></tr>
+    <tr><td>Log 位置</td><td><code>/var/log/claude-relay</code> + journald</td><td><code>C:\ProgramData\ClaudeRelay\logs</code></td><td><code>~/Library/Logs/ClaudeRelay</code></td><td><code>~/.local/state/claude-relay/logs</code> + <code>journalctl --user</code></td></tr>
+    <tr><td>終止任務程序</td><td>不適用</td><td><code>taskkill /PID &lt;pid&gt; /T /F</code></td><td>以獨立程序群組啟動，<code>kill(-pgid, SIGTERM)</code>，10 秒後 SIGKILL</td><td>同 macOS</td></tr>
+    <tr><td>防止睡眠</td><td>不適用</td><td>電源計畫：插電時睡眠「永不」</td><td>任務中自動 <code>caffeinate -i -w &lt;pid&gt;</code>；要隨時可接任務需 <code>pmset -c sleep 0</code>；筆電闔蓋仍會睡，由 <a data-ref="presence"></a> 處理</td><td>伺服器通常不需要；筆電可用 <code>systemd-inhibit</code></td></tr>
+    <tr><td>Claude 的 Bash 工具</td><td>不適用</td><td>需安裝 Git for Windows（Git Bash）</td><td>系統內建</td><td>系統內建</td></tr>
+    <tr><td>啟動鏈</td><td>systemd → node</td><td>.bat（ASCII）→ .ps1（UTF-8 BOM）→ node</td><td>launchd → start-worker.sh → exec node</td><td>systemd → start-worker.sh → exec node</td></tr>
+    <tr><td>Node 版本管理</td><td>官方 tarball 固定在 <code>/opt/node-v22</code></td><td>Volta</td><td>Volta</td><td>Volta</td></tr>
+    <tr><td>token 檔權限</td><td><code>0640 root:claude-relay</code></td><td><code>icacls</code> 只給執行帳號與 Administrators</td><td><code>chmod 600</code></td><td><code>chmod 600</code></td></tr>
+  </table></div>
+  <div class="note"><b>為什麼 Windows 放 ProgramData、Mac / Linux 放使用者目錄：</b>Windows 依團隊規則把可寫入的檔案放 ProgramData，避免 Program Files 權限問題。Mac 與 Linux 的 Worker 本來就以一般使用者執行，放在使用者目錄不需要 sudo，也符合各平台慣例（Apple 的 Application Support、Linux 的 XDG）。三個平台都可以用環境變數 <code>RELAY_HOME</code> 把全部路徑改到同一個根目錄下。</div>
+
+  <h3>Claude 登入模式（node.json 的 <code>claude_auth.mode</code>）</h3>
+  <div class="tablewrap"><table>
+    <tr><th>模式</th><th>做法</th><th>適用</th></tr>
+    <tr><td><code>login</code></td><td>沿用該使用者以 <code>claude</code> 互動登入後留下的憑證</td><td>Windows、Linux；macOS 只在使用者已登入桌面時可用</td></tr>
+    <tr><td><code>oauth_token</code></td><td>在該機執行一次 <code>claude setup-token</code>，把產生的長效 token 存成檔案（600 權限）；Worker 只在啟動 <code>claude</code> 子程序時注入 <code>CLAUDE_CODE_OAUTH_TOKEN</code></td><td>macOS LaunchDaemon、任何無人值守的機器（T16 驗證）</td></tr>
+    <tr><td><code>api_key</code></td><td>從檔案讀取並注入 <code>ANTHROPIC_API_KEY</code></td><td>改用 API 計費時</td></tr>
+  </table></div>
+  <p>Worker 啟動 <code>claude</code> 時會先移除另外兩種模式的環境變數，確保一台機器只用一種登入方式，避免帳單或額度算錯地方。</p>
+
+  <h3>平台路由</h3>
+  <ul>
+    <li>任務可帶 <code>requires: {"os":["macos"], "arch":["arm64"]}</code>；只有心跳回報符合的節點能領取</li>
+    <li>目標是指定節點但平台不符時，建立當下就回 422 <code>E_REQUIREMENT_UNMET</code>；目標是角色時，任務在佇列等符合的節點上線</li>
+    <li><code>relay_list_nodes</code> 會回傳每台的 os / arch，Claude 派工前可以自行判斷</li>
+  </ul>
+
+  <h3>跨平台內容規則</h3>
+  <ul>
+    <li>封包中的路徑一律是相對路徑、以 <code>/</code> 分隔；Worker 在本機轉換</li>
+    <li>Worker 產生的檔案一律 UTF-8 無 BOM、LF 換行；只有 Windows 的 .bat / .ps1 例外</li>
+    <li>artifact 的 glob 由 Worker 自行比對且區分大小寫，不依賴檔案系統（macOS 預設不分大小寫、Linux 區分），三個平台結果一致</li>
+    <li>建議所有被 Worker 使用的 Git repo 加 <code>.gitattributes</code>：<code>* text=auto eol=lf</code>、<code>*.bat text eol=crlf</code>、<code>*.ps1 text eol=crlf</code>，讓不同 OS 的 Worker 看到相同內容</li>
+    <li>system prompt 會告訴 Claude 目前的 OS 與 shell，讓它選對指令與路徑語法</li>
+  </ul>
+</section>

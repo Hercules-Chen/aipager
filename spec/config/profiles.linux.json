@@ -1,0 +1,36 @@
+{
+  "profiles": {
+    "echo": {
+      "description": "Smoke test: read-only commands, reports machine info. 驗證用。",
+      "workdir": "/home/<user>/.local/state/claude-relay/worker/sandbox",
+      "model": "haiku",
+      "permission_mode": "default",
+      "allowed_tools": ["Bash(hostname)", "Bash(whoami)", "Bash(uname -a)", "Bash(cat /etc/os-release)", "Read"],
+      "disallowed_tools": ["Edit", "Write", "WebFetch", "WebSearch"],
+      "approval": { "auto_allow": [], "auto_deny": ["*"], "timeout_sec": 120 },
+      "max_turns": 5,
+      "timeout_sec": 120,
+      "concurrency_key": "echo"
+    },
+    "e2e": {
+      "description": "Run the ERP web E2E suite (Playwright, headless) against a given commit and report failing cases with screenshots.",
+      "workdir": "/home/<user>/RelayWork/erp-e2e",
+      "repo": { "allow_remote": ["git@gitlab.local:erp/erp.git"], "require_clean": true, "checkout": "detached_commit" },
+      "model": "sonnet",
+      "permission_mode": "acceptEdits",
+      "allowed_tools": [
+        "Read", "Grep", "Glob",
+        "Bash(git status:*)", "Bash(git log:*)", "Bash(git diff:*)",
+        "Bash(npm ci:*)", "Bash(npx playwright test:*)", "Bash(npx playwright show-report:*)"
+      ],
+      "disallowed_tools": ["Bash(git push:*)", "Bash(rm -rf:*)", "Bash(sudo:*)", "WebFetch", "WebSearch"],
+      "approval": { "auto_allow": [], "auto_deny": ["Bash(git push --force*)", "Bash(sudo*)"], "timeout_sec": 600 },
+      "max_turns": 40,
+      "timeout_sec": 3600,
+      "env": { "CI": "1" },
+      "pre_commands": ["git fetch origin --prune"],
+      "artifacts_max_mb": 50,
+      "concurrency_key": "erp-e2e-workdir"
+    }
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "facts": {
+    "os": "macos",
+    "arch": "arm64",
+    "os_version": "macOS 26.1",
+    "hostname": "Hercules-MacBook-Pro.local",
+    "tailscale_ip": "100.88.12.34",
+    "timezone": "Asia/Taipei",
+    "worker_version": "0.3.0",
+    "claude_version": "2.9.1 (Claude Code)",
+    "claude_auth_mode": "oauth_token",
+    "worker_enabled": true
+  },
+  "profiles": [
+    { "name": "echo", "description": "Smoke test: read-only commands, reports machine info." },
+    { "name": "ios", "description": "Build and unit-test the iOS app on a given commit." }
+  ],
+  "capacity": { "max_concurrent": 1, "running": 1 },
+  "meta_version": 3,
+  "resumed_from_sleep_sec": 2470
+}

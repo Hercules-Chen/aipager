@@ -1,0 +1,31 @@
+<section id="identity" data-title="定址與身分" data-group="節點">
+  <h3>位址格式</h3>
+  <div class="tablewrap"><table>
+    <tr><th>寫法</th><th>JSON 形式</th><th>意義</th></tr>
+    <tr><td><code>worker@build-pc</code></td><td><code>{"node":"build-pc","agent":"worker"}</code></td><td>指定機器上的 Worker</td></tr>
+    <tr><td><code>worker@role:tester</code></td><td><code>{"role":"tester","agent":"worker"}</code></td><td>任一台宣告 tester 角色、在線、且符合 <code>requires</code> 的 Worker；先領先做</td></tr>
+    <tr><td><code>main@dev-pc</code></td><td><code>{"node":"dev-pc","agent":"main"}</code></td><td>dev-pc 上互動 session 的信箱</td></tr>
+    <tr><td><code>erp@dev-pc</code></td><td><code>{"node":"dev-pc","agent":"erp"}</code></td><td>dev-pc 上 ERP 專案的 session（專案層級 <code>.mcp.json</code> 設 <code>RELAY_AGENT=erp</code>）</td></tr>
+    <tr><td><code>human@hub</code></td><td><code>{"node":"hub","agent":"human"}</code></td><td>Dashboard 上的人（審核請求的收件者）</td></tr>
+  </table></div>
+  <ul>
+    <li><code>node_id</code>：小寫英數與連字號，2–32 字元，正規式 <code>^[a-z0-9][a-z0-9-]{1,31}$</code></li>
+    <li>agent 名稱：1–32 字元。保留字 <code>worker</code>、<code>human</code>、<code>hub</code></li>
+    <li>任務的目的地只能是 <code>worker</code>；訊息的目的地可以是任何信箱</li>
+    <li>封包中的 <code>from</code> 一律由 Hub 依 token 填入，呼叫端無法冒充</li>
+  </ul>
+
+  <h3>Token</h3>
+  <div class="tablewrap"><table>
+    <tr><th>種類</th><th>前綴</th><th>發給誰</th><th>能做什麼</th><th>有效期</th></tr>
+    <tr><td>admin</td><td><code>rla_</code></td><td>Dashboard、管理者的 relayctl</td><td>全部，含審核、發 token、看所有 Log</td><td>手動撤銷前有效</td></tr>
+    <tr><td>node</td><td><code>rln_</code></td><td>每台機器一把</td><td>以該 node 身分心跳、領任務、送任務與訊息、讀自己 node 的信箱</td><td>手動撤銷前有效</td></tr>
+    <tr><td>enrollment</td><td><code>rle_</code></td><td>管理者建立，交給要加入的新機器</td><td>只能呼叫一次 <code>POST /enroll</code> 換得 node token</td><td>使用一次即失效；預設 24 小時過期</td></tr>
+    <tr><td>task</td><td><code>rlt_</code></td><td>領任務時由 Hub 核發，只給該任務的 Claude session</td><td>回報該任務的進度、結果、審核；建立子任務（hop + 1）</td><td>任務結束後 5 分鐘失效</td></tr>
+  </table></div>
+  <ul>
+    <li>格式：前綴 + 32 bytes 亂數（base64url）。Hub 只存 SHA-256 雜湊，明文只在建立時顯示一次</li>
+    <li>傳遞：HTTP header <code>Authorization: Bearer &lt;token&gt;</code>；互動 session 另帶 <code>X-Relay-Agent: main</code></li>
+    <li>存放位置與權限依平台，見 <a data-ref="platforms"></a></li>
+  </ul>
+</section>

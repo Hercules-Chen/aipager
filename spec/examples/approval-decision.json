@@ -1,0 +1,16 @@
+{
+  "v": "1.0",
+  "id": "01JBX7SZ0A1B2C3D4E5F6G7H8J",
+  "kind": "approval.decision",
+  "from": { "node": "hub", "agent": "human" },
+  "to": { "node": "build-pc", "agent": "worker" },
+  "thread_id": "01JBX7Q3M8ZK4N2P6R9T0V1W2X",
+  "parent_id": "01JBX7SPQ1R2S3T4V5W6X7Y8Z9",
+  "trace": { "trace_id": "4f1c2a9be0d34c7a8b6e5d4c3b2a1f00", "hop": 1, "path": ["main@dev-pc", "worker@build-pc", "human@hub"] },
+  "created_at": "2026-11-03T06:20:02.310Z",
+  "payload": {
+    "approval_id": "01JBX7SPQ1R2S3T4V5W6X7Y8ZA",
+    "decision": "deny",
+    "note": "這個任務只做編譯，不要推送。"
+  }
+}

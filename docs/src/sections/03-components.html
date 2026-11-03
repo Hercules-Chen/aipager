@@ -1,0 +1,52 @@
+<section id="components" data-title="元件定義" data-group="總覽">
+  <p>共六個元件，全部以 Node.js 撰寫，共用同一個 <code>relay-client</code> 函式庫（HTTP 呼叫、重試、Log 格式、設定檔讀取、各 OS 預設路徑），避免各元件、各平台各寫一套。</p>
+
+  <div class="tablewrap"><table>
+    <tr><th>元件</th><th>跑在哪</th><th>以誰的身分</th><th>職責</th><th>主要相依</th></tr>
+    <tr><td><b>relay-hub</b></td><td>Ubuntu Hub 機（1 台）</td><td>系統帳號 <code>claude-relay</code>（systemd）</td><td>REST API、SSE、Dashboard、節點登錄與 metadata、在線判斷、佇列、租約、逾時、審核、附件、條件路由、備份</td><td>Fastify 5、Ajv 8（draft 2020-12）、<code>node:sqlite</code></td></tr>
+    <tr><td><b>relay-worker</b></td><td>每台執行任務的機器（Windows / macOS / Linux）</td><td><b>已登入 Claude Code 的那個使用者</b></td><td>心跳（含 facts 與睡眠偵測）、領任務、準備工作目錄、啟動 <code>claude -p</code>、解析串流、續約、取消、上傳結果、profiles 熱重載</td><td>relay-client、Claude Code CLI、Git</td></tr>
+    <tr><td><b>relay-mcp</b></td><td>每台機器（由 Claude Code 自動啟動）</td><td>啟動它的 Claude Code</td><td>把 Relay 能力包成 MCP 工具；有 interactive 與 task 兩種模式</td><td><code>@modelcontextprotocol/sdk</code>（stdio）</td></tr>
+    <tr><td><b>relay-hint</b></td><td>有互動 session 的機器</td><td>Claude Code hook</td><td>每次輸入 prompt 時查詢未讀摘要，有未讀才輸出一行提示</td><td>relay-client</td></tr>
+    <tr><td><b>relayctl</b></td><td>任何機器</td><td>操作者</td><td>加入（join）、安裝服務、查節點、改 metadata、建立加入碼、送任務、看 Log、審核、健康檢查、備份</td><td>relay-client</td></tr>
+    <tr><td><b>Dashboard</b></td><td>Hub 提供 <code>/ui</code></td><td>瀏覽器（admin token）</td><td>節點清單與在線狀態、待核准機器、metadata 編輯與歷史、任務即時串流、審核佇列、Thread 與 Trace；zh-TW / en</td><td>原生 ES modules（不打包，方便 Chrome DevTools 除錯）</td></tr>
+  </table></div>
+
+  <div class="grid2">
+    <div class="card">
+      <h4>relay-hub <span class="tag">Ubuntu · port 7300</span></h4>
+      <ul>
+        <li>只綁 Tailscale IP（<code>listen.host</code>）；開機時 Tailscale 還沒就緒的話，每 5 秒重試綁定並寫 Log</li>
+        <li>背景工作：每 5 秒掃過期租約（筆電睡眠中套用保留時間）；每 15 秒重算各節點在線狀態並記錄變化；每 30 秒掃 TTL 與逾時；每日清理與備份</li>
+        <li>啟動時把所有進行中任務的租約延長 120 秒，避免 Hub 重開就把任務判失敗</li>
+        <li>systemd 強化設定：唯讀系統、只開放 <code>/var/lib/claude-relay</code> 與 <code>/var/log/claude-relay</code> 寫入</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h4>relay-worker <span class="tag">outbound only</span></h4>
+      <ul>
+        <li>OS、架構、版本等 facts 自動偵測並在心跳回報；角色與標籤由 Hub 管理，不寫在本機</li>
+        <li>每 5 秒檢查牆上時間是否跳動，偵測到從睡眠醒來就立即送心跳</li>
+        <li>監看 profiles.json，存檔後驗證並自動重新載入</li>
+        <li>各平台用原生服務管理員啟動，由 <code>relayctl service install</code> 一鍵註冊</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h4>relay-mcp <span class="tag">stdio</span></h4>
+      <ul>
+        <li><b>interactive 模式</b>：給你手動開的 Claude Code 用，身分是 <code>&lt;RELAY_AGENT&gt;@&lt;node_id&gt;</code>；派工預設 <code>on_unavailable=confirm</code></li>
+        <li><b>task 模式</b>：Worker 為每個任務產生專屬 MCP 設定，帶 task token，多出 <code>relay_submit_result</code>、<code>relay_report_progress</code>、<code>relay_permission_prompt</code>；派工預設 <code>queue</code></li>
+        <li>token 從本機設定目錄讀取，不寫進 Claude 的設定檔</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h4>relayctl <span class="tag">CLI</span></h4>
+      <ul>
+        <li><code>join</code>：用加入碼登錄本機，寫好 node.json、token、預設 profiles.json</li>
+        <li><code>service install | uninstall | status</code>：依平台註冊工作排程器 / launchd / systemd --user</li>
+        <li><code>nodes show | set | history | rollback | approve | drain | disable | retire</code></li>
+        <li><code>enroll create | list | revoke</code>（admin）</li>
+        <li>派工時目標沒在線，直接在終端機詢問 排隊 / 改派 / 取消</li>
+      </ul>
+    </div>
+  </div>
+</section>

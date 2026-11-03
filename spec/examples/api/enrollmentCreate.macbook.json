@@ -1,0 +1,11 @@
+{
+  "preset": {
+    "display_name": "Hercules 的 MacBook",
+    "roles": ["tester", "ios-builder"],
+    "labels": { "xcode": "16", "location": "mobile" },
+    "power": "laptop",
+    "owner": "hercules"
+  },
+  "ttl_sec": 86400,
+  "auto_approve": false
+}

@@ -1,0 +1,41 @@
+<section id="errors" data-title="錯誤碼" data-group="協定">
+  <h3>API 錯誤</h3>
+  <div class="tablewrap"><table>
+    <tr><th>HTTP</th><th>code</th><th>意義</th><th>呼叫端怎麼處理</th></tr>
+    <tr><td class="num">400</td><td><code>E_VALIDATION</code></td><td>不符合 schema；detail 帶 Ajv 錯誤路徑</td><td>修正後重送，不要重試</td></tr>
+    <tr><td class="num">401</td><td><code>E_AUTH</code></td><td>token 錯誤、過期、被撤銷</td><td>檢查 token 檔，重新發 token</td></tr>
+    <tr><td class="num">403</td><td><code>E_FORBIDDEN</code></td><td>token 權限不足（例如讀別台的信箱）</td><td>不要重試</td></tr>
+    <tr><td class="num">404</td><td><code>E_NOT_FOUND</code></td><td>任務、訊息、附件不存在</td><td>不要重試</td></tr>
+    <tr><td class="num">409</td><td><code>E_CONFLICT</code></td><td>狀態不允許此操作（例如更新已結束的任務）</td><td>重新查詢狀態</td></tr>
+    <tr><td class="num">409</td><td><code>E_LEASE_LOST</code></td><td>租約不符或已過期</td><td>Worker 停止回報該任務，結果保留在本機</td></tr>
+    <tr><td class="num">413</td><td><code>E_PAYLOAD_TOO_LARGE</code></td><td>超過大小上限</td><td>改用附件或 Git</td></tr>
+    <tr><td class="num">422</td><td><code>E_PROFILE_UNKNOWN</code></td><td>目標節點沒有宣告此 profile</td><td>先 <code>relay_list_nodes</code></td></tr>
+    <tr><td class="num">422</td><td><code>E_REQUIREMENT_UNMET</code></td><td>指定節點的 os / arch / 標籤不符合 <code>requires</code></td><td>改目標或拿掉限制</td></tr>
+    <tr><td class="num">409</td><td><code>E_TARGET_UNAVAILABLE</code></td><td>目標沒在線且 <code>on_unavailable</code> 為 confirm / reject；任務未建立，回應附 alternatives</td><td>問使用者：排隊、改派或取消</td></tr>
+    <tr><td class="num">422</td><td><code>E_ENROLL_INVALID</code></td><td>加入碼錯誤、過期、已使用或已撤銷</td><td>請管理者重新建立加入碼</td></tr>
+    <tr><td class="num">409</td><td><code>E_NODE_EXISTS</code></td><td>node_id 已被使用，且加入碼沒有綁定這個 id</td><td>換 node_id，或請管理者建立綁定該 id 的加入碼（重灌）</td></tr>
+    <tr><td class="num">403</td><td><code>E_NODE_NOT_ACTIVE</code></td><td>節點為 pending / disabled，不能送或領任務</td><td>請管理者核准或啟用</td></tr>
+    <tr><td class="num">409</td><td><code>E_META_CONFLICT</code></td><td>修改 metadata 時 If-Match 版本已過期</td><td>重新讀取後再改</td></tr>
+    <tr><td class="num">422</td><td><code>E_HOP_LIMIT</code> / <code>E_THREAD_LIMIT</code> / <code>E_BUDGET</code> / <code>E_SELF_TARGET</code></td><td>防迴圈與預算限制</td><td>交由人判斷，不要自動繞過</td></tr>
+    <tr><td class="num">429</td><td><code>E_RATE_LIMIT</code></td><td>建立太頻繁</td><td>依 <code>Retry-After</code> 等待</td></tr>
+    <tr><td class="num">503</td><td><code>E_UNAVAILABLE</code></td><td>Hub 正在關閉或 DB 忙碌</td><td>指數退避重試（1、2、4、8、16 秒）</td></tr>
+  </table></div>
+
+  <h3>任務結果錯誤（task.result.error.code）</h3>
+  <div class="tablewrap"><table>
+    <tr><th>code</th><th>產生者</th><th>意義</th></tr>
+    <tr><td><code>E_TIMEOUT</code></td><td>Worker / Hub</td><td>超過 timeout_sec，程序已被終止</td></tr>
+    <tr><td><code>E_MAX_TURNS</code></td><td>Worker</td><td>Claude 結果 subtype 為 <code>error_max_turns</code></td></tr>
+    <tr><td><code>E_CLAUDE_EXIT</code></td><td>Worker</td><td><code>claude</code> 非 0 結束；stderr 末 50 行附在 detail</td></tr>
+    <tr><td><code>E_CLAUDE_NOT_FOUND</code></td><td>Worker</td><td><code>claude_path</code> 不存在或無法啟動</td></tr>
+    <tr><td><code>E_CLAUDE_AUTH</code></td><td>Worker</td><td>stderr 顯示未登入或憑證無效（常見於 macOS 未登入時使用 <code>login</code> 模式）</td></tr>
+    <tr><td><code>E_REPO_NOT_ALLOWED</code></td><td>Worker</td><td>repo url 不在 profile 的 allow_remote</td></tr>
+    <tr><td><code>E_WORKDIR_DIRTY</code></td><td>Worker</td><td>工作目錄有未提交變更，為避免覆蓋而拒絕執行</td></tr>
+    <tr><td><code>E_GIT_FAILED</code></td><td>Worker</td><td>fetch / checkout 失敗</td></tr>
+    <tr><td><code>E_PRE_COMMAND_FAILED</code></td><td>Worker</td><td>profile 的 pre_commands 失敗</td></tr>
+    <tr><td><code>E_OUTPUT_SCHEMA</code></td><td>Worker</td><td>要求 json 輸出但不符合 schema；原始輸出仍附在 output</td></tr>
+    <tr><td><code>E_CANCELLED</code></td><td>Worker</td><td>收到取消並已終止</td></tr>
+    <tr><td><code>E_LEASE_LOST</code></td><td>Hub</td><td>Worker 失聯且無重試次數</td></tr>
+    <tr><td><code>E_WORKER_CRASH</code></td><td>Worker</td><td>Worker 重啟時發現上次中斷的任務</td></tr>
+  </table></div>
+</section>

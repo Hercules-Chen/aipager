@@ -1,0 +1,76 @@
+<section id="presence" data-title="在線狀態與睡眠" data-group="節點">
+  <p>Worker 每 15 秒向 Hub 發一次心跳。Hub 不去猜機器在做什麼，只看「多久沒有心跳」：超過門檻就當作睡著，再更久就當作離線。門檻依機器類型（<code>power</code>）不同，筆電可以睡很久才算離線。派任務給沒在線的機器時，Hub 會同時提醒發派的那台機器和使用者。</p>
+
+  <h3>四種在線狀態</h3>
+  <div class="tablewrap"><table>
+    <tr><th>presence</th><th>條件（silent = 距上次心跳秒數）</th><th>Dashboard 顯示</th></tr>
+    <tr><td><span class="pill ok">online</span></td><td>silent ≤ <code>asleep_after_sec</code></td><td>在線</td></tr>
+    <tr><td><span class="pill wait">asleep</span></td><td><code>asleep_after_sec</code> &lt; silent ≤ <code>offline_after_sec</code></td><td>睡眠中／暫離，顯示「已 42 分鐘沒有回應」</td></tr>
+    <tr><td><span class="pill bad">offline</span></td><td>silent &gt; <code>offline_after_sec</code></td><td>離線，顯示最後出現時間</td></tr>
+    <tr><td><span class="pill">never</span></td><td>已登錄但從未收到心跳</td><td>尚未上線</td></tr>
+  </table></div>
+  <p>presence 與生命週期狀態（<a data-ref="nodes"></a>）是兩件事：一台 active 的筆電可以是 asleep；一台 disabled 的機器也可以 online。</p>
+
+  <h3>預設門檻（hub.json 的 presence_defaults）</h3>
+  <div class="tablewrap"><table>
+    <tr><th>power</th><th>asleep_after</th><th>offline_after</th><th>suspend_grace（執行中睡著時保留任務）</th><th>離線時通知</th></tr>
+    <tr><td>server</td><td class="num">45 秒</td><td class="num">10 分鐘</td><td class="num">0</td><td>是（伺服器不該沒回應）</td></tr>
+    <tr><td>desktop</td><td class="num">45 秒</td><td class="num">2 小時</td><td class="num">5 分鐘</td><td>否</td></tr>
+    <tr><td>laptop</td><td class="num">60 秒</td><td class="num">7 天</td><td class="num">30 分鐘</td><td>否</td></tr>
+  </table></div>
+  <p>每台機器可以在 metadata 的 <code>presence</code> 覆寫任何一項，例如網路不穩的機器把 <code>asleep_after_sec</code> 調成 120。<code>tools/validate-spec.js</code> 會檢查 hub.json 的預設值與參考實作一致。</p>
+
+  <h3>睡眠偵測（Worker 端）</h3>
+  <ul>
+    <li>Worker 每 5 秒比對一次牆上時間的進度；實際經過的時間比預期多 30 秒以上，就判定剛從睡眠醒來（筆電闔蓋、系統睡眠都會造成這種跳動）</li>
+    <li>醒來後立刻送心跳並帶 <code>resumed_from_sleep_sec</code>；Hub 記錄 <code>node.presence</code> 事件與 <code>last_wake_at</code>，Dashboard 可以看到每台機器過去 7 天的在線時數</li>
+    <li>不依賴作業系統的睡眠通知 API，三個平台做法一致</li>
+  </ul>
+
+  <h3>派任務給沒在線的機器</h3>
+  <p>建立任務時，Hub 依目標的在線狀態與發派者選擇的 <code>dispatch.on_unavailable</code> 決定怎麼做：</p>
+  <div class="tablewrap"><table>
+    <tr><th>on_unavailable</th><th>目標在線</th><th>目標 asleep / offline / never / draining</th><th>預設給誰用</th></tr>
+    <tr><td><code>confirm</code></td><td>建立任務</td><td><b>不建立</b>，回 409 <code>E_TARGET_UNAVAILABLE</code>，附目標狀態、其他可用機器、可選動作（排隊 / 改派 / 取消）</td><td>互動 session 的 MCP 工具、relayctl</td></tr>
+    <tr><td><code>queue</code></td><td>建立任務</td><td>建立任務並排隊，回應帶 <code>warnings</code>；等目標回來再執行，最久等 <code>max_wait_sec</code>（預設 24 小時）</td><td>Worker 任務內部派工、流水線 <code>then</code>、直接呼叫 API</td></tr>
+    <tr><td><code>reject</code></td><td>建立任務</td><td>不建立，回 409</td><td>需要立即結果的自動化</td></tr>
+  </table></div>
+  <ul>
+    <li><b>目標是角色時：</b>只要有一台符合條件的機器在線就直接建立；全部都沒在線時才套用上表，警告碼為 <code>W_NO_ONLINE_CANDIDATE</code></li>
+    <li><b>其他可用機器（alternatives）：</b>active、online、有同名 profile、符合 <code>requires</code> 的機器，依執行中任務數由少到多排列</li>
+    <li><b>警告訊息</b>依 <code>Accept-Language</code> 回 zh-TW 或 en，內容包含顯示名稱、機器類型、沒回應多久，例如：「macbook-hc（Hercules 的 MacBook，筆電）已 42 分鐘沒有回應，可能睡著了。」</li>
+  </ul>
+
+  <h3>提醒誰、什麼時候提醒</h3>
+  <div class="tablewrap"><table>
+    <tr><th>時機</th><th>發派的機器</th><th>使用者</th></tr>
+    <tr><td>派工時目標沒在線</td><td>MCP 工具結果直接帶警告與選項；工具說明要求 Claude 把內容轉告使用者並詢問</td><td>互動 session 中由 Claude 詢問；relayctl 直接在終端機詢問 排隊 / 改派 / 取消</td></tr>
+    <tr><td>排隊中的任務被醒來的機器領走</td><td>信箱收到 <code>system.notice</code>：「macbook-hc 已回來，開始執行『…』（等待 2 小時 13 分）」</td><td>relay-hint 在下一次輸入時提示；Dashboard 時間軸</td></tr>
+    <tr><td>排隊中的任務等到 <code>max_wait_sec</code> 仍無人領取</td><td>任務轉為 expired，信箱收到通知</td><td>同上</td></tr>
+    <tr><td>執行中的機器睡著</td><td>信箱收到通知：「執行中的機器睡著了，最多保留 30 分鐘」</td><td>Dashboard 任務標示「執行機器睡眠中」</td></tr>
+    <tr><td><code>alert_on_offline=true</code> 的機器離線（預設只有 server）</td><td>不通知</td><td>webhook（ntfy / Teams / Slack）</td></tr>
+  </table></div>
+
+  <h3>執行中睡著</h3>
+  <ul>
+    <li>筆電闔蓋時，<code>claude</code> 與 Worker 程序被系統凍結，醒來後會從原地繼續</li>
+    <li>Hub 在 <code>suspend_grace_sec</code>（筆電預設 30 分鐘）內不讓租約過期；醒來後 Worker 續約成功，任務照常完成</li>
+    <li>超過保留時間：依一般規則處理（可重試就重新排隊，否則 failed，錯誤碼 <code>E_LEASE_LOST</code>，detail 註明 <code>node_asleep</code>）；之後醒來的 Worker 續約會收到 409，立即終止該任務並保留本機結果檔</li>
+    <li><b>逾時只計算醒著的時間：</b>Worker 從經過時間扣掉偵測到的睡眠；Hub 端的逾時保護也扣掉該機器 asleep 的區間。三個平台一致</li>
+    <li>macOS 的 <code>caffeinate -i</code> 只能阻止閒置睡眠，闔蓋仍會睡；這正是 suspend grace 要處理的情況</li>
+  </ul>
+
+  <details>
+    <summary>範例：派給睡著的筆電（confirm 被擋下 / queue 排隊）與醒來後的心跳</summary>
+    <div class="inner">
+      <div class="codebox"><div class="label"><span>409（targetUnavailable.confirm.json）</span><button type="button" data-copy>複製</button></div><pre><code><!--INCLUDE:spec/examples/api/targetUnavailable.confirm.json--></code></pre></div>
+      <div class="codebox"><div class="label"><span>201（taskCreated.queued-asleep.json）</span><button type="button" data-copy>複製</button></div><pre><code><!--INCLUDE:spec/examples/api/taskCreated.queued-asleep.json--></code></pre></div>
+      <div class="codebox"><div class="label"><span>醒來後的心跳（heartbeatRequest.mac-after-sleep.json）</span><button type="button" data-copy>複製</button></div><pre><code><!--INCLUDE:spec/examples/api/heartbeatRequest.mac-after-sleep.json--></code></pre></div>
+      <div class="codebox"><div class="label"><span>心跳回應：metadata 已被修改（heartbeatResponse.meta-changed.json）</span><button type="button" data-copy>複製</button></div><pre><code><!--INCLUDE:spec/examples/api/heartbeatResponse.meta-changed.json--></code></pre></div>
+    </div>
+  </details>
+  <details>
+    <summary>參考實作（spec/reference/presence.js，由 tools/validate-spec.js 自動測試）</summary>
+    <div class="inner"><div class="codebox"><div class="label"><span>spec/reference/presence.js</span><button type="button" data-copy>複製</button></div><pre><code><!--INCLUDE:spec/reference/presence.js--></code></pre></div></div>
+  </details>
+</section>

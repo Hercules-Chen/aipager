@@ -1,0 +1,45 @@
+<section id="files" data-title="規格檔與變更紀錄" data-group="交付">
+  <p>本文件的程式碼區塊都是從下列檔案直接嵌入；章節編號、目錄、交叉引用由建置程式自動產生。修改請改原始檔後依序執行 <code>node tools/validate-spec.js</code> 與 <code>node tools/build-doc.js</code>，不要直接改產出的 HTML。</p>
+
+  <h3>文件原始檔</h3>
+  <div class="tablewrap"><table>
+    <tr><th>檔案</th><th>內容</th></tr>
+    <tr><td><code>docs/src/layout.html</code></td><td>頁面外框：樣式、目錄、腳本</td></tr>
+    <tr><td><code>docs/src/header.html</code></td><td>頁首</td></tr>
+    <tr><td><code>docs/src/sections/NN-&lt;id&gt;.html</code></td><td>一章一個檔案，依檔名排序決定章節編號。開頭固定為 <code>&lt;section id data-title data-group&gt;</code>；交叉引用寫 <code>&lt;a data-ref="id"&gt;&lt;/a&gt;</code>，不要手寫編號</td></tr>
+    <tr><td><code>docs/claude-relay-design.html</code></td><td>產出：可直接用瀏覽器開啟的完整 HTML</td></tr>
+    <tr><td><code>docs/artifact/claude-relay-design.html</code></td><td>產出：發佈到 claude.ai 用的片段</td></tr>
+  </table></div>
+
+  <h3>規格檔</h3>
+  <div class="tablewrap"><table>
+    <tr><th>檔案</th><th>內容</th><th>編碼</th></tr>
+    <tr><td><code>spec/schemas/envelope.schema.json</code></td><td>封包 JSON Schema（draft 2020-12）</td><td>UTF-8 無 BOM</td></tr>
+    <tr><td><code>spec/schemas/api.schema.json</code></td><td>非封包的 API 請求與回應：節點 metadata、加入、心跳、派工結果</td><td>UTF-8 無 BOM</td></tr>
+    <tr><td><code>spec/examples/*.json</code></td><td>6 個封包範例</td><td>UTF-8 無 BOM</td></tr>
+    <tr><td><code>spec/examples/api/&lt;defName&gt;.&lt;情境&gt;.json</code></td><td>10 個 API 範例，檔名第一段即對應的 <code>$defs</code></td><td>UTF-8 無 BOM</td></tr>
+    <tr><td><code>spec/reference/presence.js</code></td><td>在線判斷、租約保留、睡眠偵測、派工決策的參考實作</td><td>UTF-8 無 BOM</td></tr>
+    <tr><td><code>spec/mcp/relay-tools.json</code></td><td>14 個 MCP 工具定義</td><td>UTF-8 無 BOM</td></tr>
+    <tr><td><code>spec/sql/hub-schema.sql</code></td><td>Hub 資料庫 DDL</td><td>UTF-8 無 BOM</td></tr>
+    <tr><td><code>spec/config/hub.json</code></td><td>Hub 設定範本（含在線判斷預設值、加入碼設定）</td><td>UTF-8 無 BOM</td></tr>
+    <tr><td><code>spec/config/node.{windows,macos,linux}.json</code></td><td>各平台節點設定範本（實際由 <code>relayctl join</code> 產生）</td><td>UTF-8 無 BOM</td></tr>
+    <tr><td><code>spec/config/profiles.{windows,macos,linux}.json</code></td><td>各平台 profile 範本</td><td>UTF-8 無 BOM</td></tr>
+    <tr><td><code>spec/prompts/*.txt</code></td><td>Worker 的 system-append 與 task prompt 範本</td><td>UTF-8 無 BOM</td></tr>
+    <tr><td><code>spec/claude/*.json</code></td><td>Claude Code 的 MCP 與 hooks 設定範例（Windows / POSIX）</td><td>UTF-8 無 BOM</td></tr>
+    <tr><td><code>spec/scripts/windows/*.bat</code></td><td>Windows 啟動腳本</td><td>ASCII、CRLF</td></tr>
+    <tr><td><code>spec/scripts/windows/*.ps1</code></td><td>Windows 啟動與排程腳本</td><td>UTF-8 BOM、CRLF</td></tr>
+    <tr><td><code>spec/scripts/posix/start-worker.sh</code></td><td>macOS / Linux 共用啟動腳本（bash 3.2 相容，已在 Linux 實測）</td><td>UTF-8 無 BOM、LF</td></tr>
+    <tr><td><code>spec/scripts/linux/*</code></td><td>Hub 安裝腳本、Hub 與 Worker 的 systemd unit</td><td>UTF-8 無 BOM、LF</td></tr>
+    <tr><td><code>spec/scripts/macos/*.plist</code></td><td>launchd 設定</td><td>UTF-8 無 BOM、LF</td></tr>
+    <tr><td><code>tools/validate-spec.js</code></td><td>驗證兩份 schema 與全部範例、反例、設定檔、MCP 工具、參考實作、DDL、領任務 SQL</td><td>ASCII</td></tr>
+    <tr><td><code>tools/build-doc.js</code></td><td>組合章節產生 HTML；檢查錨點、交叉引用、標籤配對、測試編號；全專案編碼與換行稽核</td><td>UTF-8 無 BOM</td></tr>
+  </table></div>
+
+  <h3>變更紀錄</h3>
+  <div class="tablewrap"><table>
+    <tr><th>版本</th><th>日期</th><th>變更</th></tr>
+    <tr><td class="num">v0.1</td><td class="num">2026-11-03</td><td>初版。假設全部機器為 Windows、Hub 在 Windows</td></tr>
+    <tr><td class="num">v0.2</td><td class="num">2026-11-03</td><td>Hub 改放 Linux；節點支援 Windows / macOS / Linux；新增跨平台差異、os / arch 路由、Claude 登入模式、各平台服務設定；網路改 Tailscale</td></tr>
+    <tr><td class="num">v0.3</td><td class="num">2026-11-03</td><td>機器改為動態加入（加入碼、待核准、生命週期）；metadata 移到 Hub 並可隨時修改、有版本紀錄；新增在線判斷（online / asleep / offline / never，依機器類型）與派給沒在線機器時的 confirm / queue / reject；執行中睡著保留租約、逾時只算醒著時間；標籤路由；新增 api.schema.json 與參考實作；修正領任務 SQL 的 NULL 標籤錯誤；Hub 支援 Ubuntu 24.04 / 26.04；驗證計畫擴充為 T01–T33；新增 D16–D20、Q9–Q11；文件改為一章一檔，編號與交叉引用自動產生</td></tr>
+  </table></div>
+</section>

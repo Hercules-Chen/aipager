@@ -1,0 +1,111 @@
+<section id="worker" data-title="Worker 執行流程" data-group="執行">
+  <h3>主迴圈</h3>
+  <ol class="steps">
+    <li><div><b>啟動自檢</b>：偵測 os / arch；讀 node.json、token、profiles.json；確認 <code>claude --version</code> 可執行、資料目錄可寫入；補送「有 result.json 但未送出」的任務；把「沒有 result.json 也沒有程序」的任務以 <code>E_WORKER_CRASH</code> 回報</div></li>
+    <li><div><b>心跳</b>：每 15 秒 <code>POST /nodes/heartbeat</code>（帶 facts、profiles、目前持有的 meta_version）；回應中的 <code>cancel_requests</code> 立即處理，有新 metadata 就更新本機快取</div></li>
+    <li><div><b>領任務</b>：有空位時 <code>POST /tasks/claim?wait=25</code>（long-poll），帶上目前沒被鎖住的 profile</div></li>
+    <li><div><b>建任務目錄</b>：<code>&lt;資料位置&gt;/tasks/yyyyMMdd/&lt;task_id&gt;/</code>，寫入 task.json、task.token、profile.json（任務結束即刪除 token）</div></li>
+    <li><div><b>準備工作目錄</b>：若有 repo：檢查 url 在 allow_remote 內 → <code>git status --porcelain</code> 必須乾淨 → 執行 pre_commands → <code>git checkout --detach &lt;commit&gt;</code>。附件下載到 <code>.relay/inputs/&lt;task_id&gt;/</code></div></li>
+    <li><div><b>組 prompt</b>：依範本產生 prompt.txt 與 system-append.txt（含 os、arch、shell 提示），產生 mcp.json（task 模式）</div></li>
+    <li><div><b>啟動 Claude</b>：以參數陣列 spawn（不經 shell），prompt 從 stdin 寫入；POSIX 上以 <code>detached:true</code> 建立獨立程序群組；macOS 若 <code>keep_awake</code> 則同時啟動 <code>caffeinate -i -w &lt;pid&gt;</code></div></li>
+    <li><div><b>執行中</b>：stdout 逐行寫入 stream.jsonl 並解析；每 20 秒續約；轉送進度（節流 2 秒）；收到取消或逾時就依平台終止程序樹（見 <a data-ref="platforms"></a>）</div></li>
+    <li><div><b>收尾</b>：決定結果來源（見下）→ 驗證 json 輸出 → 收集 artifacts（相對路徑、禁止 <code>..</code>、總量上限）→ 上傳 blob → 上傳壓縮後的 stream.jsonl（供 Dashboard 檢視）→ <code>POST /result</code></div></li>
+    <li><div><b>送不出去</b>：Hub 連不上時把結果留在 result.json 並標記 pending，背景以指數退避重送（最長間隔 5 分鐘）</div></li>
+  </ol>
+
+  <h3>心跳、睡眠偵測與熱重載</h3>
+  <ul>
+    <li><b>facts</b>：啟動時與每小時重新偵測一次（OS 版本、Claude 版本、Tailscale IP 等），變動時隨心跳送出</li>
+    <li><b>睡眠偵測</b>：每 5 秒比對牆上時間，跳動超過 30 秒即判定剛醒來，立刻送心跳並帶 <code>resumed_from_sleep_sec</code>，同時把這段時間記為該任務的睡眠區間（逾時只算醒著的時間）</li>
+    <li><b>retired</b>：心跳收到 401 時停止領任務、在 Log 寫明「此節點已退役或 token 已撤銷」，每 10 分鐘重試一次，不再狂打 Hub</li>
+    <li><b>profiles 熱重載</b>：監看 profiles.json，存檔後驗證通過才替換；失敗保留舊設定並在心跳回報 <code>profiles_error</code></li>
+  </ul>
+
+  <h3>Claude 啟動參數（三個平台相同，只有路徑不同）</h3>
+  <div class="codebox"><div class="label"><span>Worker 組出的參數（cmdline.txt 會記錄，不含 token）</span><button type="button" data-copy>複製</button></div><pre><code>&lt;claude_path&gt; -p
+  --output-format stream-json --verbose
+  --model sonnet
+  --max-turns 30
+  --permission-mode acceptEdits
+  --allowedTools "Read" "Grep" "Glob" "Bash(git status:*)" "Bash(dotnet build:*)" …
+  --disallowedTools "Bash(git push:*)" "WebFetch" …
+  --mcp-config "&lt;任務目錄&gt;/mcp.json"
+  --strict-mcp-config
+  --permission-prompt-tool mcp__relay__relay_permission_prompt
+  --append-system-prompt "&lt;system-append.txt 的內容&gt;"
+  [--resume &lt;claude_session_id&gt;]        ← 只在 session.mode=resume_thread 且 Hub 有紀錄時
+
+cwd   = profile.workdir
+stdin = prompt.txt（UTF-8）
+env   = 使用者環境 + profile.env + RELAY_TASK_ID + MCP_TOOL_TIMEOUT=900000
+        + 依 claude_auth 注入 CLAUDE_CODE_OAUTH_TOKEN 或 ANTHROPIC_API_KEY（並移除另一個）</code></pre></div>
+  <ul>
+    <li><b>claude_path</b>：Windows 指向 <code>claude.exe</code>（原生安裝版；Node 在 Windows 上 spawn <code>.cmd</code> 需要 <code>shell:true</code>，會引入參數跳脫問題，v1 不支援）；macOS / Linux 為 <code>~/.local/bin/claude</code></li>
+    <li><code>--strict-mcp-config</code> 讓任務 session 只載入 relay，不受操作者個人 MCP 設定影響</li>
+    <li><code>--resume</code> 只能在同一台、同一個 cwd 找到舊 session，因此 resume 記錄以 (thread, node, profile) 為鍵</li>
+    <li>launchd 與 systemd 啟動時 PATH 很短，服務設定檔必須明確給 PATH（範本已設定 Volta 與 <code>~/.local/bin</code>）</li>
+  </ul>
+
+  <h3>結果判定優先序</h3>
+  <ol>
+    <li>Claude 有呼叫 <code>relay_submit_result</code> → 採用它（<code>result_source=submit_tool</code>）</li>
+    <li>沒呼叫，但串流最後的 <code>result</code> 事件 subtype 為 success → 狀態 succeeded，summary 取最後文字前 4000 字（<code>final_text</code>）</li>
+    <li>其他情況 → failed，依 <code>error_max_turns</code>、exit code、逾時、取消、驗證錯誤對應錯誤碼（<code>worker</code>）</li>
+  </ol>
+
+  <h3>stream-json 對應</h3>
+  <div class="tablewrap"><table>
+    <tr><th>Claude 事件</th><th>Worker 動作</th></tr>
+    <tr><td><code>type=system, subtype=init</code></td><td>取得 session_id、載入的工具與 MCP 狀態；若 relay MCP 未連上則記 warn → progress started</td></tr>
+    <tr><td><code>type=assistant</code> 含 <code>tool_use</code></td><td>progress phase=tool（工具名 + 參數摘要 ≤ 300 字）</td></tr>
+    <tr><td><code>type=assistant</code> 含 text</td><td>只寫入 stream.jsonl，不逐句轉送（避免洗版）</td></tr>
+    <tr><td><code>type=result</code></td><td>取 <code>subtype</code>、<code>is_error</code>、<code>result</code>、<code>session_id</code>、<code>total_cost_usd</code>、<code>num_turns</code>、<code>duration_ms</code> 寫入 metrics</td></tr>
+    <tr><td>無法解析的行</td><td>原樣保留在 stream.jsonl，Log 記 warn，不中斷任務</td></tr>
+  </table></div>
+
+  <h3>程序終止（已實測）</h3>
+  <p>POSIX 的做法已在 Linux 上實測：以 <code>detached:true</code> 啟動含多層子程序的 bash，對整個程序群組送 SIGTERM 後，群組內沒有任何仍在執行的程序。測試環境中剩下的兩個項目是殭屍狀態（Z），原因是容器的 PID 1 不回收子程序；真機上的 systemd 與 launchd 會回收。因此 Worker 檢查孤兒程序時要<b>排除 Z 狀態</b>，否則會誤判。</p>
+
+  <h3>Profile 設定</h3>
+  <p>Profile 是接收端的安全邊界：發送端只能選 profile 名稱，工作目錄、可用工具、模型、上限都在這裡決定。每台機器的 profiles.json 用自己平台的路徑與指令。</p>
+  <details open>
+    <summary>Windows：profiles.windows.json（echo 冒煙測試 + build 編譯）</summary>
+    <div class="inner"><div class="codebox"><div class="label"><span>spec/config/profiles.windows.json</span><button type="button" data-copy>複製</button></div><pre><code><!--INCLUDE:spec/config/profiles.windows.json--></code></pre></div></div>
+  </details>
+  <details>
+    <summary>macOS：profiles.macos.json（echo + ios 建置測試）</summary>
+    <div class="inner"><div class="codebox"><div class="label"><span>spec/config/profiles.macos.json</span><button type="button" data-copy>複製</button></div><pre><code><!--INCLUDE:spec/config/profiles.macos.json--></code></pre></div></div>
+  </details>
+  <details>
+    <summary>Linux：profiles.linux.json（echo + e2e 測試）</summary>
+    <div class="inner"><div class="codebox"><div class="label"><span>spec/config/profiles.linux.json</span><button type="button" data-copy>複製</button></div><pre><code><!--INCLUDE:spec/config/profiles.linux.json--></code></pre></div></div>
+  </details>
+  <div class="note"><b>工作目錄策略：</b>每個 profile 使用 Worker 專屬的 clone（例如 <code>D:\RelayWork\erp</code>、<code>~/RelayWork/ios-app</code>），不與開發者自己的工作副本共用，也不使用 git worktree。工作目錄不乾淨時直接以 <code>E_WORKDIR_DIRTY</code> 失敗，不自動清除，避免誤刪。</div>
+
+  <h3>任務目錄內容</h3>
+  <div class="tablewrap"><table>
+    <tr><th>檔案</th><th>內容</th><th>保留</th></tr>
+    <tr><td><code>task.json</code></td><td>領到的完整 envelope</td><td>30 天</td></tr>
+    <tr><td><code>profile.json</code></td><td>當下生效的 profile 快照</td><td>30 天</td></tr>
+    <tr><td><code>task.token</code></td><td>task token</td><td>任務結束立即刪除</td></tr>
+    <tr><td><code>mcp.json</code></td><td>task 模式 MCP 設定（只放 token 檔路徑）</td><td>30 天</td></tr>
+    <tr><td><code>prompt.txt</code> / <code>system-append.txt</code></td><td>實際送給 Claude 的內容</td><td>30 天</td></tr>
+    <tr><td><code>cmdline.txt</code></td><td>完整命令列（可手動複製重跑）</td><td>30 天</td></tr>
+    <tr><td><code>stream.jsonl</code></td><td>Claude 原始串流輸出</td><td>30 天</td></tr>
+    <tr><td><code>stderr.log</code></td><td>Claude 標準錯誤</td><td>30 天</td></tr>
+    <tr><td><code>worker.log</code></td><td>此任務的 Worker Log（JSONL）</td><td>30 天</td></tr>
+    <tr><td><code>result.json</code></td><td>送出（或待送出）的結果</td><td>30 天</td></tr>
+  </table></div>
+
+  <details>
+    <summary>Prompt 範本（system-append 與 task prompt）</summary>
+    <div class="inner">
+      <div class="codebox"><div class="label"><span>spec/prompts/worker-system-append.txt</span><button type="button" data-copy>複製</button></div><pre><code><!--INCLUDE:spec/prompts/worker-system-append.txt--></code></pre></div>
+      <div class="codebox"><div class="label"><span>spec/prompts/worker-task-prompt.txt</span><button type="button" data-copy>複製</button></div><pre><code><!--INCLUDE:spec/prompts/worker-task-prompt.txt--></code></pre></div>
+    </div>
+  </details>
+  <details>
+    <summary>task 模式的 mcp.json（Worker 每個任務自動產生；此為 Windows 範例，Mac / Linux 只差路徑）</summary>
+    <div class="inner"><div class="codebox"><div class="label"><span>spec/claude/mcp.task.windows.json</span><button type="button" data-copy>複製</button></div><pre><code><!--INCLUDE:spec/claude/mcp.task.windows.json--></code></pre></div></div>
+  </details>
+</section>
