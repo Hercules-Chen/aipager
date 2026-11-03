@@ -1,5 +1,5 @@
 @echo off
-rem Claude Relay worker launcher (ASCII only, CRLF). Chain: .bat -> .ps1 -> node
+rem AIPager worker launcher (ASCII only, CRLF). Chain: .bat -> .ps1 -> node
 setlocal
 pushd "%~dp0"
 echo [start-worker] script dir = %CD%

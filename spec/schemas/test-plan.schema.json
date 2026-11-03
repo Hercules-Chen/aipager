@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://claude-relay.local/schemas/relay-1.0/test-plan.schema.json",
-  "title": "Claude Relay test plan (single source for the design document's test plan and roadmap)",
+  "$id": "https://aipager.local/schemas/aipager-1.0/test-plan.schema.json",
+  "title": "AIPager test plan (single source for the design document's test plan and roadmap)",
   "type": "object",
   "required": ["version", "phases", "automated", "manual"],
   "additionalProperties": false,

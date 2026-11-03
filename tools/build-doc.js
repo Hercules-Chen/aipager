@@ -6,13 +6,13 @@
 //   - chapter numbers (from file order), <h2> headings, the table of contents
 //   - cross references: <a data-ref="<id>"></a>  ->  <a href="#<id>">NN title</a>
 //   - code blocks: <!--INCLUDE:path-->  ->  HTML-escaped file content
-// Outputs: docs/claude-relay-design.html (standalone) and docs/artifact/claude-relay-design.html (fragment for publishing)
+// Outputs: docs/aipager-design.html (standalone) and docs/artifact/aipager-design.html (fragment for publishing)
 // Usage: node tools/build-doc.js
 'use strict';
 const fs = require('node:fs');
 const path = require('node:path');
 
-const DOC_VERSION = 'v0.3.1';
+const DOC_VERSION = 'v0.3.2';
 const root = path.resolve(__dirname, '..');
 const src = path.join(root, 'docs/src');
 let problems = 0;
@@ -118,12 +118,12 @@ html = html.replace(/<!--INCLUDE:([^>]+?)-->/g, (_, rel) => {
   return esc(text.replace(/\r\n/g, '\n').replace(/\n+$/, ''));
 });
 
-const outPath = path.join(root, 'docs/claude-relay-design.html');
+const outPath = path.join(root, 'docs/aipager-design.html');
 const standalone = '<!doctype html>\n<html lang="zh-Hant">\n<head>\n<meta charset="utf-8">\n' +
   '<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">\n' +
   html.replace(/\n<div class="shell">/, '\n</head>\n<body>\n<div class="shell">') + '\n</body>\n</html>\n';
 fs.writeFileSync(outPath, standalone, { encoding: 'utf8' });
-const fragPath = path.join(root, 'docs/artifact/claude-relay-design.html');
+const fragPath = path.join(root, 'docs/artifact/aipager-design.html');
 fs.mkdirSync(path.dirname(fragPath), { recursive: true });
 fs.writeFileSync(fragPath, html, { encoding: 'utf8' });
 ok(`built ${path.relative(root, outPath)} and artifact fragment (${includes} includes, ${refCount} cross-refs, ${Buffer.byteLength(standalone)} bytes)`);

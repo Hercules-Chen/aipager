@@ -73,8 +73,8 @@ for (const f of fs.readdirSync(apiDir).filter((f) => f.endsWith('.json')).sort()
   else bad(`api example invalid: ${f}\n      ` + ajv.errorsText(v.errors, { separator: '\n      ' }));
 }
 const apiNegatives = [
-  ['enrollmentCreated', 'code with lowercase', (d) => { d.code = 'rle_k7qf-2xma-pl4d-9rte'; }],
-  ['enrollResponse', 'short node token', (d) => { d.node_token = 'rln_abc'; }],
+  ['enrollmentCreated', 'code with lowercase', (d) => { d.code = 'ape_k7qf-2xma-pl4d-9rte'; }],
+  ['enrollResponse', 'short node token', (d) => { d.node_token = 'apn_abc'; }],
   ['nodeView', 'meta label value "*"', (d) => { d.meta.labels.any = '*'; }],
   ['nodeView', 'unknown presence', (d) => { d.presence = 'sleeping'; }],
   ['nodeMetaPatch', 'empty patch', () => ({})],
@@ -94,7 +94,7 @@ for (const f of fs.readdirSync(path.join(root, 'spec/config')).sort()) {
   try { readJson(path.join(root, 'spec/config', f)); ok('config parses: ' + f); }
   catch (e) { bad('config parse failed: ' + f + ' ' + e.message); }
 }
-const tools = readJson(path.join(root, 'spec/mcp/relay-tools.json'));
+const tools = readJson(path.join(root, 'spec/mcp/aipager-tools.json'));
 for (const t of tools.tools) {
   try { ajv.compile(t.inputSchema); } catch (e) { bad('mcp tool schema invalid: ' + t.name + ' ' + e.message); }
 }

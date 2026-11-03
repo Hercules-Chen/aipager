@@ -9,7 +9,7 @@
     <tr><td class="num">409</td><td><code>E_CONFLICT</code></td><td>狀態不允許此操作（例如更新已結束的任務）</td><td>重新查詢狀態</td></tr>
     <tr><td class="num">409</td><td><code>E_LEASE_LOST</code></td><td>租約不符或已過期</td><td>Worker 停止回報該任務，結果保留在本機</td></tr>
     <tr><td class="num">413</td><td><code>E_PAYLOAD_TOO_LARGE</code></td><td>超過大小上限</td><td>改用附件或 Git</td></tr>
-    <tr><td class="num">422</td><td><code>E_PROFILE_UNKNOWN</code></td><td>目標節點沒有宣告此 profile</td><td>先 <code>relay_list_nodes</code></td></tr>
+    <tr><td class="num">422</td><td><code>E_PROFILE_UNKNOWN</code></td><td>目標節點沒有宣告此 profile</td><td>先 <code>list_nodes</code></td></tr>
     <tr><td class="num">422</td><td><code>E_REQUIREMENT_UNMET</code></td><td>指定節點的 os / arch / 標籤不符合 <code>requires</code></td><td>改目標或拿掉限制</td></tr>
     <tr><td class="num">409</td><td><code>E_TARGET_UNAVAILABLE</code></td><td>目標沒在線且 <code>on_unavailable</code> 為 confirm / reject；任務未建立，回應附 alternatives</td><td>問使用者：排隊、改派或取消</td></tr>
     <tr><td class="num">422</td><td><code>E_ENROLL_INVALID</code></td><td>加入碼錯誤、過期、已使用或已撤銷</td><td>請管理者重新建立加入碼</td></tr>

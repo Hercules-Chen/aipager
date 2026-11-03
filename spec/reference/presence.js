@@ -1,5 +1,5 @@
-// Claude Relay reference algorithms: node presence and dispatch decision (relay/1.0).
-// The Hub, the Dashboard and relayctl must behave exactly like these functions.
+// AIPager reference algorithms: node presence and dispatch decision (aipager/1.0).
+// The Hub, the Dashboard and aipagerctl must behave exactly like these functions.
 // Pure functions only (no I/O) so they can be unit-tested and copied into any component.
 'use strict';
 

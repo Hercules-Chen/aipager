@@ -1,7 +1,7 @@
 {
   "node_id": "build-pc",
-  "hub_url": "http://relay-hub:7300",
-  "token_file": "C:\\ProgramData\\ClaudeRelay\\node\\node.token",
+  "hub_url": "http://aipager-hub:7300",
+  "token_file": "C:\\ProgramData\\AIPager\\node\\node.token",
   "claude_path": "C:\\Users\\<user>\\.local\\bin\\claude.exe",
   "claude_auth": {
     "mode": "login"
@@ -13,7 +13,7 @@
     "claim_wait_sec": 25,
     "lease_renew_sec": 20,
     "progress_throttle_ms": 2000,
-    "tasks_dir": "C:\\ProgramData\\ClaudeRelay\\worker\\tasks",
+    "tasks_dir": "C:\\ProgramData\\AIPager\\worker\\tasks",
     "upload_stream_log": true,
     "mcp_tool_timeout_ms": 900000,
     "keep_awake": false
@@ -23,7 +23,7 @@
   },
   "log": {
     "level": "info",
-    "dir": "C:\\ProgramData\\ClaudeRelay\\logs",
+    "dir": "C:\\ProgramData\\AIPager\\logs",
     "keep_days": 30
   }
 }

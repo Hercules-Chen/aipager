@@ -1,7 +1,7 @@
-﻿# Claude Relay worker 啟動腳本（UTF-8 BOM，供 Windows PowerShell 5.x 正確解析中文）
+﻿# AIPager worker 啟動腳本（UTF-8 BOM，供 Windows PowerShell 5.x 正確解析中文）
 param(
-    [string]$Config = "C:\ProgramData\ClaudeRelay\node\node.json",
-    [string]$AppDir = "C:\Program Files\ClaudeRelay",
+    [string]$Config = "C:\ProgramData\AIPager\node\node.json",
+    [string]$AppDir = "C:\Program Files\AIPager",
     [int]$InspectPort = 0,
     [switch]$Once
 )
@@ -16,7 +16,7 @@ $cfg = Get-Content -Raw -Encoding UTF8 $Config | ConvertFrom-Json
 Write-Info "config      = $Config"
 Write-Info "node_id     = $($cfg.node_id)"
 Write-Info "hub_url     = $($cfg.hub_url)"
-Write-Info "roles/labels = 由 Hub 管理（relayctl nodes show $($cfg.node_id)）"
+Write-Info "roles/labels = 由 Hub 管理（aipagerctl nodes show $($cfg.node_id)）"
 Write-Info "claude_path = $($cfg.claude_path)"
 Write-Info "token_file  = $($cfg.token_file)  (內容不顯示)"
 Write-Info "node        = $(& node --version)"

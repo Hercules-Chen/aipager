@@ -1,4 +1,4 @@
--- Claude Relay Hub schema (relay/1.0, schema_version 1)
+-- AIPager Hub schema (aipager/1.0, schema_version 1)
 -- Engine: SQLite via Node.js built-in node:sqlite (no native module rebuild)
 -- Times: TEXT, RFC3339 UTC with milliseconds. JSON columns: TEXT holding JSON.
 PRAGMA journal_mode = WAL;

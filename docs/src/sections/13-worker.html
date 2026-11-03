@@ -5,7 +5,7 @@
     <li><div><b>心跳</b>：每 15 秒 <code>POST /nodes/heartbeat</code>（帶 facts、profiles、目前持有的 meta_version）；回應中的 <code>cancel_requests</code> 立即處理，有新 metadata 就更新本機快取</div></li>
     <li><div><b>領任務</b>：有空位時 <code>POST /tasks/claim?wait=25</code>（long-poll），帶上目前沒被鎖住的 profile</div></li>
     <li><div><b>建任務目錄</b>：<code>&lt;資料位置&gt;/tasks/yyyyMMdd/&lt;task_id&gt;/</code>，寫入 task.json、task.token、profile.json（任務結束即刪除 token）</div></li>
-    <li><div><b>準備工作目錄</b>：若有 repo：檢查 url 在 allow_remote 內 → <code>git status --porcelain</code> 必須乾淨 → 執行 pre_commands → <code>git checkout --detach &lt;commit&gt;</code>。附件下載到 <code>.relay/inputs/&lt;task_id&gt;/</code></div></li>
+    <li><div><b>準備工作目錄</b>：若有 repo：檢查 url 在 allow_remote 內 → <code>git status --porcelain</code> 必須乾淨 → 執行 pre_commands → <code>git checkout --detach &lt;commit&gt;</code>。附件下載到 <code>.aipager/inputs/&lt;task_id&gt;/</code></div></li>
     <li><div><b>組 prompt</b>：依範本產生 prompt.txt 與 system-append.txt（含 os、arch、shell 提示），產生 mcp.json（task 模式）</div></li>
     <li><div><b>啟動 Claude</b>：以參數陣列 spawn（不經 shell），prompt 從 stdin 寫入；POSIX 上以 <code>detached:true</code> 建立獨立程序群組；macOS 若 <code>keep_awake</code> 則同時啟動 <code>caffeinate -i -w &lt;pid&gt;</code></div></li>
     <li><div><b>執行中</b>：stdout 逐行寫入 stream.jsonl 並解析；每 20 秒續約；轉送進度（節流 2 秒）；收到取消或逾時就依平台終止程序樹（見 <a data-ref="platforms"></a>）</div></li>
@@ -31,24 +31,24 @@
   --disallowedTools "Bash(git push:*)" "WebFetch" …
   --mcp-config "&lt;任務目錄&gt;/mcp.json"
   --strict-mcp-config
-  --permission-prompt-tool mcp__relay__relay_permission_prompt
+  --permission-prompt-tool mcp__aipager__permission_prompt
   --append-system-prompt "&lt;system-append.txt 的內容&gt;"
   [--resume &lt;claude_session_id&gt;]        ← 只在 session.mode=resume_thread 且 Hub 有紀錄時
 
 cwd   = profile.workdir
 stdin = prompt.txt（UTF-8）
-env   = 使用者環境 + profile.env + RELAY_TASK_ID + MCP_TOOL_TIMEOUT=900000
+env   = 使用者環境 + profile.env + AIPAGER_TASK_ID + MCP_TOOL_TIMEOUT=900000
         + 依 claude_auth 注入 CLAUDE_CODE_OAUTH_TOKEN 或 ANTHROPIC_API_KEY（並移除另一個）</code></pre></div>
   <ul>
     <li><b>claude_path</b>：Windows 指向 <code>claude.exe</code>（原生安裝版；Node 在 Windows 上 spawn <code>.cmd</code> 需要 <code>shell:true</code>，會引入參數跳脫問題，v1 不支援）；macOS / Linux 為 <code>~/.local/bin/claude</code></li>
-    <li><code>--strict-mcp-config</code> 讓任務 session 只載入 relay，不受操作者個人 MCP 設定影響</li>
+    <li><code>--strict-mcp-config</code> 讓任務 session 只載入 aipager，不受操作者個人 MCP 設定影響</li>
     <li><code>--resume</code> 只能在同一台、同一個 cwd 找到舊 session，因此 resume 記錄以 (thread, node, profile) 為鍵</li>
     <li>launchd 與 systemd 啟動時 PATH 很短，服務設定檔必須明確給 PATH（範本已設定 Volta 與 <code>~/.local/bin</code>）</li>
   </ul>
 
   <h3>結果判定優先序</h3>
   <ol>
-    <li>Claude 有呼叫 <code>relay_submit_result</code> → 採用它（<code>result_source=submit_tool</code>）</li>
+    <li>Claude 有呼叫 <code>submit_result</code> → 採用它（<code>result_source=submit_tool</code>）</li>
     <li>沒呼叫，但串流最後的 <code>result</code> 事件 subtype 為 success → 狀態 succeeded，summary 取最後文字前 4000 字（<code>final_text</code>）</li>
     <li>其他情況 → failed，依 <code>error_max_turns</code>、exit code、逾時、取消、驗證錯誤對應錯誤碼（<code>worker</code>）</li>
   </ol>
@@ -56,7 +56,7 @@ env   = 使用者環境 + profile.env + RELAY_TASK_ID + MCP_TOOL_TIMEOUT=900000
   <h3>stream-json 對應</h3>
   <div class="tablewrap"><table>
     <tr><th>Claude 事件</th><th>Worker 動作</th></tr>
-    <tr><td><code>type=system, subtype=init</code></td><td>取得 session_id、載入的工具與 MCP 狀態；若 relay MCP 未連上則記 warn → progress started</td></tr>
+    <tr><td><code>type=system, subtype=init</code></td><td>取得 session_id、載入的工具與 MCP 狀態；若 aipager MCP 未連上則記 warn → progress started</td></tr>
     <tr><td><code>type=assistant</code> 含 <code>tool_use</code></td><td>progress phase=tool（工具名 + 參數摘要 ≤ 300 字）</td></tr>
     <tr><td><code>type=assistant</code> 含 text</td><td>只寫入 stream.jsonl，不逐句轉送（避免洗版）</td></tr>
     <tr><td><code>type=result</code></td><td>取 <code>subtype</code>、<code>is_error</code>、<code>result</code>、<code>session_id</code>、<code>total_cost_usd</code>、<code>num_turns</code>、<code>duration_ms</code> 寫入 metrics</td></tr>
@@ -80,7 +80,7 @@ env   = 使用者環境 + profile.env + RELAY_TASK_ID + MCP_TOOL_TIMEOUT=900000
     <summary>Linux：profiles.linux.json（echo + e2e 測試）</summary>
     <div class="inner"><div class="codebox"><div class="label"><span>spec/config/profiles.linux.json</span><button type="button" data-copy>複製</button></div><pre><code><!--INCLUDE:spec/config/profiles.linux.json--></code></pre></div></div>
   </details>
-  <div class="note"><b>工作目錄策略：</b>每個 profile 使用 Worker 專屬的 clone（例如 <code>D:\RelayWork\erp</code>、<code>~/RelayWork/ios-app</code>），不與開發者自己的工作副本共用，也不使用 git worktree。工作目錄不乾淨時直接以 <code>E_WORKDIR_DIRTY</code> 失敗，不自動清除，避免誤刪。</div>
+  <div class="note"><b>工作目錄策略：</b>每個 profile 使用 Worker 專屬的 clone（例如 <code>D:\AIPagerWork\erp</code>、<code>~/AIPagerWork/ios-app</code>），不與開發者自己的工作副本共用，也不使用 git worktree。工作目錄不乾淨時直接以 <code>E_WORKDIR_DIRTY</code> 失敗，不自動清除，避免誤刪。</div>
 
   <h3>任務目錄內容</h3>
   <div class="tablewrap"><table>

@@ -1,4 +1,4 @@
-# Claude Relay（aipager）設計規格
+# AIPager 設計規格
 
 讓多台機器上的 Claude Code 透過一個中控 Hub 互相派工、回報、對話，不需要人轉貼 prompt。
 
@@ -6,24 +6,24 @@
 - 節點：Windows、macOS、Linux，以一次性加入碼動態加入，機器資料在 Hub 上隨時調整
 - 在線判斷：依心跳判斷 online / asleep / offline；派給睡著的機器時提醒發派者與使用者
 
-目前狀態：**設計規格 v0.3.1（草案），尚未實作。**
+目前狀態：**設計規格 v0.3.2（草案），尚未實作。**
 
 ## 閱讀文件
 
-用瀏覽器開啟 [`docs/claude-relay-design.html`](docs/claude-relay-design.html)，左側有章節目錄。
+用瀏覽器開啟 [`docs/aipager-design.html`](docs/aipager-design.html)，左側有章節目錄。
 
 ## 目錄
 
 | 路徑 | 內容 |
 |---|---|
 | `docs/src/` | 文件原始檔（一章一個檔案），HTML 由程式產生 |
-| `docs/claude-relay-design.html` | 產出的完整文件 |
+| `docs/aipager-design.html` | 產出的完整文件 |
 | `spec/schemas/` | 封包與 API 的 JSON Schema（draft 2020-12） |
 | `spec/examples/` | 封包與 API 範例（全部經過 schema 驗證） |
 | `spec/reference/presence.js` | 在線判斷、租約保留、睡眠偵測、派工決策的參考實作 |
 | `spec/tests/test-plan.json` | 測試清單與執行紀錄（唯一來源） |
 | `spec/sql/hub-schema.sql` | Hub 資料庫 DDL（SQLite） |
-| `spec/mcp/relay-tools.json` | MCP 工具定義 |
+| `spec/mcp/aipager-tools.json` | MCP 工具定義 |
 | `spec/config/` | Hub 與各平台節點的設定範本 |
 | `spec/scripts/` | Windows / macOS / Linux 的啟動與服務設定腳本 |
 | `tools/validate-spec.js` | 驗證全部規格檔 |
@@ -53,7 +53,7 @@ npm test
 Hub 安裝腳本的實跑測試會修改系統，只能在用完即丟的 Ubuntu 機器或容器中執行：
 
 ```bash
-sudo RELAY_TEST_ALLOW_SYSTEM_CHANGES=1 bash tools/tests/linux-install-hub.test.sh
+sudo AIPAGER_TEST_ALLOW_SYSTEM_CHANGES=1 bash tools/tests/linux-install-hub.test.sh
 ```
 
 ## 測試項目

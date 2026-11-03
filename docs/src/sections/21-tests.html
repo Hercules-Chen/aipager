@@ -8,7 +8,7 @@
 
   <h3>手動測試的環境與優先順序</h3>
   <ul>
-    <li>Hub：relay-hub（Ubuntu，MagicDNS 名稱 <code>relay-hub</code>）</li>
+    <li>Hub：aipager-hub（Ubuntu，MagicDNS 名稱 <code>aipager-hub</code>）</li>
     <li>Worker：build-pc（Windows）、macbook-hc（macOS 筆電）、linux-box（Linux）；互動機：dev-pc 或 dev-mac</li>
     <li><b>P0 階段要最先做：<!--TESTPLAN:priority--></b>。它們確認本設計依賴的 Claude Code CLI 行為、各平台登入方式、筆電睡眠行為與 Ubuntu 26.04 相容性，結果可能改變設計</li>
     <li>標示「CLI 行為」的項目在驗證 Claude Code 本身的行為；結果不符時要回頭修改設計，而不是只修程式</li>

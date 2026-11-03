@@ -1,6 +1,6 @@
 <section id="api" data-title="Hub REST API" data-group="協定">
   <ul>
-    <li>Base URL：<code>http://relay-hub:7300/api/v1</code>（Tailscale MagicDNS）。請求與回應皆為 <code>application/json; charset=utf-8</code></li>
+    <li>Base URL：<code>http://aipager-hub:7300/api/v1</code>（Tailscale MagicDNS）。請求與回應皆為 <code>application/json; charset=utf-8</code></li>
     <li>每個回應帶 <code>X-Trace-Id</code>；呼叫端可送 <code>X-Request-Id</code>，Hub 原樣回傳並寫入 Log</li>
     <li>錯誤一律回 <code>{"error":{"code":"E_…","message":"…","detail":{},"trace_id":"…"}}</code>；<code>message</code> 依 <code>Accept-Language</code> 回 zh-TW 或 en</li>
     <li>Long-poll 端點的 <code>wait</code> / <code>timeout</code> 上限 50 秒；沒有結果時回 204 或目前狀態</li>
@@ -46,7 +46,7 @@
     <tr><td><span class="method post">POST</span></td><td><code>/messages</code></td><td>node / task</td><td>送訊息，回 201 <code>{message_id, thread_id, warnings}</code>；收件機器沒在線時附 <code>W_TARGET_ASLEEP</code> 等警告（訊息仍會保留，等對方回來讀）</td></tr>
     <tr><td><span class="method">GET</span></td><td><code>/mailboxes/{agent}/inbox</code></td><td>node</td><td><code>unread_only</code>、<code>limit</code>、<code>wait</code>。只能讀自己 node 的信箱</td></tr>
     <tr><td><span class="method post">POST</span></td><td><code>/mailboxes/{agent}/ack</code></td><td>node</td><td><code>{ids:[…]}</code>，回 <code>{acked}</code></td></tr>
-    <tr><td><span class="method">GET</span></td><td><code>/mailboxes/{agent}/summary</code></td><td>node</td><td><code>{unread, tasks_done, approvals_pending, waiting_tasks, top:[…3 筆標題]}</code>，給 relay-hint 用，需在 200 ms 內回應</td></tr>
+    <tr><td><span class="method">GET</span></td><td><code>/mailboxes/{agent}/summary</code></td><td>node</td><td><code>{unread, tasks_done, approvals_pending, waiting_tasks, top:[…3 筆標題]}</code>，給 aipager-hint 用，需在 200 ms 內回應</td></tr>
   </table></div>
 
   <h3>審核、附件、追蹤、管理</h3>

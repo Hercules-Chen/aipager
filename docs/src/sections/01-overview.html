@@ -1,6 +1,6 @@
 <section id="overview" data-title="目標與範圍" data-group="總覽">
   <h3>要解決的問題</h3>
-  <p>現況是每台機器各自跑 Claude Code，要協作時只能由人複製 A 機的輸出、貼到 B 機。Claude Relay 提供一個中控站（Hub），讓各機器的 Claude 用固定的協定互相傳遞「任務」與「訊息」，不論那台機器是 Windows、macOS 還是 Linux，也不論它是常駐的伺服器還是會闔蓋睡覺的筆電。</p>
+  <p>現況是每台機器各自跑 Claude Code，要協作時只能由人複製 A 機的輸出、貼到 B 機。AIPager 提供一個中控站（Hub），讓各機器的 Claude 用固定的協定互相傳遞「任務」與「訊息」，不論那台機器是 Windows、macOS 還是 Linux，也不論它是常駐的伺服器還是會闔蓋睡覺的筆電。</p>
 
   <div class="grid2">
     <div class="card">
@@ -31,7 +31,7 @@
   <div class="tablewrap"><table>
     <tr><th>代號</th><th>內容</th><th>來源</th></tr>
     <tr><td class="num">C1</td><td>Hub 放在 Ubuntu 24.04 LTS 或 26.04 LTS，使用 systemd，常駐開機</td><td>使用者確認</td></tr>
-    <tr><td class="num">C2</td><td>所有機器裝 Tailscale，透過 tailnet 互通；Hub 只綁 Tailscale IP，節點以 MagicDNS 名稱 <code>relay-hub</code> 連線</td><td>使用者確認</td></tr>
+    <tr><td class="num">C2</td><td>所有機器裝 Tailscale，透過 tailnet 互通；Hub 只綁 Tailscale IP，節點以 MagicDNS 名稱 <code>aipager-hub</code> 連線</td><td>使用者確認</td></tr>
     <tr><td class="num">C3</td><td>機器清單不固定，會陸續加入；機器資料要能隨時調整</td><td>使用者確認</td></tr>
     <tr><td class="num">C4</td><td>Mac 一開始是筆電，會睡眠；以心跳判斷，派工時提醒</td><td>使用者確認</td></tr>
   </table></div>
@@ -39,7 +39,7 @@
   <h3>仍為假設（見 <a data-ref="questions"></a>）</h3>
   <div class="tablewrap"><table>
     <tr><th>代號</th><th>假設</th><th>若不成立的影響</th></tr>
-    <tr><td class="num">A1</td><td>每台 Worker 都已安裝 Claude Code，並以某個作業系統帳號完成登入</td><td><code>relayctl join</code> 的檢查會失敗並說明原因</td></tr>
+    <tr><td class="num">A1</td><td>每台 Worker 都已安裝 Claude Code，並以某個作業系統帳號完成登入</td><td><code>aipagerctl join</code> 的檢查會失敗並說明原因</td></tr>
     <tr><td class="num">A2</td><td>程式碼放在既有 Git server，各 Worker 可 fetch</td><td>只能傳小檔附件，不適合傳整個專案</td></tr>
     <tr><td class="num">A3</td><td>Node.js 22 LTS。Worker 以 Volta 鎖版，Hub 用官方 tarball 固定路徑（本規格的驗證腳本已在 22.23 實測）</td><td>升 24 LTS 時需重跑 <code>tools/validate-spec.js</code></td></tr>
   </table></div>
@@ -48,7 +48,7 @@
   <div class="tablewrap"><table>
     <tr><th>名詞</th><th>意義</th></tr>
     <tr><td>Hub</td><td>中控服務，跑在 Linux。只負責存放、轉送、排程、記錄；<b>不執行任何程式，也不需要安裝 Claude</b></td></tr>
-    <tr><td>Node（節點）</td><td>一台加入 Relay 的機器，以 <code>node_id</code> 識別（例如 <code>build-pc</code>、<code>macbook-hc</code>），node_id 加入後不可改</td></tr>
+    <tr><td>Node（節點）</td><td>一台加入 AIPager 的機器，以 <code>node_id</code> 識別（例如 <code>build-pc</code>、<code>macbook-hc</code>），node_id 加入後不可改</td></tr>
     <tr><td>Metadata</td><td>Hub 上可隨時修改的機器資料：顯示名稱、角色、標籤、機器類型等</td></tr>
     <tr><td>Presence（在線狀態）</td><td>依心跳判斷：online / asleep / offline / never</td></tr>
     <tr><td>Enrollment（加入碼）</td><td>一次性代碼，新機器用它換得 node token</td></tr>

@@ -1,12 +1,12 @@
 <section id="security" data-title="安全" data-group="維運">
   <div class="tablewrap"><table>
     <tr><th>風險</th><th>對策</th></tr>
-    <tr><td>Hub 被其他人存取</td><td>只綁 Tailscale IP；防火牆只允許 <code>100.64.0.0/10</code>；Tailscale ACL 只允許標記為 relay 節點的裝置連 Hub 的 7300；所有 API 需 token。若不用 Tailscale，Hub 前加 Caddy 等 TLS 反向代理</td></tr>
+    <tr><td>Hub 被其他人存取</td><td>只綁 Tailscale IP；防火牆只允許 <code>100.64.0.0/10</code>；Tailscale ACL 只允許標記為 aipager 節點的裝置連 Hub 的 7300；所有 API 需 token。若不用 Tailscale，Hub 前加 Caddy 等 TLS 反向代理</td></tr>
     <tr><td>加入碼外洩，陌生機器混入</td><td>加入碼一次性、預設 24 小時過期、可撤銷；預設需要人工核准，pending 節點不能送或領任務；只有 tailnet 內的裝置連得到 <code>/enroll</code>；每 IP 每分鐘 5 次</td></tr>
     <tr><td>metadata 被誤改</td><td>只有 admin token 可改；每次修改有完整快照與修改者，可一鍵還原；修改不會放寬任何機器的本機權限（profiles 在本機）</td></tr>
     <tr><td>Token 外洩</td><td>Hub 只存雜湊；token 檔依平台限制權限；task token 任務結束 5 分鐘失效；可隨時撤銷</td></tr>
     <tr><td>Claude 長效 token 外洩（oauth_token 模式）</td><td>檔案 600 權限；只注入給 <code>claude</code> 子程序，不出現在 Log、cmdline.txt 或任何封包；外洩時到 Claude 帳號設定撤銷</td></tr>
-    <tr><td>跨機 prompt injection（A 機被誘導送惡意任務給 B 機）</td><td>任務只能選 profile；profile 白名單工具；跨機內容包在 <code>&lt;relay_task&gt;</code> 並在 system prompt 聲明為資料；高風險動作走人工審核</td></tr>
+    <tr><td>跨機 prompt injection（A 機被誘導送惡意任務給 B 機）</td><td>任務只能選 profile；profile 白名單工具；跨機內容包在 <code>&lt;aipager_task&gt;</code> 並在 system prompt 聲明為資料；高風險動作走人工審核</td></tr>
     <tr><td>任務互相觸發形成迴圈、耗盡用量</td><td>hop 上限、thread 任務數與花費上限、速率限制、禁止寄給自己</td></tr>
     <tr><td>破壞性指令（強推、刪檔、sudo、格式化）</td><td>profile 的 disallowedTools + auto_deny；工作目錄不乾淨就拒絕執行；Worker 專屬 clone；Worker 永遠不以 root / Administrator 執行</td></tr>
     <tr><td>機密外流到其他機器</td><td>system prompt 禁止讀取與輸出機密；artifacts 只能收集工作目錄內、符合 glob 的檔案；Log 遮罩</td></tr>

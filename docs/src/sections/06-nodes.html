@@ -1,12 +1,12 @@
 <section id="nodes" data-title="節點加入與 metadata" data-group="節點">
-  <p>機器會陸續增加、更換、搬位置，所以 Relay 不預先寫死機器清單。新機器用一次性的加入碼自行登錄；顯示名稱、角色、標籤、機器類型等 metadata 都存在 Hub，隨時在 Dashboard 或用 <code>relayctl</code> 調整，<b>不需要登入那台機器、也不需要重啟 Worker</b>。唯一不能改的是 <code>node_id</code>，因為它是位址的一部分。</p>
+  <p>機器會陸續增加、更換、搬位置，所以 AIPager 不預先寫死機器清單。新機器用一次性的加入碼自行登錄；顯示名稱、角色、標籤、機器類型等 metadata 都存在 Hub，隨時在 Dashboard 或用 <code>aipagerctl</code> 調整，<b>不需要登入那台機器、也不需要重啟 Worker</b>。唯一不能改的是 <code>node_id</code>，因為它是位址的一部分。</p>
 
   <h3>節點資料分三層</h3>
   <div class="tablewrap"><table>
     <tr><th>層</th><th>內容</th><th>誰寫入</th><th>存在哪</th><th>怎麼改</th><th>何時生效</th></tr>
     <tr><td><b>facts</b>（事實）</td><td>os、arch、OS 版本、主機名稱、Tailscale IP、時區、Worker 與 Claude 版本、登入模式</td><td>Worker 自動偵測，每次心跳回報</td><td>Hub</td><td>不能手動改</td><td>下一次心跳</td></tr>
-    <tr><td><b>meta</b>（管理資料）</td><td>顯示名稱、說明、角色、標籤、機器類型、在線判斷設定、負責人、備註</td><td>管理者</td><td>Hub（有版本紀錄）</td><td>Dashboard 或 <code>relayctl nodes set</code></td><td>派工路由立即生效；Worker 在 15 秒內的下一次心跳取得新版</td></tr>
-    <tr><td><b>local</b>（本機設定）</td><td>node.json（Hub 位址、token 檔、claude 路徑、登入模式、Worker 參數）、profiles.json（能做哪些事）</td><td><code>relayctl join</code> 產生，之後由該機管理者編輯</td><td>該機器</td><td>在該機器上編輯檔案</td><td>profiles.json 自動重新載入；node.json 需重啟 Worker</td></tr>
+    <tr><td><b>meta</b>（管理資料）</td><td>顯示名稱、說明、角色、標籤、機器類型、在線判斷設定、負責人、備註</td><td>管理者</td><td>Hub（有版本紀錄）</td><td>Dashboard 或 <code>aipagerctl nodes set</code></td><td>派工路由立即生效；Worker 在 15 秒內的下一次心跳取得新版</td></tr>
+    <tr><td><b>local</b>（本機設定）</td><td>node.json（Hub 位址、token 檔、claude 路徑、登入模式、Worker 參數）、profiles.json（能做哪些事）</td><td><code>aipagerctl join</code> 產生，之後由該機管理者編輯</td><td>該機器</td><td>在該機器上編輯檔案</td><td>profiles.json 自動重新載入；node.json 需重啟 Worker</td></tr>
   </table></div>
   <div class="note"><b>為什麼 profiles 不放 Hub：</b>profile 決定這台機器允許 Claude 做什麼（工作目錄、可用指令），是本機的安全邊界。放在本機代表就算 Hub 被入侵，也無法遠端放寬任何一台機器的權限。Hub 只看得到 profile 的名稱與說明。</div>
 
@@ -27,21 +27,21 @@
   <h3>生命週期</h3>
   <div class="tablewrap"><table>
     <tr><th>狀態</th><th>意義</th><th>心跳</th><th>領任務</th><th>送任務</th><th>如何進入</th></tr>
-    <tr><td><span class="pill wait">pending</span></td><td>已用加入碼登錄，等待核准</td><td>接受（Dashboard 可看到它在線）</td><td>否</td><td>否</td><td><code>relayctl join</code>（加入碼未設自動核准）</td></tr>
+    <tr><td><span class="pill wait">pending</span></td><td>已用加入碼登錄，等待核准</td><td>接受（Dashboard 可看到它在線）</td><td>否</td><td>否</td><td><code>aipagerctl join</code>（加入碼未設自動核准）</td></tr>
     <tr><td><span class="pill ok">active</span></td><td>正常運作</td><td>接受</td><td>是</td><td>是</td><td>管理者核准，或加入碼設定自動核准</td></tr>
-    <tr><td><span class="pill run">draining</span></td><td>不接新任務，跑完手上的；適合要關機維護、帶筆電出門前</td><td>接受</td><td>否</td><td>是</td><td><code>relayctl nodes drain &lt;id&gt;</code></td></tr>
-    <tr><td><span class="pill bad">disabled</span></td><td>暫停使用（可恢復）</td><td>接受</td><td>否</td><td>否</td><td><code>relayctl nodes disable &lt;id&gt;</code></td></tr>
-    <tr><td><span class="pill">retired</span></td><td>退役，token 全部撤銷，資料保留供查詢</td><td>拒絕（401）</td><td>否</td><td>否</td><td><code>relayctl nodes retire &lt;id&gt;</code></td></tr>
+    <tr><td><span class="pill run">draining</span></td><td>不接新任務，跑完手上的；適合要關機維護、帶筆電出門前</td><td>接受</td><td>否</td><td>是</td><td><code>aipagerctl nodes drain &lt;id&gt;</code></td></tr>
+    <tr><td><span class="pill bad">disabled</span></td><td>暫停使用（可恢復）</td><td>接受</td><td>否</td><td>否</td><td><code>aipagerctl nodes disable &lt;id&gt;</code></td></tr>
+    <tr><td><span class="pill">retired</span></td><td>退役，token 全部撤銷，資料保留供查詢</td><td>拒絕（401）</td><td>否</td><td>否</td><td><code>aipagerctl nodes retire &lt;id&gt;</code></td></tr>
   </table></div>
   <p>指定送給 draining、disabled 機器的任務會依 <a data-ref="presence"></a> 的規則提醒發派者；送給角色的任務會自動略過這些機器。</p>
 
   <h3>加入一台新機器</h3>
   <ol class="steps">
-    <li><div><span class="who">管理者（任何一台有 admin token 的機器，或 Dashboard 的「新增機器」）</span><br><code>relayctl enroll create --name "Hercules 的 MacBook" --power laptop --role tester --role ios-builder --label xcode=16 --ttl 24h</code><br>畫面顯示一次性加入碼（例如 <code>rle_K7QF-2XMA-PL4D-7RTE</code>）與三個平台各自的加入指令</div></li>
-    <li><div><span class="who">新機器</span><br>安裝 Tailscale、Git、Claude Code（並登入）、Node 22、Relay 發行檔（見 <a data-ref="deploy"></a>）</div></li>
-    <li><div><span class="who">新機器</span><br><code>relayctl join --hub http://relay-hub:7300 --code rle_K7QF-2XMA-PL4D-7RTE</code>（<code>--node-id</code> 可省略，預設取主機名稱轉小寫）</div></li>
-    <li><div><span class="who">relayctl join 自動完成</span><br>① 執行 doctor 檢查（Node、claude、Hub 連線、資料目錄可寫）② 偵測 facts ③ <code>POST /enroll</code> 換得 node token ④ 依平台寫入 node.json、token 檔（並設定權限）、只含 echo 的 profiles.json ⑤ 印出該平台安裝服務的指令</div></li>
-    <li><div><span class="who">新機器</span><br><code>relayctl service install</code>：依平台註冊工作排程器 / launchd / systemd --user，並立刻啟動 Worker</div></li>
+    <li><div><span class="who">管理者（任何一台有 admin token 的機器，或 Dashboard 的「新增機器」）</span><br><code>aipagerctl enroll create --name "Hercules 的 MacBook" --power laptop --role tester --role ios-builder --label xcode=16 --ttl 24h</code><br>畫面顯示一次性加入碼（例如 <code>ape_K7QF-2XMA-PL4D-7RTE</code>）與三個平台各自的加入指令</div></li>
+    <li><div><span class="who">新機器</span><br>安裝 Tailscale、Git、Claude Code（並登入）、Node 22、AIPager 發行檔（見 <a data-ref="deploy"></a>）</div></li>
+    <li><div><span class="who">新機器</span><br><code>aipagerctl join --hub http://aipager-hub:7300 --code ape_K7QF-2XMA-PL4D-7RTE</code>（<code>--node-id</code> 可省略，預設取主機名稱轉小寫）</div></li>
+    <li><div><span class="who">aipagerctl join 自動完成</span><br>① 執行 doctor 檢查（Node、claude、Hub 連線、資料目錄可寫）② 偵測 facts ③ <code>POST /enroll</code> 換得 node token ④ 依平台寫入 node.json、token 檔（並設定權限）、只含 echo 的 profiles.json ⑤ 印出該平台安裝服務的指令</div></li>
+    <li><div><span class="who">新機器</span><br><code>aipagerctl service install</code>：依平台註冊工作排程器 / launchd / systemd --user，並立刻啟動 Worker</div></li>
     <li><div><span class="who">管理者</span><br>Dashboard「待核准」出現這台機器與它回報的 facts；確認後按「核准」（可順便修改 metadata），狀態轉為 active</div></li>
     <li><div><span class="who">新機器</span><br>依需要編輯 profiles.json 增加 profile；存檔後 Worker 自動重新載入並在下一次心跳回報</div></li>
   </ol>
@@ -54,14 +54,14 @@
 
   <h3>調整 metadata</h3>
   <div class="tablewrap"><table>
-    <tr><th>要做的事</th><th>relayctl</th></tr>
-    <tr><td>看一台機器的全部資料</td><td><code>relayctl nodes show macbook-hc</code></td></tr>
-    <tr><td>加 / 改標籤</td><td><code>relayctl nodes set macbook-hc --label location=office --label xcode=16</code></td></tr>
-    <tr><td>移除標籤</td><td><code>relayctl nodes set macbook-hc --unlabel battery</code></td></tr>
-    <tr><td>增減角色</td><td><code>relayctl nodes set macbook-hc --add-role tester --remove-role ios-builder</code></td></tr>
-    <tr><td>改機器類型與門檻</td><td><code>relayctl nodes set macbook-hc --power laptop --asleep-after 120s</code></td></tr>
-    <tr><td>看修改歷史 / 還原</td><td><code>relayctl nodes history macbook-hc</code>、<code>relayctl nodes rollback macbook-hc --to 3</code></td></tr>
-    <tr><td>核准、暫停、退役</td><td><code>relayctl nodes approve|drain|disable|enable|retire &lt;id&gt;</code></td></tr>
+    <tr><th>要做的事</th><th>aipagerctl</th></tr>
+    <tr><td>看一台機器的全部資料</td><td><code>aipagerctl nodes show macbook-hc</code></td></tr>
+    <tr><td>加 / 改標籤</td><td><code>aipagerctl nodes set macbook-hc --label location=office --label xcode=16</code></td></tr>
+    <tr><td>移除標籤</td><td><code>aipagerctl nodes set macbook-hc --unlabel battery</code></td></tr>
+    <tr><td>增減角色</td><td><code>aipagerctl nodes set macbook-hc --add-role tester --remove-role ios-builder</code></td></tr>
+    <tr><td>改機器類型與門檻</td><td><code>aipagerctl nodes set macbook-hc --power laptop --asleep-after 120s</code></td></tr>
+    <tr><td>看修改歷史 / 還原</td><td><code>aipagerctl nodes history macbook-hc</code>、<code>aipagerctl nodes rollback macbook-hc --to 3</code></td></tr>
+    <tr><td>核准、暫停、退役</td><td><code>aipagerctl nodes approve|drain|disable|enable|retire &lt;id&gt;</code></td></tr>
   </table></div>
   <ul>
     <li>修改使用 <code>PATCH /nodes/{id}/meta</code>，必須帶 <code>If-Match: &lt;meta_version&gt;</code>；兩個人同時改時後送出的會收到 409 <code>E_META_CONFLICT</code>，重新讀取後再改，不會互相覆蓋</li>
@@ -80,7 +80,7 @@
     <div class="inner">
       <div class="codebox"><div class="label"><span>POST /admin/enrollments（spec/examples/api/enrollmentCreate.macbook.json）</span><button type="button" data-copy>複製</button></div><pre><code><!--INCLUDE:spec/examples/api/enrollmentCreate.macbook.json--></code></pre></div>
       <div class="codebox"><div class="label"><span>回應（enrollmentCreated.macbook.json）</span><button type="button" data-copy>複製</button></div><pre><code><!--INCLUDE:spec/examples/api/enrollmentCreated.macbook.json--></code></pre></div>
-      <div class="codebox"><div class="label"><span>POST /enroll，由 relayctl join 送出（enrollRequest.macbook.json）</span><button type="button" data-copy>複製</button></div><pre><code><!--INCLUDE:spec/examples/api/enrollRequest.macbook.json--></code></pre></div>
+      <div class="codebox"><div class="label"><span>POST /enroll，由 aipagerctl join 送出（enrollRequest.macbook.json）</span><button type="button" data-copy>複製</button></div><pre><code><!--INCLUDE:spec/examples/api/enrollRequest.macbook.json--></code></pre></div>
       <div class="codebox"><div class="label"><span>回應（enrollResponse.pending.json）</span><button type="button" data-copy>複製</button></div><pre><code><!--INCLUDE:spec/examples/api/enrollResponse.pending.json--></code></pre></div>
       <div class="codebox"><div class="label"><span>PATCH /nodes/macbook-hc/meta，If-Match: 3（nodeMetaPatch.move-to-office.json）</span><button type="button" data-copy>複製</button></div><pre><code><!--INCLUDE:spec/examples/api/nodeMetaPatch.move-to-office.json--></code></pre></div>
       <div class="codebox"><div class="label"><span>GET /nodes/macbook-hc（nodeView.macbook-asleep.json）</span><button type="button" data-copy>複製</button></div><pre><code><!--INCLUDE:spec/examples/api/nodeView.macbook-asleep.json--></code></pre></div>

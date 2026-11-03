@@ -12,7 +12,7 @@
     "approval_id": "01JBX7SPQ1R2S3T4V5W6X7Y8ZA",
     "task_id": "01JBX7Q3M8ZK4N2P6R9T0V1W2Y",
     "tool_name": "Bash",
-    "tool_input": { "command": "git push origin relay/01JBX7Q3M8ZK4N2P6R9T0V1W2Y", "description": "推送修正分支" },
+    "tool_input": { "command": "git push origin aipager/01JBX7Q3M8ZK4N2P6R9T0V1W2Y", "description": "推送修正分支" },
     "reason": "profile build 未自動允許 git push",
     "risk": "high",
     "timeout_sec": 600,

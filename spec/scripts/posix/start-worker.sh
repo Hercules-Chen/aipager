@@ -1,20 +1,20 @@
 #!/usr/bin/env bash
-# Claude Relay worker launcher for macOS and Linux (bash 3.2 compatible, LF line endings).
+# AIPager worker launcher for macOS and Linux (bash 3.2 compatible, LF line endings).
 # Prints what it is about to run, then execs node so the service manager (launchd / systemd) supervises it directly.
-# Env: RELAY_CONFIG (node.json path), RELAY_APP_DIR (default /opt/claude-relay), RELAY_INSPECT_PORT (Chrome DevTools)
+# Env: AIPAGER_CONFIG (node.json path), AIPAGER_APP_DIR (default /opt/aipager), AIPAGER_INSPECT_PORT (Chrome DevTools)
 set -euo pipefail
 
 log() { printf '[start-worker %s] %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$*"; }
 
 case "$(uname -s)" in
-  Darwin) OS=macos; DEFAULT_CONFIG="$HOME/Library/Application Support/ClaudeRelay/node/node.json" ;;
-  Linux)  OS=linux; DEFAULT_CONFIG="${XDG_CONFIG_HOME:-$HOME/.config}/claude-relay/node.json" ;;
+  Darwin) OS=macos; DEFAULT_CONFIG="$HOME/Library/Application Support/AIPager/node/node.json" ;;
+  Linux)  OS=linux; DEFAULT_CONFIG="${XDG_CONFIG_HOME:-$HOME/.config}/aipager/node.json" ;;
   *) log "unsupported OS: $(uname -s)"; exit 2 ;;
 esac
 
-CONFIG="${RELAY_CONFIG:-$DEFAULT_CONFIG}"
-APP_DIR="${RELAY_APP_DIR:-/opt/claude-relay}"
-INSPECT_PORT="${RELAY_INSPECT_PORT:-0}"
+CONFIG="${AIPAGER_CONFIG:-$DEFAULT_CONFIG}"
+APP_DIR="${AIPAGER_APP_DIR:-/opt/aipager}"
+INSPECT_PORT="${AIPAGER_INSPECT_PORT:-0}"
 
 command -v node >/dev/null 2>&1 || { log "node not found in PATH=$PATH"; exit 3; }
 [ -f "$CONFIG" ] || { log "config not found: $CONFIG"; exit 2; }
@@ -26,7 +26,7 @@ log "os          = $OS ($(uname -m))"
 log "config      = $CONFIG"
 log "node_id     = $(cfg node_id)"
 log "hub_url     = $(cfg hub_url)"
-log "roles/labels = managed at the Hub (relayctl nodes show $(cfg node_id))"
+log "roles/labels = managed at the Hub (aipagerctl nodes show $(cfg node_id))"
 log "claude_auth = $(cfg claude_auth.mode)"
 log "claude_path = $CLAUDE_PATH"
 log "token_file  = $(cfg token_file)  (content not shown)"

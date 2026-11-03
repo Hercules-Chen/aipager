@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://claude-relay.local/schemas/relay-1.0/envelope.schema.json",
-  "title": "Claude Relay Envelope (relay/1.0)",
+  "$id": "https://aipager.local/schemas/aipager-1.0/envelope.schema.json",
+  "title": "AIPager Envelope (aipager/1.0)",
   "description": "All tasks, messages, approvals and results travel in this envelope. Fields marked hub-assigned are overwritten by the Hub; clients must not rely on values they send for them.",
   "type": "object",
   "required": ["v", "id", "kind", "from", "to", "thread_id", "trace", "created_at", "payload"],
@@ -246,7 +246,7 @@
             "cost_usd": { "type": "number", "minimum": 0 },
             "claude_session_id": { "type": "string" },
             "exit_code": { "type": "integer" },
-            "result_source": { "enum": ["submit_tool", "final_text", "worker"], "description": "Where the result came from: relay_submit_result call, Claude final text, or worker-generated (timeout/cancel/crash)." }
+            "result_source": { "enum": ["submit_tool", "final_text", "worker"], "description": "Where the result came from: submit_result call, Claude final text, or worker-generated (timeout/cancel/crash)." }
           }
         }
       }

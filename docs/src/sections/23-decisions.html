@@ -15,7 +15,7 @@
     <tr><td class="num">D11</td><td>Hub 放 Linux，用 systemd 強化設定與官方 Node tarball</td><td>常駐穩定；系統服務不依賴某個使用者的 Volta 安裝</td><td>Hub 放 Windows 開發機</td></tr>
     <tr><td class="num">D12</td><td>以 Tailscale 作為網路層</td><td>三平台都有官方用戶端；WireGuard 加密；固定 100.x 位址；手機也能開 Dashboard</td><td>直接開區網 port + 自管 TLS 憑證</td></tr>
     <tr><td class="num">D13</td><td>Claude 登入模式在每台 node.json 明確設定</td><td>macOS Keychain 在未登入時不可用；明確設定才不會靠運氣</td><td>一律沿用互動登入</td></tr>
-    <tr><td class="num">D14</td><td>Windows 放 ProgramData，Mac / Linux 放使用者目錄</td><td>Windows 依團隊規則避免權限問題；Mac / Linux Worker 以使用者執行，不需 sudo；可用 <code>RELAY_HOME</code> 統一</td><td>三平台都放系統目錄</td></tr>
+    <tr><td class="num">D14</td><td>Windows 放 ProgramData，Mac / Linux 放使用者目錄</td><td>Windows 依團隊規則避免權限問題；Mac / Linux Worker 以使用者執行，不需 sudo；可用 <code>AIPAGER_HOME</code> 統一</td><td>三平台都放系統目錄</td></tr>
     <tr><td class="num">D15</td><td>os / arch 由 Worker 自動偵測，不可設定</td><td>避免手動填錯造成任務被送到錯的平台</td><td>寫在 node.json</td></tr>
     <tr><td class="num">D16</td><td>機器以一次性加入碼動態加入</td><td>機器會持續增加；加入碼可預設 metadata、可撤銷、預設需核准；join 一次寫好設定，避免手抄 token 出錯</td><td>預先列清單、手動發 token 並手寫 node.json</td></tr>
     <tr><td class="num">D17</td><td>metadata 放 Hub，profiles 留本機</td><td>調整名稱、角色、標籤不用登入機器；權限邊界不受 Hub 影響</td><td>全部放 Hub（Hub 可遠端放寬權限）或全部放本機（每次調整都要登入）</td></tr>

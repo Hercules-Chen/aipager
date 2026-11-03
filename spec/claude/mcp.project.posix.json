@@ -1,10 +1,10 @@
 {
   "mcpServers": {
-    "relay": {
+    "aipager": {
       "type": "stdio",
       "command": "node",
-      "args": ["/opt/claude-relay/bin/relay-mcp.js", "--mode", "interactive"],
-      "env": { "RELAY_AGENT": "erp" }
+      "args": ["/opt/aipager/bin/aipager-mcp.js", "--mode", "interactive"],
+      "env": { "AIPAGER_AGENT": "erp" }
     }
   }
 }

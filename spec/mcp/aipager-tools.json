@@ -1,18 +1,18 @@
 {
   "server": {
-    "name": "relay",
+    "name": "aipager",
     "transport": "stdio",
-    "command": "node relay-mcp.js",
-    "tool_prefix_in_claude_code": "mcp__relay__"
+    "command": "node aipager-mcp.js",
+    "tool_prefix_in_claude_code": "mcp__aipager__"
   },
   "tools": [
     {
-      "name": "relay_list_nodes",
+      "name": "list_nodes",
       "audience": [
         "interactive",
         "task"
       ],
-      "description": "List Claude Relay nodes (other machines): node_id, display_name, presence (online/asleep/offline/never) with how long they have been silent, power class (server/desktop/laptop), state, os, arch, roles, labels and the task profiles each one accepts. Call this before relay_send_task. A laptop that is asleep may come back hours later.",
+      "description": "List AIPager nodes (other machines): node_id, display_name, presence (online/asleep/offline/never) with how long they have been silent, power class (server/desktop/laptop), state, os, arch, roles, labels and the task profiles each one accepts. Call this before send_task. A laptop that is asleep may come back hours later.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -33,12 +33,12 @@
       }
     },
     {
-      "name": "relay_describe_node",
+      "name": "describe_node",
       "audience": [
         "interactive",
         "task"
       ],
-      "description": "Full detail of one node: metadata, facts, profiles, presence, when it was last seen and last woke up, online hours in the last 7 days. Read-only; metadata is edited by a person in the Dashboard or with relayctl.",
+      "description": "Full detail of one node: metadata, facts, profiles, presence, when it was last seen and last woke up, online hours in the last 7 days. Read-only; metadata is edited by a person in the Dashboard or with aipagerctl.",
       "inputSchema": {
         "type": "object",
         "required": [
@@ -53,12 +53,12 @@
       }
     },
     {
-      "name": "relay_send_task",
+      "name": "send_task",
       "audience": [
         "interactive",
         "task"
       ],
-      "description": "Send a task to the headless worker on another machine. The worker runs Claude Code there with the chosen profile and reports back. Prefer passing repo+commit so the other machine works on exactly your code. If the target is not online, the default on_unavailable=confirm creates nothing and returns E_TARGET_UNAVAILABLE with alternatives: tell the user which machine is asleep, since when, and ask whether to queue, send to an alternative, or cancel. Then call again with on_unavailable=queue or a different target. Always relay any warnings in the result to the user.",
+      "description": "Send a task to the headless worker on another machine. The worker runs Claude Code there with the chosen profile and reports back. Prefer passing repo+commit so the other machine works on exactly your code. If the target is not online, the default on_unavailable=confirm creates nothing and returns E_TARGET_UNAVAILABLE with alternatives: tell the user which machine is asleep, since when, and ask whether to queue, send to an alternative, or cancel. Then call again with on_unavailable=queue or a different target. Always tell the user about any warnings in the result.",
       "inputSchema": {
         "type": "object",
         "required": [
@@ -108,7 +108,7 @@
             "items": {
               "type": "string"
             },
-            "description": "sha256 values returned by relay_attach_file"
+            "description": "sha256 values returned by attach_file"
           },
           "output_format": {
             "enum": [
@@ -194,7 +194,7 @@
       }
     },
     {
-      "name": "relay_wait_task",
+      "name": "wait_task",
       "audience": [
         "interactive",
         "task"
@@ -220,7 +220,7 @@
       }
     },
     {
-      "name": "relay_get_task",
+      "name": "get_task",
       "audience": [
         "interactive",
         "task"
@@ -244,7 +244,7 @@
       }
     },
     {
-      "name": "relay_cancel_task",
+      "name": "cancel_task",
       "audience": [
         "interactive",
         "task"
@@ -267,7 +267,7 @@
       }
     },
     {
-      "name": "relay_send_message",
+      "name": "send_message",
       "audience": [
         "interactive",
         "task"
@@ -309,7 +309,7 @@
       }
     },
     {
-      "name": "relay_inbox",
+      "name": "inbox",
       "audience": [
         "interactive"
       ],
@@ -343,7 +343,7 @@
       }
     },
     {
-      "name": "relay_ack",
+      "name": "ack",
       "audience": [
         "interactive"
       ],
@@ -367,7 +367,7 @@
       }
     },
     {
-      "name": "relay_attach_file",
+      "name": "attach_file",
       "audience": [
         "interactive",
         "task"
@@ -390,7 +390,7 @@
       }
     },
     {
-      "name": "relay_fetch_attachment",
+      "name": "fetch_attachment",
       "audience": [
         "interactive",
         "task"
@@ -417,11 +417,11 @@
       }
     },
     {
-      "name": "relay_report_progress",
+      "name": "report_progress",
       "audience": [
         "task"
       ],
-      "description": "Report a milestone of the current relay task to the sender. Use for meaningful steps only (start of build, tests finished), not every tool call.",
+      "description": "Report a milestone of the current aipager task to the sender. Use for meaningful steps only (start of build, tests finished), not every tool call.",
       "inputSchema": {
         "type": "object",
         "required": [
@@ -442,11 +442,11 @@
       }
     },
     {
-      "name": "relay_submit_result",
+      "name": "submit_result",
       "audience": [
         "task"
       ],
-      "description": "Submit the final result of the current relay task. Call exactly once, as the last step. If expected output format is json, put the JSON in output.",
+      "description": "Submit the final result of the current aipager task. Call exactly once, as the last step. If expected output format is json, put the JSON in output.",
       "inputSchema": {
         "type": "object",
         "required": [
@@ -474,7 +474,7 @@
       }
     },
     {
-      "name": "relay_permission_prompt",
+      "name": "permission_prompt",
       "audience": [
         "task"
       ],

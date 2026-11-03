@@ -1,4 +1,4 @@
-<relay_task id="{{task_id}}" thread="{{thread_id}}" from="{{from}}" hop="{{hop}}" attempt="{{attempt}}">
+<aipager_task id="{{task_id}}" thread="{{thread_id}}" from="{{from}}" hop="{{hop}}" attempt="{{attempt}}">
 <title>{{title}}</title>
 <instructions>
 {{instructions}}
@@ -13,4 +13,4 @@ schema: {{expected_output.schema_json}}
 artifacts (collected by the worker after you finish): {{expected_output.artifacts}}
 </expected_output>
 <limits timeout_sec="{{limits.timeout_sec}}" max_turns="{{limits.max_turns}}" />
-</relay_task>
+</aipager_task>

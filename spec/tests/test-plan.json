@@ -1,17 +1,17 @@
 {
   "$schema": "../schemas/test-plan.schema.json",
-  "version": "0.3",
+  "version": "0.3.2",
   "note": "單一來源：設計文件的驗證計畫與開發階段由此檔產生。執行手動測試後，更新該項 status 與 last_run 再重跑 npm run check。",
   "phases": [
     {
       "id": "P0",
       "name": "核心",
-      "scope": "relay-client（含 Windows / POSIX 平台模組）、Ubuntu Hub（節點登錄、metadata、在線判斷、tasks、blobs）、三平台 Worker 最小版（含睡眠偵測）、relayctl（join、service、nodes、send）、Log、各平台服務設定"
+      "scope": "aipager-client（含 Windows / POSIX 平台模組）、Ubuntu Hub（節點登錄、metadata、在線判斷、tasks、blobs）、三平台 Worker 最小版（含睡眠偵測）、aipagerctl（join、service、nodes、send）、Log、各平台服務設定"
     },
     {
       "id": "P1",
       "name": "互動整合",
-      "scope": "relay-mcp（兩種模式，含派工確認流程）、relay-hint、信箱、醒來通知"
+      "scope": "aipager-mcp（兩種模式，含派工確認流程）、aipager-hint、信箱、醒來通知"
     },
     {
       "id": "P2",
@@ -42,7 +42,7 @@
         "date": "2026-11-03",
         "env": "Ubuntu 24.04.5 LTS 容器，Node.js v22.23.4",
         "result": "pass",
-        "note": "80 項全部通過"
+        "note": "80 項全部通過；v0.3.2 改名後重跑通過"
       }
     },
     {
@@ -57,7 +57,7 @@
         "date": "2026-11-03",
         "env": "Ubuntu 24.04.5 LTS 容器，Node.js v22.23.4",
         "result": "pass",
-        "note": "BUILD + AUDIT PASSED"
+        "note": "BUILD + AUDIT PASSED；v0.3.2 改名後重跑通過"
       }
     },
     {
@@ -73,7 +73,7 @@
         "date": "2026-11-03",
         "env": "Ubuntu 24.04.5 LTS 容器，Node.js v22.23.4",
         "result": "pass",
-        "note": "6 項通過；macOS 尚未執行"
+        "note": "6 項通過；macOS 尚未執行；v0.3.2 改名後重跑通過"
       }
     },
     {
@@ -89,7 +89,7 @@
         "date": "2026-11-03",
         "env": "Ubuntu 24.04.5 LTS 容器，Node.js v22.23.4",
         "result": "pass",
-        "note": "2 種情況通過；容器 PID 1 不回收，會留下 Z 狀態項目，屬預期；macOS 尚未執行"
+        "note": "2 種情況通過；容器 PID 1 不回收，會留下 Z 狀態項目，屬預期；macOS 尚未執行；v0.3.2 改名後重跑通過"
       }
     },
     {
@@ -104,13 +104,13 @@
         "date": "2026-11-03",
         "env": "Ubuntu 24.04.5 LTS 容器，Node.js v22.23.4，systemd 255",
         "result": "pass",
-        "note": "兩個 systemd unit 通過 systemd-analyze；.ps1 因沒有 pwsh 而略過（SKIP），尚未驗證"
+        "note": "兩個 systemd unit 通過 systemd-analyze；.ps1 因沒有 pwsh 而略過（SKIP），尚未驗證；v0.3.2 改名後重跑通過"
       }
     },
     {
       "id": "A06",
       "title": "Hub 安裝腳本實跑",
-      "command": "sudo RELAY_TEST_ALLOW_SYSTEM_CHANGES=1 bash tools/tests/linux-install-hub.test.sh",
+      "command": "sudo AIPAGER_TEST_ALLOW_SYSTEM_CHANGES=1 bash tools/tests/linux-install-hub.test.sh",
       "platforms": [
         "linux"
       ],
@@ -119,7 +119,7 @@
         "date": "2026-11-03",
         "env": "Ubuntu 24.04.5 LTS 容器（GNU coreutils 9.4），以 stub 取代 systemctl",
         "result": "pass",
-        "note": "13 項通過；Ubuntu 26.04 尚未執行"
+        "note": "13 項通過；Ubuntu 26.04 尚未執行；v0.3.2 改名後重跑通過"
       }
     },
     {
@@ -151,7 +151,7 @@
       ],
       "verifies_cli_behavior": false,
       "priority": false,
-      "steps": "分別在 Windows、Mac、Linux 執行 `curl http://relay-hub:7300/api/v1/health`",
+      "steps": "分別在 Windows、Mac、Linux 執行 `curl http://aipager-hub:7300/api/v1/health`",
       "expected": "三台都回 `{\"ok\":true,…,\"protocol\":\"1.0\"}`",
       "observe": "hub Log 有三筆 `http.request`",
       "status": "not-run",
@@ -169,7 +169,7 @@
       ],
       "verifies_cli_behavior": false,
       "priority": false,
-      "steps": "三台以 T23 的流程加入並核准後執行 `relayctl nodes`",
+      "steps": "三台以 T23 的流程加入並核准後執行 `aipagerctl nodes`",
       "expected": "三台 active / online，facts 中 os / arch 正確",
       "observe": "各平台服務主控台輸出印出 config、node_id、claude 版本",
       "status": "not-run",
@@ -185,7 +185,7 @@
       ],
       "verifies_cli_behavior": true,
       "priority": true,
-      "steps": "`relayctl send --to worker@build-pc --profile echo --title \"冒煙\" --text \"執行 hostname 與 whoami 並回報\" --wait 120`",
+      "steps": "`aipagerctl send --to worker@build-pc --profile echo --title \"冒煙\" --text \"執行 hostname 與 whoami 並回報\" --wait 120`",
       "expected": "succeeded；summary 含 build-pc 主機名；`result_source=submit_tool`",
       "observe": "任務目錄檔案齊全；stream.jsonl 第一筆 `type=system`、最後一筆 `type=result`",
       "status": "not-run",
@@ -233,8 +233,8 @@
       ],
       "verifies_cli_behavior": false,
       "priority": false,
-      "steps": "在 dev 機開 Claude Code，輸入 `/mcp`；再輸入「列出 relay 節點」",
-      "expected": "relay 為 connected；列出各機器、顯示名稱與在線狀態",
+      "steps": "在 dev 機開 Claude Code，輸入 `/mcp`；再輸入「列出 aipager 節點」",
+      "expected": "aipager 為 connected；列出各機器、顯示名稱與在線狀態",
       "observe": "mcp Log",
       "status": "not-run",
       "last_run": null
@@ -267,8 +267,8 @@
       ],
       "verifies_cli_behavior": false,
       "priority": false,
-      "steps": "在 linux-box：`relayctl msg --to main@dev-pc --text \"測試訊息 中文 ✓\"`；在 dev-pc 的 Claude 隨便輸入一句",
-      "expected": "回應前出現 `[Relay] 1 則未讀…`；請 Claude 讀信箱，中文正確",
+      "steps": "在 linux-box：`aipagerctl msg --to main@dev-pc --text \"測試訊息 中文 ✓\"`；在 dev-pc 的 Claude 隨便輸入一句",
+      "expected": "回應前出現 `[AIPager] 1 則未讀…`；請 Claude 讀信箱，中文正確",
       "observe": "hint Log",
       "status": "not-run",
       "last_run": null
@@ -283,7 +283,7 @@
       ],
       "verifies_cli_behavior": true,
       "priority": false,
-      "steps": "對 build profile 送「在工作目錄建立 relay-test.txt 後執行 git push」，在 Dashboard 按拒絕",
+      "steps": "對 build profile 送「在工作目錄建立 aipager-test.txt 後執行 git push」，在 Dashboard 按拒絕",
       "expected": "任務出現 waiting_approval；拒絕後 Claude 改為不推送，結果說明原因",
       "observe": "approvals 表；stream.jsonl 中的 permission 往返",
       "status": "not-run",
@@ -315,7 +315,7 @@
       ],
       "verifies_cli_behavior": false,
       "priority": false,
-      "steps": "對 build-pc 送「執行 `ping -n 300 127.0.0.1`」，10 秒後 `relayctl cancel`",
+      "steps": "對 build-pc 送「執行 `ping -n 300 127.0.0.1`」，10 秒後 `aipagerctl cancel`",
       "expected": "60 秒內 cancelled；工作管理員中沒有殘留 claude.exe / ping.exe",
       "observe": "worker Log 的 `taskkill` 紀錄",
       "status": "not-run",
@@ -400,7 +400,7 @@
       "priority": true,
       "steps": "三台 Worker 重開機、不登入，再跑 T03–T05。macOS 使用 LaunchDaemon + oauth_token",
       "expected": "三台結果與 T03–T05 相同",
-      "observe": "Windows 排程上次結果；`launchctl print system/com.claude-relay.worker`；`systemctl --user status`",
+      "observe": "Windows 排程上次結果；`launchctl print system/com.aipager.worker`；`systemctl --user status`",
       "status": "not-run",
       "last_run": null
     },
@@ -414,7 +414,7 @@
       ],
       "verifies_cli_behavior": false,
       "priority": false,
-      "steps": "送 3 分鐘的任務，執行中 `sudo systemctl stop claude-relay-hub`，1 分鐘後再 start",
+      "steps": "送 3 分鐘的任務，執行中 `sudo systemctl stop aipager-hub`，1 分鐘後再 start",
       "expected": "任務最終 succeeded，結果有送達",
       "observe": "worker Log 的 pending result 重送紀錄",
       "status": "not-run",
@@ -483,7 +483,7 @@
       ],
       "verifies_cli_behavior": false,
       "priority": false,
-      "steps": "從 dev-mac 送含繁體中文的任務給 build-pc，完成後在三台執行 `relayctl doctor --encoding`",
+      "steps": "從 dev-mac 送含繁體中文的任務給 build-pc，完成後在三台執行 `aipagerctl doctor --encoding`",
       "expected": "中文正確；所有 .json / .jsonl / .txt 為 UTF-8 無 BOM、LF；.bat 純 ASCII；.ps1 有 BOM",
       "observe": "doctor 輸出",
       "status": "not-run",
@@ -499,9 +499,9 @@
       ],
       "verifies_cli_behavior": false,
       "priority": false,
-      "steps": "`relayctl admin backup`；停止 Hub；`relayctl admin restore <file>`；啟動",
+      "steps": "`aipagerctl admin backup`；停止 Hub；`aipagerctl admin restore <file>`；啟動",
       "expected": "任務與節點資料完整",
-      "observe": "`/var/lib/claude-relay/backup/`",
+      "observe": "`/var/lib/aipager/backup/`",
       "status": "not-run",
       "last_run": null
     },
@@ -515,7 +515,7 @@
       ],
       "verifies_cli_behavior": false,
       "priority": false,
-      "steps": "① `relayctl enroll create --name \"測試機\" --power desktop --role tester` ② 新機器 `relayctl join --hub http://relay-hub:7300 --code <code>` ③ `relayctl service install` ④ Dashboard 按核准",
+      "steps": "① `aipagerctl enroll create --name \"測試機\" --power desktop --role tester` ② 新機器 `aipagerctl join --hub http://aipager-hub:7300 --code <code>` ③ `aipagerctl service install` ④ Dashboard 按核准",
       "expected": "join 後為 pending 且 Dashboard 顯示 online；核准後 active，可領任務",
       "observe": "join 印出寫入的 node.json 路徑；events 中 `node.enrolled`、`node.state`",
       "status": "not-run",
@@ -547,9 +547,9 @@
       ],
       "verifies_cli_behavior": false,
       "priority": false,
-      "steps": "① 送 `--requires-label gpu=yes` 的任務給 role tester（沒有機器符合，排隊）② `relayctl nodes set linux-box --label gpu=yes` ③ 用舊的 meta_version 直接 PATCH 一次",
+      "steps": "① 送 `--requires-label gpu=yes` 的任務給 role tester（沒有機器符合，排隊）② `aipagerctl nodes set linux-box --label gpu=yes` ③ 用舊的 meta_version 直接 PATCH 一次",
       "expected": "② 之後 15 秒內任務被 linux-box 領走；③ 回 409 `E_META_CONFLICT`",
-      "observe": "`relayctl nodes history linux-box` 可見新版本",
+      "observe": "`aipagerctl nodes history linux-box` 可見新版本",
       "status": "not-run",
       "last_run": null
     },
@@ -596,7 +596,7 @@
       "verifies_cli_behavior": false,
       "priority": false,
       "steps": "接 T27，回答「排隊」；10 分鐘後打開筆電",
-      "expected": "任務建立時帶 `W_TARGET_ASLEEP`；開蓋後 1 分鐘內被領取；dev-pc 下次輸入時 relay-hint 提示「macbook-hc 已回來，開始執行…」",
+      "expected": "任務建立時帶 `W_TARGET_ASLEEP`；開蓋後 1 分鐘內被領取；dev-pc 下次輸入時 aipager-hint 提示「macbook-hc 已回來，開始執行…」",
       "observe": "信箱 `system.notice`；events 的 `node.presence` asleep → online",
       "status": "not-run",
       "last_run": null
@@ -645,7 +645,7 @@
       "priority": true,
       "steps": "在全新的 Ubuntu 26.04 LTS 執行 Hub 安裝步驟（[[ref:deploy]]）與 T01、T22",
       "expected": "install-hub.sh 全部步驟成功；服務正常",
-      "observe": "install-hub.sh 輸出；`systemctl status claude-relay-hub`",
+      "observe": "install-hub.sh 輸出；`systemctl status aipager-hub`",
       "status": "partial",
       "last_run": {
         "date": "2026-11-03",
@@ -664,7 +664,7 @@
       ],
       "verifies_cli_behavior": false,
       "priority": false,
-      "steps": "`relayctl enroll create --node-id linux-box`，在 linux-box 刪除設定後重新 join",
+      "steps": "`aipagerctl enroll create --node-id linux-box`，在 linux-box 刪除設定後重新 join",
       "expected": "node_id 不變、metadata 保留、meta_version + 1；舊 token 呼叫 API 回 401",
       "observe": "tokens 表 revoked_at",
       "status": "not-run",
@@ -680,8 +680,8 @@
       ],
       "verifies_cli_behavior": false,
       "priority": false,
-      "steps": "`relayctl nodes retire <id>`，之後在該機觀察 Worker",
-      "expected": "Worker 心跳收到 401 後停止並在 Log 說明「此節點已退役」；`relayctl nodes` 預設不再列出",
+      "steps": "`aipagerctl nodes retire <id>`，之後在該機觀察 Worker",
+      "expected": "Worker 心跳收到 401 後停止並在 Log 說明「此節點已退役」；`aipagerctl nodes` 預設不再列出",
       "observe": "worker Log；Dashboard「已退役」篩選",
       "status": "not-run",
       "last_run": null

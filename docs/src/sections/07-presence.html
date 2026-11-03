@@ -31,7 +31,7 @@
   <p>建立任務時，Hub 依目標的在線狀態與發派者選擇的 <code>dispatch.on_unavailable</code> 決定怎麼做：</p>
   <div class="tablewrap"><table>
     <tr><th>on_unavailable</th><th>目標在線</th><th>目標 asleep / offline / never / draining</th><th>預設給誰用</th></tr>
-    <tr><td><code>confirm</code></td><td>建立任務</td><td><b>不建立</b>，回 409 <code>E_TARGET_UNAVAILABLE</code>，附目標狀態、其他可用機器、可選動作（排隊 / 改派 / 取消）</td><td>互動 session 的 MCP 工具、relayctl</td></tr>
+    <tr><td><code>confirm</code></td><td>建立任務</td><td><b>不建立</b>，回 409 <code>E_TARGET_UNAVAILABLE</code>，附目標狀態、其他可用機器、可選動作（排隊 / 改派 / 取消）</td><td>互動 session 的 MCP 工具、aipagerctl</td></tr>
     <tr><td><code>queue</code></td><td>建立任務</td><td>建立任務並排隊，回應帶 <code>warnings</code>；等目標回來再執行，最久等 <code>max_wait_sec</code>（預設 24 小時）</td><td>Worker 任務內部派工、流水線 <code>then</code>、直接呼叫 API</td></tr>
     <tr><td><code>reject</code></td><td>建立任務</td><td>不建立，回 409</td><td>需要立即結果的自動化</td></tr>
   </table></div>
@@ -44,8 +44,8 @@
   <h3>提醒誰、什麼時候提醒</h3>
   <div class="tablewrap"><table>
     <tr><th>時機</th><th>發派的機器</th><th>使用者</th></tr>
-    <tr><td>派工時目標沒在線</td><td>MCP 工具結果直接帶警告與選項；工具說明要求 Claude 把內容轉告使用者並詢問</td><td>互動 session 中由 Claude 詢問；relayctl 直接在終端機詢問 排隊 / 改派 / 取消</td></tr>
-    <tr><td>排隊中的任務被醒來的機器領走</td><td>信箱收到 <code>system.notice</code>：「macbook-hc 已回來，開始執行『…』（等待 2 小時 13 分）」</td><td>relay-hint 在下一次輸入時提示；Dashboard 時間軸</td></tr>
+    <tr><td>派工時目標沒在線</td><td>MCP 工具結果直接帶警告與選項；工具說明要求 Claude 把內容轉告使用者並詢問</td><td>互動 session 中由 Claude 詢問；aipagerctl 直接在終端機詢問 排隊 / 改派 / 取消</td></tr>
+    <tr><td>排隊中的任務被醒來的機器領走</td><td>信箱收到 <code>system.notice</code>：「macbook-hc 已回來，開始執行『…』（等待 2 小時 13 分）」</td><td>aipager-hint 在下一次輸入時提示；Dashboard 時間軸</td></tr>
     <tr><td>排隊中的任務等到 <code>max_wait_sec</code> 仍無人領取</td><td>任務轉為 expired，信箱收到通知</td><td>同上</td></tr>
     <tr><td>執行中的機器睡著</td><td>信箱收到通知：「執行中的機器睡著了，最多保留 30 分鐘」</td><td>Dashboard 任務標示「執行機器睡眠中」</td></tr>
     <tr><td><code>alert_on_offline=true</code> 的機器離線（預設只有 server）</td><td>不通知</td><td>webhook（ntfy / Teams / Slack）</td></tr>

@@ -3,14 +3,14 @@
     "SessionStart": [
       {
         "hooks": [
-          { "type": "command", "command": "node \"C:\\Program Files\\ClaudeRelay\\bin\\relay-hint.js\" --event session-start", "timeout": 5 }
+          { "type": "command", "command": "node \"C:\\Program Files\\AIPager\\bin\\aipager-hint.js\" --event session-start", "timeout": 5 }
         ]
       }
     ],
     "UserPromptSubmit": [
       {
         "hooks": [
-          { "type": "command", "command": "node \"C:\\Program Files\\ClaudeRelay\\bin\\relay-hint.js\" --event prompt", "timeout": 5 }
+          { "type": "command", "command": "node \"C:\\Program Files\\AIPager\\bin\\aipager-hint.js\" --event prompt", "timeout": 5 }
         ]
       }
     ]

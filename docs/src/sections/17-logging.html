@@ -1,46 +1,46 @@
 <section id="logging" data-title="Log 與除錯" data-group="維運">
   <h3>Log 格式（所有元件、所有平台相同，JSONL，UTF-8 無 BOM）</h3>
-  <div class="codebox"><div class="label"><span>worker-20261103.jsonl（一行一筆）</span><button type="button" data-copy>複製</button></div><pre><code>{"ts":"2026-11-03T06:16:05.402Z","level":"info","comp":"worker","node":"build-pc","os":"windows","trace_id":"4f1c2a9be0d34c7a8b6e5d4c3b2a1f00","task_id":"01JBX7Q3M8ZK4N2P6R9T0V1W2Y","thread_id":"01JBX7Q3M8ZK4N2P6R9T0V1W2X","event":"claude.spawn","msg":"啟動 claude -p","data":{"pid":11872,"profile":"build","cwd":"D:\\RelayWork\\erp"}}</code></pre></div>
+  <div class="codebox"><div class="label"><span>worker-20261103.jsonl（一行一筆）</span><button type="button" data-copy>複製</button></div><pre><code>{"ts":"2026-11-03T06:16:05.402Z","level":"info","comp":"worker","node":"build-pc","os":"windows","trace_id":"4f1c2a9be0d34c7a8b6e5d4c3b2a1f00","task_id":"01JBX7Q3M8ZK4N2P6R9T0V1W2Y","thread_id":"01JBX7Q3M8ZK4N2P6R9T0V1W2X","event":"claude.spawn","msg":"啟動 claude -p","data":{"pid":11872,"profile":"build","cwd":"D:\\AIPagerWork\\erp"}}</code></pre></div>
   <div class="tablewrap"><table>
     <tr><th>元件</th><th>Log 位置</th></tr>
-    <tr><td>relay-hub（Linux）</td><td><code>/var/log/claude-relay/hub-yyyyMMdd.jsonl</code>；啟動與崩潰訊息在 <code>journalctl -u claude-relay-hub</code>；DB 的 <code>events</code> 表作為稽核紀錄</td></tr>
-    <tr><td>relay-worker</td><td>各平台 Log 位置（見 <a data-ref="platforms"></a>）下的 <code>worker-yyyyMMdd.jsonl</code> + 每個任務目錄的 <code>worker.log</code></td></tr>
-    <tr><td>relay-mcp</td><td>同目錄 <code>mcp-yyyyMMdd.jsonl</code>（stdout 留給 MCP 協定，Log 一律寫檔或 stderr）</td></tr>
-    <tr><td>relay-hint</td><td>同目錄 <code>hint-yyyyMMdd.jsonl</code></td></tr>
-    <tr><td>服務主控台輸出</td><td>Windows：<code>worker-console.log</code>；macOS：plist 指定的 <code>worker-console.log</code>；Linux：<code>journalctl --user -u claude-relay-worker</code></td></tr>
+    <tr><td>aipager-hub（Linux）</td><td><code>/var/log/aipager/hub-yyyyMMdd.jsonl</code>；啟動與崩潰訊息在 <code>journalctl -u aipager-hub</code>；DB 的 <code>events</code> 表作為稽核紀錄</td></tr>
+    <tr><td>aipager-worker</td><td>各平台 Log 位置（見 <a data-ref="platforms"></a>）下的 <code>worker-yyyyMMdd.jsonl</code> + 每個任務目錄的 <code>worker.log</code></td></tr>
+    <tr><td>aipager-mcp</td><td>同目錄 <code>mcp-yyyyMMdd.jsonl</code>（stdout 留給 MCP 協定，Log 一律寫檔或 stderr）</td></tr>
+    <tr><td>aipager-hint</td><td>同目錄 <code>hint-yyyyMMdd.jsonl</code></td></tr>
+    <tr><td>服務主控台輸出</td><td>Windows：<code>worker-console.log</code>；macOS：plist 指定的 <code>worker-console.log</code>；Linux：<code>journalctl --user -u aipager-worker</code></td></tr>
   </table></div>
   <ul>
-    <li>等級由 <code>log.level</code> 或環境變數 <code>RELAY_LOG_LEVEL</code>（debug / info / warn / error）控制；每日輪替、單檔 50 MB、保留 30 天</li>
+    <li>等級由 <code>log.level</code> 或環境變數 <code>AIPAGER_LOG_LEVEL</code>（debug / info / warn / error）控制；每日輪替、單檔 50 MB、保留 30 天</li>
     <li>token、密碼、連線字串一律遮罩（只顯示前綴與末 4 碼）</li>
-    <li>每筆都帶 trace_id 與 os；<code>relayctl trace &lt;trace_id&gt;</code> 會合併 Hub 事件與已上傳的 stream log，不必登入各台機器翻檔</li>
+    <li>每筆都帶 trace_id 與 os；<code>aipagerctl trace &lt;trace_id&gt;</code> 會合併 Hub 事件與已上傳的 stream log，不必登入各台機器翻檔</li>
   </ul>
 
   <h3>Chrome DevTools</h3>
   <ul>
-    <li>Hub：在 Hub 機暫時以 <code>RELAY_INSPECT_PORT=9229</code> 啟動（只綁 127.0.0.1），從自己電腦以 <code>ssh -L 9229:127.0.0.1:9229 hub</code> 轉送後開 <code>chrome://inspect</code></li>
-    <li>Worker：Windows 用 <code>start-worker.ps1 -InspectPort 9230</code>；macOS / Linux 用 <code>RELAY_INSPECT_PORT=9230 start-worker.sh</code>（已實測會印出 DevTools 連線位址）</li>
+    <li>Hub：在 Hub 機暫時以 <code>AIPAGER_INSPECT_PORT=9229</code> 啟動（只綁 127.0.0.1），從自己電腦以 <code>ssh -L 9229:127.0.0.1:9229 hub</code> 轉送後開 <code>chrome://inspect</code></li>
+    <li>Worker：Windows 用 <code>start-worker.ps1 -InspectPort 9230</code>；macOS / Linux 用 <code>AIPAGER_INSPECT_PORT=9230 start-worker.sh</code>（已實測會印出 DevTools 連線位址）</li>
     <li>Dashboard：未打包的原始碼，F12 直接看 Network（每個回應的 <code>X-Trace-Id</code>）與 Sources</li>
   </ul>
 
   <h3>症狀對照</h3>
   <div class="tablewrap"><table>
     <tr><th>症狀</th><th>先看哪裡</th></tr>
-    <tr><td>Hub 啟動後連不上</td><td><code>journalctl -u claude-relay-hub</code> 是否持續出現綁定重試（Tailscale 未就緒或 <code>listen.host</code> 錯）；<code>ufw status</code></td></tr>
-    <tr><td>節點顯示 offline</td><td>該機 <code>relayctl doctor</code>；worker Log 的 heartbeat 錯誤；機器是否進入睡眠</td></tr>
+    <tr><td>Hub 啟動後連不上</td><td><code>journalctl -u aipager-hub</code> 是否持續出現綁定重試（Tailscale 未就緒或 <code>listen.host</code> 錯）；<code>ufw status</code></td></tr>
+    <tr><td>節點顯示 offline</td><td>該機 <code>aipagerctl doctor</code>；worker Log 的 heartbeat 錯誤；機器是否進入睡眠</td></tr>
     <tr><td>任務一直 queued</td><td>目標節點有沒有宣告該 profile；<code>requires.os</code> 是否沒有任何在線節點符合；<code>max_concurrent</code> 是否滿；<code>concurrency_key</code> 是否被鎖住</td></tr>
     <tr><td><code>E_CLAUDE_AUTH</code> 或 stderr 提到登入</td><td>Worker 執行身分是否就是登入 Claude 的使用者；macOS 改用 <code>oauth_token</code> 模式；用同一身分手動跑 <code>cmdline.txt</code> 重現</td></tr>
     <tr><td>Linux Worker 登出後停止</td><td>是否執行過 <code>sudo loginctl enable-linger &lt;user&gt;</code></td></tr>
-    <tr><td>筆電顯示 asleep</td><td>闔蓋或睡眠時屬正常；若筆電明明開著：Worker 是否在跑（<code>relayctl service status</code>）、Tailscale 是否連線</td></tr>
+    <tr><td>筆電顯示 asleep</td><td>闔蓋或睡眠時屬正常；若筆電明明開著：Worker 是否在跑（<code>aipagerctl service status</code>）、Tailscale 是否連線</td></tr>
     <tr><td>桌機 / 伺服器常被判 asleep</td><td>網路不穩或機器忙到心跳延遲；在 metadata 調高 <code>presence.asleep_after_sec</code>，並查 worker Log 的 heartbeat 錯誤</td></tr>
-    <tr><td><code>relayctl join</code> 失敗</td><td>join 會先跑 doctor 並逐項列出；<code>E_ENROLL_INVALID</code> 請重新建立加入碼；<code>E_NODE_EXISTS</code> 改 <code>--node-id</code></td></tr>
-    <tr><td>改了 metadata 沒生效</td><td><code>relayctl nodes history &lt;id&gt;</code> 確認新版本存在；路由用的是 Hub 端資料，下一次領任務即生效；Worker 本機快取在 15 秒內更新</td></tr>
-    <tr><td>派工一直被要求確認</td><td>目標不在線（看 <code>relayctl nodes</code>）；自動化流程請改用 <code>on_unavailable=queue</code></td></tr>
+    <tr><td><code>aipagerctl join</code> 失敗</td><td>join 會先跑 doctor 並逐項列出；<code>E_ENROLL_INVALID</code> 請重新建立加入碼；<code>E_NODE_EXISTS</code> 改 <code>--node-id</code></td></tr>
+    <tr><td>改了 metadata 沒生效</td><td><code>aipagerctl nodes history &lt;id&gt;</code> 確認新版本存在；路由用的是 Hub 端資料，下一次領任務即生效；Worker 本機快取在 15 秒內更新</td></tr>
+    <tr><td>派工一直被要求確認</td><td>目標不在線（看 <code>aipagerctl nodes</code>）；自動化流程請改用 <code>on_unavailable=queue</code></td></tr>
     <tr><td>launchd / systemd 下找不到 node 或 claude</td><td>服務設定檔的 PATH；<code>start-worker.sh</code> 會在第一行印出實際使用的 node 路徑</td></tr>
     <tr><td>任務卡在 waiting_approval</td><td>Dashboard 審核佇列；<code>MCP_TOOL_TIMEOUT</code> 是否大於審核逾時</td></tr>
     <tr><td>結果 summary 是空的或很怪</td><td><code>metrics.result_source</code>；任務目錄的 stream.jsonl 最後一筆 <code>type=result</code></td></tr>
     <tr><td>中文亂碼</td><td>stream.jsonl 是否為 UTF-8；Windows 上被呼叫的 .ps1 是否設定 <code>[Console]::OutputEncoding</code> 為 UTF-8；.bat 是否為純 ASCII</td></tr>
     <tr><td>同一 repo 在不同 OS 結果不同</td><td>換行（<code>.gitattributes</code>）、大小寫敏感的檔名、平台專屬指令</td></tr>
     <tr><td>互動 session 沒有未讀提示</td><td>hint Log；<code>claude --debug</code> 看 hook 是否執行；<code>/hooks</code> 確認設定</td></tr>
-    <tr><td>Windows Worker 開機後沒起來</td><td>工作排程器「ClaudeRelay Worker」的上次執行結果；worker-console.log；<code>-1073741819</code> 表示 Node native crash，先查 Node 執行環境</td></tr>
+    <tr><td>Windows Worker 開機後沒起來</td><td>工作排程器「AIPager Worker」的上次執行結果；worker-console.log；<code>-1073741819</code> 表示 Node native crash，先查 Node 執行環境</td></tr>
   </table></div>
 </section>

@@ -1,7 +1,7 @@
 <section id="interactive" data-title="互動 session 整合" data-group="執行">
   <h3>註冊 MCP（全機共用，信箱 main）</h3>
-  <div class="codebox"><div class="label"><span>Windows</span><button type="button" data-copy>複製</button></div><pre><code>claude mcp add --scope user --env RELAY_AGENT=main relay -- node "C:\Program Files\ClaudeRelay\bin\relay-mcp.js" --mode interactive</code></pre></div>
-  <div class="codebox"><div class="label"><span>macOS / Linux</span><button type="button" data-copy>複製</button></div><pre><code>claude mcp add --scope user --env RELAY_AGENT=main relay -- node /opt/claude-relay/bin/relay-mcp.js --mode interactive</code></pre></div>
+  <div class="codebox"><div class="label"><span>Windows</span><button type="button" data-copy>複製</button></div><pre><code>claude mcp add --scope user --env AIPAGER_AGENT=main aipager -- node "C:\Program Files\AIPager\bin\aipager-mcp.js" --mode interactive</code></pre></div>
+  <div class="codebox"><div class="label"><span>macOS / Linux</span><button type="button" data-copy>複製</button></div><pre><code>claude mcp add --scope user --env AIPAGER_AGENT=main aipager -- node /opt/aipager/bin/aipager-mcp.js --mode interactive</code></pre></div>
   <p>依專案區分信箱（例如 ERP 專案用 <code>erp@dev-pc</code>），在專案根目錄放 <code>.mcp.json</code>：</p>
   <details>
     <summary>專案層級 .mcp.json（Windows / POSIX）</summary>
@@ -10,10 +10,10 @@
       <div class="codebox"><div class="label"><span>spec/claude/mcp.project.posix.json</span><button type="button" data-copy>複製</button></div><pre><code><!--INCLUDE:spec/claude/mcp.project.posix.json--></code></pre></div>
     </div>
   </details>
-  <p>同一個 repo 會在不同 OS 上開啟時，<code>.mcp.json</code> 不要寫死絕對路徑。改用使用者層級的 MCP 註冊（上方指令），專案層級只放 <code>RELAY_AGENT</code> 的差異；或把 <code>.mcp.json</code> 加進 <code>.gitignore</code>，各機各放一份。</p>
+  <p>同一個 repo 會在不同 OS 上開啟時，<code>.mcp.json</code> 不要寫死絕對路徑。改用使用者層級的 MCP 註冊（上方指令），專案層級只放 <code>AIPAGER_AGENT</code> 的差異；或把 <code>.mcp.json</code> 加進 <code>.gitignore</code>，各機各放一份。</p>
 
   <h3>未讀提示 hook</h3>
-  <p>合併進使用者設定檔：Windows 為 <code>%USERPROFILE%\.claude\settings.json</code>，macOS / Linux 為 <code>~/.claude/settings.json</code>。relay-hint 會讀 cwd 下 <code>.mcp.json</code> 的 <code>RELAY_AGENT</code> 決定查哪個信箱，沒有就用 <code>main</code>。</p>
+  <p>合併進使用者設定檔：Windows 為 <code>%USERPROFILE%\.claude\settings.json</code>，macOS / Linux 為 <code>~/.claude/settings.json</code>。aipager-hint 會讀 cwd 下 <code>.mcp.json</code> 的 <code>AIPAGER_AGENT</code> 決定查哪個信箱，沒有就用 <code>main</code>。</p>
   <details>
     <summary>hooks 設定（Windows / POSIX）</summary>
     <div class="inner">
@@ -28,7 +28,7 @@
     <li>「把目前分支推上 Git，叫 build-pc 用 build profile 編譯這個 commit，等結果回來告訴我」</li>
     <li>「請 Mac 跑 iOS 的單元測試，跑完前我先繼續改 UI，有結果再提醒我」。筆電睡著的話，Claude 會先告訴你「macbook-hc 已 42 分鐘沒有回應」，問你要排隊、改派還是取消</li>
     <li>「現在有哪些機器在線？macbook 上次出現是什麼時候？」</li>
-    <li>「看一下 relay 信箱，build-pc 問的問題幫我回：改用離線套件快取」</li>
+    <li>「看一下 aipager 信箱，build-pc 問的問題幫我回：改用離線套件快取」</li>
   </ul>
-  <div class="note"><b>長任務不要佔住 session：</b>每次等待最多 50 秒。Claude 可以先繼續別的工作，任務完成後下一次輸入時 relay-hint 會提示。如果希望互動 session 自動處理信箱，可用 <code>/loop 10m 用 relay_inbox 檢查未讀，需要回覆的就處理並回覆</code>，但會持續消耗用量，建議只在需要時開。</div>
+  <div class="note"><b>長任務不要佔住 session：</b>每次等待最多 50 秒。Claude 可以先繼續別的工作，任務完成後下一次輸入時 aipager-hint 會提示。如果希望互動 session 自動處理信箱，可用 <code>/loop 10m 用 inbox 檢查未讀，需要回覆的就處理並回覆</code>，但會持續消耗用量，建議只在需要時開。</div>
 </section>

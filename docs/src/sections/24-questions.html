@@ -18,6 +18,6 @@
     <tr><td class="num">Q8</td><td>要先上線的第一個實際流程是什麼？</td><td>dev 機派編譯給 Windows build-pc</td></tr>
     <tr><td class="num">Q9</td><td>新機器加入要人工核准，還是加入碼可設為自動核准？</td><td>預設需要核准；建立加入碼時可個別勾選自動核准</td></tr>
     <tr><td class="num">Q10</td><td>筆電睡著時，執行中的任務保留多久（suspend_grace）？排隊任務最多等多久？</td><td>保留 30 分鐘；排隊最多等 24 小時</td></tr>
-    <tr><td class="num">Q11</td><td>MCP（讓 Claude 用自然語言派工、Worker 端回報結構化結果與申請審核）要放在第一階段，還是先只做 Hub + Worker 排程詢問 + relayctl？</td><td>先不做，放 P1；P0 用 relayctl 派工、結果取 Claude 最後的文字、超出權限一律拒絕</td></tr>
+    <tr><td class="num">Q11</td><td>MCP（讓 Claude 用自然語言派工、Worker 端回報結構化結果與申請審核）要放在第一階段，還是先只做 Hub + Worker 排程詢問 + aipagerctl？</td><td>先不做，放 P1；P0 用 aipagerctl 派工、結果取 Claude 最後的文字、超出權限一律拒絕</td></tr>
   </table></div>
 </section>

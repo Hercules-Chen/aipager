@@ -1,14 +1,14 @@
 {
   "mcpServers": {
-    "relay": {
+    "aipager": {
       "type": "stdio",
       "command": "C:\\Program Files\\nodejs\\node.exe",
-      "args": ["C:\\Program Files\\ClaudeRelay\\bin\\relay-mcp.js", "--mode", "task"],
+      "args": ["C:\\Program Files\\AIPager\\bin\\aipager-mcp.js", "--mode", "task"],
       "env": {
-        "RELAY_CONFIG": "C:\\ProgramData\\ClaudeRelay\\node\\node.json",
-        "RELAY_TASK_ID": "01JBX7Q3M8ZK4N2P6R9T0V1W2Y",
-        "RELAY_TASK_TOKEN_FILE": "C:\\ProgramData\\ClaudeRelay\\worker\\tasks\\20261103\\01JBX7Q3M8ZK4N2P6R9T0V1W2Y\\task.token",
-        "RELAY_PROFILE_FILE": "C:\\ProgramData\\ClaudeRelay\\worker\\tasks\\20261103\\01JBX7Q3M8ZK4N2P6R9T0V1W2Y\\profile.json"
+        "AIPAGER_CONFIG": "C:\\ProgramData\\AIPager\\node\\node.json",
+        "AIPAGER_TASK_ID": "01JBX7Q3M8ZK4N2P6R9T0V1W2Y",
+        "AIPAGER_TASK_TOKEN_FILE": "C:\\ProgramData\\AIPager\\worker\\tasks\\20261103\\01JBX7Q3M8ZK4N2P6R9T0V1W2Y\\task.token",
+        "AIPAGER_PROFILE_FILE": "C:\\ProgramData\\AIPager\\worker\\tasks\\20261103\\01JBX7Q3M8ZK4N2P6R9T0V1W2Y\\profile.json"
       }
     }
   }

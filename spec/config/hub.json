@@ -4,8 +4,8 @@
     "port": 7300,
     "bind_retry_sec": 5
   },
-  "data_dir": "/var/lib/claude-relay",
-  "public_base_url": "http://relay-hub:7300",
+  "data_dir": "/var/lib/aipager",
+  "public_base_url": "http://aipager-hub:7300",
   "limits": {
     "max_hops": 4,
     "max_tasks_per_thread": 20,
@@ -57,7 +57,7 @@
     "blobs_days": 14
   },
   "backup": {
-    "dir": "/var/lib/claude-relay/backup",
+    "dir": "/var/lib/aipager/backup",
     "daily_at_utc": "19:00",
     "keep": 14
   },
@@ -67,13 +67,13 @@
         "approval.request",
         "task.failed"
       ],
-      "url": "https://ntfy.example.local/claude-relay",
+      "url": "https://ntfy.example.local/aipager",
       "format": "ntfy"
     }
   ],
   "log": {
     "level": "info",
-    "dir": "/var/log/claude-relay",
+    "dir": "/var/log/aipager",
     "max_file_mb": 50,
     "keep_days": 30
   },
